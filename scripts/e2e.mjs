@@ -206,6 +206,64 @@ check('手机收到的文件一字节不差，有「存到手机」', phFileOk &
 await panel.click('.tabs .t-pc').catch(() => {});
 const pcSentFile = panel.locator('.item[data-kind="file"][data-from="pc"]', { hasText: '会议纪要.docx' });
 check('侧边栏里发出去的文件显示「已送到」', await pcSentFile.waitFor({ timeout: 5000 }).then(() => pcSentFile.innerText()).then((t) => !t.includes('等手机'), () => false));
+// 大文件（像曦传的视频）：收的一方要看得到「正在接收」和进度，发的一方看得到「发送中 x%」
+const watch = (page, sel) => page.evaluate((sel) => {
+  window.__seen = [];
+  const note = () => { for (const e of document.querySelectorAll(sel)) { const t = e.innerText.replace(/\s+/g, ' ').trim(); if (t && window.__seen.at(-1) !== t) window.__seen.push(t); } };
+  window.__mo?.disconnect();
+  window.__mo = new MutationObserver(note);
+  window.__mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+}, sel);
+const seen = (page) => page.evaluate(() => { window.__mo?.disconnect(); return window.__seen; });
+const midPct = (list) => list.some((t) => { const m = t.match(/(\d+)%/); return m && +m[1] > 0 && +m[1] < 100; });
+const bigPc = fakeFile(12 * 1024 * 1024 + 77, 3);
+await watch(phone, '.recv'); await watch(panel, '.item[data-from="pc"] .st');
+await panel.setInputFiles('.send input[type=file]', { name: '旅行视频.mp4', mimeType: 'video/mp4', buffer: bigPc });
+const bigGot = await phone.locator('.item[data-kind="file"]', { hasText: '旅行视频.mp4' }).waitFor({ timeout: 60000 }).then(() => true, () => false);
+await phone.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+const phRecv = await seen(phone), pcSend = await seen(panel);
+check('电脑发 12MB 视频：手机收到', bigGot);
+check('手机接收时显示「正在接收」和进度，收完就消失', phRecv.some((t) => t.includes('正在接收') && t.includes('旅行视频.mp4')) && midPct(phRecv) && !(await phone.isVisible('.recv')),
+  phRecv.slice(0, 3).concat(phRecv.slice(-2)).join(' | '));
+check('电脑发送时显示「发送中 x%」', pcSend.some((t) => t.startsWith('发送中')) && midPct(pcSend), pcSend.slice(0, 4).join(' | '));
+const bigPhone = fakeFile(12 * 1024 * 1024 + 31, 5);
+await watch(panel, '.recv'); await watch(phone, '.sent');
+await phone.setInputFiles('input[type=file]', { name: '录屏.mov', mimeType: 'video/quicktime', buffer: bigPhone });
+await panel.click('.tabs .t-phone').catch(() => {});
+const bigBack = await panel.locator('.item[data-kind="file"][data-from="phone"]', { hasText: '录屏.mov' }).waitFor({ timeout: 60000 }).then(() => true, () => false);
+await panel.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+const pcRecv = await seen(panel), phSend = await seen(phone);
+if (process.env.E2E_SHOTS) {
+  // 截「正在接收」的样子：两边各假装收了一半（真传太快截不到），截完发个不完整的结尾让它消失
+  await phone.evaluate(async () => {
+    const t = window.__hutong.transfer;
+    t.handle({ v: 1, t: 'file-start', id: 'shot-rx', createdAt: Date.now(), meta: { name: '旅行视频.mp4', mime: 'video/mp4', size: 54 * 1048576 } });
+    await new Promise((r) => setTimeout(r, 250));
+    t.handleBinary(new ArrayBuffer(23 * 1048576));
+  });
+  await phone.waitForTimeout(500);
+  await phone.evaluate(() => document.querySelector('.got')?.scrollIntoView({ block: 'start' }));
+  await phone.waitForTimeout(400);
+  await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-recv.png') });
+  await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-recv-dark.png') }); await phone.emulateMedia({ colorScheme: null });
+  await phone.evaluate(() => window.__hutong.transfer.handle({ v: 1, t: 'file-end', id: 'shot-rx' }));
+  await phone.evaluate(async () => {
+    const l = window.__hutong.link;
+    l.send({ t: 'file-start', id: 'shot-tx', createdAt: Date.now(), meta: { name: '录屏 2026-11-05.mov', mime: 'video/quicktime', size: 2.5 * 1048576 } });
+    for (let i = 0; i < 64; i++) { await l.waitDrain(); l.sendBinary(new ArrayBuffer(16384)); }
+  });
+  await panel.waitForTimeout(800);
+  await panel.evaluate(() => scrollTo(0, 0));
+  await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-recv.png') });
+  await phone.evaluate(() => window.__hutong.link.send({ t: 'file-end', id: 'shot-tx' }));
+  await panel.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+  await phone.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+}
+check('手机发 12MB 视频：电脑收到', bigBack);
+check('电脑接收时显示「正在接收」和进度，收完就消失', pcRecv.some((t) => t.includes('正在接收') && t.includes('录屏.mov')) && midPct(pcRecv) && !(await panel.isVisible('.recv')),
+  pcRecv.slice(0, 3).concat(pcRecv.slice(-2)).join(' | '));
+check('手机发送时显示「发送中 x%」', phSend.some((t) => t.includes('发送中')) && midPct(phSend), phSend.slice(0, 3).join(' | '));
+
 await panel.click('.tabs .t-phone').catch(() => {});
 if (process.env.E2E_SHOTS) {
   await phone.evaluate(() => document.querySelector('.list')?.scrollIntoView({ block: 'start' })); await phone.waitForTimeout(500);

@@ -27,6 +27,8 @@ export interface Item {
   dropped?: 'cancelled' | 'expired' | 'failed';
   /** 文字太长，记录里只存了开头 */
   cut?: boolean;
+  /** 电脑发出去的：正在发，发到百分之几（不存） */
+  pct?: number;
 }
 
 export interface EngineState {
@@ -49,6 +51,8 @@ export interface EngineState {
   newPhone?: string;
   /** 「复制就发」跳过了一条像密码的内容（时间），提醒用户 */
   skippedSecretAt?: number;
+  /** 正在收手机发来的照片或文件 */
+  receiving?: { id: string; name: string; size: number; got: number; done: boolean };
   log: string[];
 }
 

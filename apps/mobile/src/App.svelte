@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     BlobStore, CONFIG, isShowableImage, localKV, persistentOutbox, randomId, secretFromHash, sizeText, startSession, trimForHistory,
-    type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Session
+    type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Receiving, type Session
   } from '@hutong/core';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
@@ -69,6 +69,9 @@
   let pcName = $state('');
   let got = $state<Got[]>(loadGot());
   let sent = $state<Sent[]>([]);
+  /** 正在收电脑发来的照片或文件（大文件要一会儿，让人知道在传） */
+  let receiving = $state<Receiving | null>(null);
+  let rxStale: ReturnType<typeof setTimeout> | undefined;
   let note = $state('');
   let txt = $state('');
   let newer = $state(false);
@@ -141,15 +144,22 @@
           let g: Got;
           if (it.kind === 'text') g = { id: it.id, kind: 'text', text: it.text, time: Date.now() };
           else {
-            await photos.put(it.id, it.blob);
+            await photos.put(it.id, it.blob).catch((e) => console.log('[Tapaste] 存不进手机：', e));
             const mime = it.blob.type || it.meta.mime;
             g = { id: it.id, kind: isShowableImage(mime) ? 'image' : 'file', name: it.meta.name, size: it.blob.size, mime, time: Date.now() };
           }
           got = [g, ...got.filter((x) => x.id !== g.id)].slice(0, MAX_GOT);
+          if (receiving?.id === g.id) receiving = null;
           saveGot();
           void pruneBlobs();
         },
-        progress: (it, r) => setSent(it.id, { state: 'sending', pct: Math.round(r * 100) }),
+        progress: (it, r) => setSent(it.id, { state: 'sending', pct: Math.floor(r * 100) }),
+        receiving: (r) => {
+          receiving = r;
+          // 半天没动静（电脑那边不发了、或断了很久）：先不显示，电脑重发时会再出来
+          clearTimeout(rxStale);
+          if (r) rxStale = setTimeout(() => (receiving = null), 30_000);
+        },
         delivered: (it) => { setSent(it.id, { state: 'done' }); note = ''; },
         dropped: (it, why) => setSent(it.id, { state: why }),
         queue: (n) => {
@@ -242,15 +252,16 @@
   const isUrl = (t: string) => /^https?:\/\/\S+$/.test(t.trim());
   /** 像验证码（4~8 位，带数字）：放大显示，方便看着输 */
   const isCode = (t: string) => /^[A-Za-z0-9]{4,8}$/.test(t.trim()) && /\d/.test(t);
-  const kb = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
+  const kb = (n: number) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 </script>
 
-{#snippet icon(name: 'clip' | 'image' | 'up' | 'tray' | 'trash')}
+{#snippet icon(name: 'clip' | 'image' | 'up' | 'tray' | 'trash' | 'doc')}
   <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
     {#if name === 'clip'}<rect x="7.5" y="3.5" width="9" height="4" rx="1.6" /><path d="M7.5 5.5H6.5a2.5 2.5 0 0 0-2.5 2.5v10.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V8a2.5 2.5 0 0 0-2.5-2.5h-1" /><path d="M9 14h6M12 11v6" />
     {:else if name === 'image'}<rect x="3" y="4.5" width="18" height="15" rx="3.5" /><circle cx="8.8" cy="9.8" r="1.7" /><path d="m3.5 17 5.2-4.6 4.1 3.6 2.6-2.1 5.1 4" />
     {:else if name === 'up'}<path d="M12 18.5V6M6.5 11.5 12 6l5.5 5.5" />
+    {:else if name === 'doc'}<path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8z" /><path d="M14 3.5V8h4.5M9 13h6M9 16.5h4" />
     {:else if name === 'trash'}<path d="M4.5 7h15M9.5 7V5.2c0-.7.5-1.2 1.2-1.2h2.6c.7 0 1.2.5 1.2 1.2V7M6.5 7l.8 11.6c.1 1 .9 1.9 2 1.9h5.4c1 0 1.9-.8 2-1.9L17.5 7M10.2 11v5.5M13.8 11v5.5" />
     {:else}<path d="M3.5 13.5 6 5.5h12l2.5 8v4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-4Z" /><path d="M3.5 13.5h5l1 2h5l1-2h5" />{/if}
   </svg>
@@ -372,7 +383,24 @@
 
       <section class="got rise" style="--d: 190ms">
         <h2>电脑发来的{#if got.length}<span class="count">{got.length}</span>{/if}</h2>
-        {#if got.length === 0}
+        {#if receiving}
+          {@const r = receiving}
+          {@const pct = r.done || !r.meta.size ? 100 : Math.floor((r.got / r.meta.size) * 100)}
+          {@const lost = !r.done && link !== 'connected'}
+          <div class="recv" class:lost aria-live="polite" in:fly={pop} out:fade={{ duration: 180 }}>
+            <div class="recv-top">
+              <span class="recv-ic">{@render icon(isShowableImage(r.meta.mime) ? 'image' : 'doc')}</span>
+              <div class="recv-info">
+                <b>{r.done ? '收好了，正在保存…' : lost ? '连接断了，电脑会重新发…' : '正在接收'}</b>
+                <span>{r.meta.name}</span>
+              </div>
+              <span class="pct">{pct}%</span>
+            </div>
+            <div class="prog"><i style="width: {pct}%"></i></div>
+            <div class="recv-size">{kb(r.got)} / {kb(r.meta.size)}</div>
+          </div>
+        {/if}
+        {#if got.length === 0 && !receiving}
           <div class="empty">{@render icon('tray')}<p>还没有。电脑上可以在网页里右键「发到手机」，或者在 Tapaste 侧边栏里发文字、网址、图片、文件过来。</p></div>
         {/if}
         {#each got as g (g.id)}
@@ -496,6 +524,20 @@
   .got { margin-top: 10px; }
   h2 { display: flex; align-items: baseline; gap: 8px; font-size: 22px; font-weight: 700; margin: 0 4px 10px; }
   .count { font-size: 17px; font-weight: 500; color: var(--label2); }
+  /* 正在接收：和记录卡片一样的白卡片，进度条用品牌渐变 */
+  .recv { background: var(--card); border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; }
+  .recv-top { display: flex; align-items: center; gap: 12px; }
+  .recv-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tint-soft); color: var(--tint); }
+  .recv-ic .ic { width: 22px; height: 22px; }
+  .recv-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .recv-info b { font-size: 15px; font-weight: 600; color: var(--tint); }
+  .recv-info span { font-size: 15px; color: var(--label); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recv .pct { flex: none; font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .recv .prog { height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; margin: 12px 0 6px; }
+  .recv .prog i { display: block; height: 100%; border-radius: inherit; background: var(--grad); transition: width .3s var(--ease); }
+  .recv-size { font-size: 13px; color: var(--label2); font-variant-numeric: tabular-nums; }
+  .recv.lost .recv-info b { color: var(--orange-text); }
+  .recv.lost .prog i { background: var(--orange); }
   .empty { text-align: center; color: var(--label2); font-size: 15px; padding: 28px 24px; background: var(--card); border-radius: 20px; }
   .empty .ic { width: 34px; height: 34px; color: var(--label3); stroke-width: 1.5; margin-bottom: 6px; }
   .empty p { margin: 0; }

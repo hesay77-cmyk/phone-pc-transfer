@@ -12,6 +12,8 @@ import type { EngineState, Item, SavedInfo, SendResult, ToBg, ToEngine, ToPanel 
 
 const kv = localKV('hutong:pc:');
 const MAX_ITEMS = 30;
+/** 正在收的照片或文件半天没动静，就先不显示进度（对方重发时会再出来） */
+const RX_STALE_MS = 30_000;
 
 function loadItems(): Item[] {
   try { return JSON.parse(kv.get('items') || '[]'); } catch { return []; }
@@ -21,6 +23,7 @@ export class Engine {
   private session: Session | null = null;
   private state: EngineState;
   private pushTimer: ReturnType<typeof setTimeout> | undefined;
+  private rxStale: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     let secret = kv.get('secret');
@@ -90,6 +93,8 @@ export class Engine {
           if (s === 'connected' && info) this.log(`连上手机：${info.route}，${info.connectMs} 毫秒`);
           if (s === 'connected' && !this.state.everPaired) { this.state.everPaired = true; kv.set('everPaired', '1'); }
           if (s === 'connected') this.sendPendingClip();
+          // 断了：发了一半的进度作废（连上后从头重发）
+          if (s !== 'connected') for (const it of this.state.items) if (it.pct !== undefined) it.pct = undefined;
           this.push();
         },
         peer: (d) => {
@@ -106,8 +111,22 @@ export class Engine {
         },
         newerPeer: () => { this.state.newerPeer = true; this.push(); },
         received: (it) => void this.onReceived(it),
-        delivered: (it) => { this.patch(it.id, { delivered: true }); },
-        dropped: (it, why) => { this.patch(it.id, { dropped: why }); },
+        delivered: (it) => { this.patch(it.id, { delivered: true, pct: undefined }); },
+        dropped: (it, why) => { this.patch(it.id, { dropped: why, pct: undefined }); },
+        // 发送进度只给界面看，不存
+        progress: (out, r) => {
+          const it = this.state.items.find((x) => x.id === out.id);
+          if (!it || it.delivered) return;
+          it.pct = Math.floor(r * 100);
+          this.push();
+        },
+        receiving: (r) => {
+          this.state.receiving = r ? { id: r.id, name: r.meta.name, size: r.meta.size, got: r.got, done: r.done } : undefined;
+          // 半天没动静（手机那边不发了、或断了很久）：先不显示，对方重发时会再出来
+          clearTimeout(this.rxStale);
+          if (r) this.rxStale = setTimeout(() => { this.state.receiving = undefined; this.push(); }, RX_STALE_MS);
+          this.push();
+        },
         queue: (n) => {
           if (!n && this.state.pendingToPhone) this.flashOk(); // 攒着的全送到手机了
           this.state.pendingToPhone = n;
@@ -260,7 +279,7 @@ export class Engine {
     const isImg = isShowableImage(blob.type || meta.mime);
     const what = isImg ? '照片' : `文件「${meta.name}」`;
     this.log(`收到${what} ${kb(blob.size)}，用时 ${it.ms} 毫秒`);
-    if (isImg) await putFile(it.id, blob);
+    if (isImg) await putFile(it.id, blob).catch((e) => this.log('照片放进小数据库失败：' + String(e)));
     this.addItem({ id: it.id, from: 'phone', kind: isImg ? 'image' : 'file', time: Date.now(), size: blob.size,
       w: meta.w, h: meta.h, mime: blob.type || meta.mime, name: meta.name });
     // 自动存进电脑：「下载\Tapaste」
@@ -311,6 +330,7 @@ export class Engine {
   private early = new Map<string, Partial<Item>>();
 
   private addItem(item: Item) {
+    if (this.state.receiving?.id === item.id) this.state.receiving = undefined;
     const e = this.early.get(item.id);
     if (e) { Object.assign(item, e); this.early.delete(item.id); }
     if (item.from === 'phone') this.setUnseen(this.state.unseen + 1);
@@ -333,7 +353,7 @@ export class Engine {
 
   /** 存记录：太长的文字只存开头，免得本机存储满了整个记录都存不上 */
   private saveItems() {
-    kv.set('items', JSON.stringify(this.state.items.map((it) => {
+    kv.set('items', JSON.stringify(this.state.items.map(({ pct: _pct, ...it }) => {
       if (it.kind !== 'text' || !it.text) return it;
       const t = trimForHistory(it.text);
       return t.cut ? { ...it, text: t.text, cut: true } : it;

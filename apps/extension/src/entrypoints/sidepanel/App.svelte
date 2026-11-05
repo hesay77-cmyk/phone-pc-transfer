@@ -1,6 +1,6 @@
 <script lang="ts">
   import { flip } from 'svelte/animate';
-  import { fade } from 'svelte/transition';
+  import { fade, slide } from 'svelte/transition';
   import { browser } from 'wxt/browser';
   import { putFile } from '../../lib/files';
   import { servePageDrop } from '../../lib/pagedrop';
@@ -178,6 +178,7 @@
     : it.dropped === 'cancelled' ? { cls: 'off', text: '已取消，不发了' }
     : it.dropped === 'expired' ? { cls: 'off', text: '放了一天也没送到，不发了' }
     : it.dropped === 'failed' ? { cls: 'bad', text: '没发出去' }
+    : it.pct !== undefined ? { cls: 'wait', text: `发送中 ${it.pct}%` }
     : { cls: 'wait', text: '等手机打开网页' };
 
   function onDrop(e: DragEvent) {
@@ -205,7 +206,7 @@
   }
 
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const kb = (n?: number) => (!n ? '' : n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
+  const kb = (n?: number) => (!n ? '' : n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
   const showFile = (downloadId: number) => void bg({ to: 'bg', type: 'show-file', downloadId });
 </script>
 
@@ -253,6 +254,22 @@
           {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>收起</button> · {/if}
           <button class="link" onclick={reset}>换一个新码</button>
         </p>
+      </section>
+    {/if}
+
+    {#if s.receiving}
+      {@const r = s.receiving}
+      {@const pct = r.done || !r.size ? 100 : Math.floor((r.got / r.size) * 100)}
+      {@const lost = !r.done && s.link !== 'connected'}
+      <!-- 正在收手机发来的大文件：让人知道在传、传到哪了 -->
+      <section class="card recv" class:lost aria-live="polite" transition:slide={{ duration: 220 }}>
+        <div class="recv-top">
+          <b>{r.done ? '收好了，正在保存…' : lost ? '连接断了，等手机重新发…' : '正在接收手机发来的'}</b>
+          <span class="pct">{pct}%</span>
+        </div>
+        <div class="recv-name" title={r.name}>{r.name}</div>
+        <div class="prog"><i style="width: {pct}%"></i></div>
+        <div class="small">{kb(r.got) || '0 KB'} / {kb(r.size)}</div>
       </section>
     {/if}
 
@@ -382,6 +399,15 @@
   .bad { color: var(--bad); }
 
   .card { background: var(--surface); border-radius: 16px; padding: 14px; margin: 0 0 12px; box-shadow: var(--shadow); }
+  .recv-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .recv-top b { font-weight: 600; color: var(--accent); }
+  .recv.lost .recv-top b { color: var(--wait); }
+  .recv .pct { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .recv-name { margin: 2px 0 8px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prog { height: 6px; border-radius: 3px; background: var(--card); overflow: hidden; margin-bottom: 6px; }
+  .prog i { display: block; height: 100%; border-radius: inherit; background: var(--grad); transition: width .25s ease-out; }
+  .recv.lost .prog i { background: var(--wait); }
+  .recv .small { color: var(--muted); font-variant-numeric: tabular-nums; margin: 0; }
   .hint, .small { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
   .hint:last-child { margin-bottom: 0; }
   .center { text-align: center; }
