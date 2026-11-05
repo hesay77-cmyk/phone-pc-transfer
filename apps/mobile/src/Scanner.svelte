@@ -51,19 +51,25 @@
 </script>
 
 <div class="scan">
-  <div class="frame"><video bind:this={video} playsinline muted autoplay></video></div>
-  <p>把电脑上Tapaste 侧边栏里的二维码对准上面的框。</p>
-  <p class="hint">电脑上没看到二维码？点开Tapaste 侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
+  <div class="frame"><video bind:this={video} playsinline muted autoplay></video><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i></div>
+  <p>把电脑上 Tapaste 侧边栏里的二维码对准上面的框。</p>
+  <p class="hint">电脑上没看到二维码？点开 Tapaste 侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
   {#if err}<p class="err">{err}</p>{/if}
   <button class="btn" onclick={onClose}>取消</button>
 </div>
 
 <style>
   .scan { text-align: center; }
-  .frame { width: min(78vw, 320px); aspect-ratio: 1; margin: 4px auto 14px; border-radius: 20px; box-shadow: 0 0 0 3px var(--accent-soft); overflow: hidden; background: #000; }
+  .frame { position: relative; width: min(76vw, 300px); aspect-ratio: 1; margin: 4px auto 18px; border-radius: 28px; overflow: hidden; background: #000; }
   video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  p { margin: 0 0 8px; font-size: 16px; }
-  .hint { font-size: 13.5px; color: var(--muted); }
-  .err { color: var(--bad); font-size: 14px; }
-  .btn { padding: 9px 22px; border: none; background: var(--card); color: var(--fg); border-radius: 12px; font-size: 15px; font-weight: 550; }
+  .c { position: absolute; width: 34px; height: 34px; border: 4px solid #fff; opacity: .9; }
+  .tl { top: 16px; left: 16px; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+  .tr { top: 16px; right: 16px; border-left: 0; border-bottom: 0; border-top-right-radius: 14px; }
+  .bl { bottom: 16px; left: 16px; border-right: 0; border-top: 0; border-bottom-left-radius: 14px; }
+  .br { bottom: 16px; right: 16px; border-left: 0; border-top: 0; border-bottom-right-radius: 14px; }
+  p { margin: 0 0 8px; font-size: 17px; }
+  .hint { font-size: 14px; color: var(--label2); }
+  .err { color: var(--red); font-size: 15px; }
+  .btn { margin-top: 8px; height: 40px; padding: 0 26px; border: none; border-radius: 20px; background: var(--fill); color: var(--label); font-size: 16px; font-weight: 600; cursor: pointer; }
+  .btn:active { transform: scale(.96); }
 </style>

@@ -58,16 +58,19 @@
 
 {#if url}
   <img src={url} alt="电脑发来的图片" />
-  <button class="btn" onclick={save}>{saveLabel}</button>
-  <button class="btn" onclick={copy}>{copyLabel}</button>
+  <div class="btns">
+    <button class="btn" onclick={save}>{saveLabel}</button>
+    <button class="btn" onclick={copy}>{copyLabel}</button>
+  </div>
   {#if tip}<p class="tip">{tip}</p>{/if}
 {:else if gone}
   <p class="tip">图片已经不在了（只保留最近 20 张）</p>
 {/if}
 
 <style>
-  img { display: block; max-width: 100%; max-height: 60vh; border-radius: 12px; margin: 8px 0 10px; -webkit-touch-callout: default; }
-  .btn { display: inline-flex; align-items: center; padding: 7px 15px; border: none; background: var(--card); color: var(--fg); border-radius: 11px; margin: 0 6px 0 0; font-size: 14.5px; font-weight: 550; }
-  .btn:active { opacity: .7; }
-  .tip { font-size: 13.5px; color: var(--muted); margin: 8px 0 0; }
+  img { display: block; max-width: 100%; max-height: 60vh; border-radius: 14px; margin: 8px 0 12px; -webkit-touch-callout: default; box-shadow: 0 0 0 .5px var(--sep); }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border: none; border-radius: 17px; background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; cursor: pointer; transition: transform .25s var(--ease), opacity .2s; }
+  .btn:active { transform: scale(.94); opacity: .8; }
+  .tip { font-size: 14px; color: var(--label2); margin: 10px 0 0; }
 </style>
