@@ -9,6 +9,7 @@
   let showQr = $state(false);
   let out = $state('');
   let sendTip = $state('');
+  let sendOk = $state(false);
   let failed = $state(false);
   let dragging = $state(false);
   let fileInput = $state<HTMLInputElement>();
@@ -43,6 +44,7 @@
     if (await browser.permissions.request({ origins: ['<all_urls>'] })) {
       needImagePermission = false;
       void browser.storage.local.remove('needImagePermission');
+      sendOk = true;
       sendTip = '好了，现在可以在网页的图片上右键「把这张图发到手机」';
     }
   }
@@ -66,32 +68,59 @@
     return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开互传网页就会自动连上' : '还没配对手机' };
   });
 
-  const tipFor = (r: SendResult | undefined) =>
-    !r?.ok ? (r?.error ?? '没发出去') : r.connected ? '已发出' : '手机现在没打开网页，先存着，打开后自动送到';
+  function showResult(r: SendResult | undefined, what = '') {
+    sendOk = !!r?.ok;
+    sendTip = !r?.ok ? (r?.error ?? '没发出去')
+      : r.connected ? `✓ ${what}已发到手机` : `${what}先存着，手机打开互传网页后自动送到`;
+  }
 
   async function send() {
     const text = out;
     if (!text.trim()) return;
     const r: SendResult = await engine({ to: 'engine', type: 'send-text', text });
     out = '';
-    sendTip = tipFor(r);
+    showResult(r);
   }
 
   /** 发图片：选的、粘贴的、拖进来的都走这里（先放进小数据库，再让引擎发） */
   async function sendImages(files: File[]) {
     const imgs = files.filter((f) => f.type.startsWith('image/'));
-    if (!imgs.length) { if (files.length) sendTip = '现在只能发图片'; return; }
+    if (!imgs.length) { if (files.length) { sendOk = false; sendTip = '现在只能发图片'; } return; }
     for (const f of imgs) {
       const fileId = 'up:' + Math.random().toString(36).slice(2);
       await putFile(fileId, f);
-      const r: SendResult = await engine({ to: 'engine', type: 'send-file', fileId, name: f.name || '图片' });
-      sendTip = tipFor(r);
+      const r: SendResult = await engine({ to: 'engine', type: 'send-file', fileId, name: f.name || shotName() });
+      showResult(r, imgs.length > 1 ? '' : '图片');
     }
   }
 
+  const shotName = () => `截图 ${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`;
+
+  /** 侧边栏里任何地方按 Ctrl+V：剪贴板里是图片（比如刚截的图）就直接发到手机 */
   function onPaste(e: ClipboardEvent) {
-    const files = Array.from(e.clipboardData?.files ?? []);
-    if (files.some((f) => f.type.startsWith('image/'))) { e.preventDefault(); void sendImages(files); }
+    // 往输入框里粘文字时（剪贴板里同时有字和图，比如从 Word 复制的）照常粘文字
+    if (e.target instanceof HTMLTextAreaElement && e.clipboardData?.types.includes('text/plain')) return;
+    const files = Array.from(e.clipboardData?.items ?? [])
+      .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+      .map((i) => i.getAsFile())
+      .filter((f): f is File => !!f);
+    if (files.length) { e.preventDefault(); void sendImages(files); }
+  }
+
+  /** 按钮：把剪贴板里的图（刚截的图）发到手机 */
+  async function sendClipboardImage() {
+    try {
+      const files: File[] = [];
+      for (const it of await navigator.clipboard.read()) {
+        const t = it.types.find((x) => x.startsWith('image/'));
+        if (t) files.push(new File([await it.getType(t)], shotName(), { type: t }));
+      }
+      if (!files.length) { sendOk = false; sendTip = '剪贴板里没有图片。先截图（Win+Shift+S），再点这个按钮'; return; }
+      await sendImages(files);
+    } catch {
+      sendOk = false;
+      sendTip = '读不到剪贴板里的图。可以点一下上面的输入框，再按 Ctrl+V';
+    }
   }
 
   function onDrop(e: DragEvent) {
@@ -122,6 +151,8 @@
   const kb = (n?: number) => (!n ? '' : n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
   const showFile = (downloadId: number) => void bg({ to: 'bg', type: 'show-file', downloadId });
 </script>
+
+<svelte:document onpaste={onPaste} />
 
 <main>
   <header>
@@ -180,12 +211,15 @@
     <section class="send" class:dragging aria-label="发到手机"
       ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
       <h2>发到手机</h2>
-      <textarea rows="2" bind:value={out} onpaste={onPaste} placeholder="输入或粘贴文字、网址；截图也可以直接粘贴进来"></textarea>
-      <button class="primary" onclick={send}>发到手机</button>
-      <button onclick={() => fileInput?.click()}>发图片…</button>
+      <textarea rows="2" bind:value={out} placeholder="输入或粘贴文字、网址"></textarea>
+      <div class="row">
+        <button class="primary" onclick={send}>发到手机</button>
+        <button onclick={sendClipboardImage}>发刚截的图</button>
+        <button onclick={() => fileInput?.click()}>选图片…</button>
+      </div>
       <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
-      <div class="small">{sendTip}</div>
-      <p class="hint">图片也可以直接拖到这里。在网页上选中文字、或在链接和图片上点右键，选「发到手机」也行。</p>
+      {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
+      <p class="hint">截图（Win+Shift+S）后点「发刚截的图」，或在这里按 Ctrl+V。图片也可以直接拖到这里。在网页上选中文字、或在链接和图片上点右键，也能「发到手机」。</p>
       {#if needImagePermission}<button onclick={allowImages}>允许发网页上的图</button>{/if}
     </section>
 
@@ -215,6 +249,9 @@
   .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
   .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; }
   textarea { margin-bottom: 6px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .result { padding: 8px 10px; border-radius: 8px; font-size: 13.5px; margin: 4px 0 8px; background: #fef3c7; color: #78350f; }
+  .result.ok { background: #dcfce7; color: #166534; }
   .send.dragging { outline: 2px dashed #2563eb; outline-offset: 2px; border-radius: 8px; }
   .tip { background: #fef3c7; color: #78350f; border-radius: 10px; padding: 10px 12px; font-size: 13px; border: none; margin: 8px 0; }
   footer { border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: 12px; }

@@ -15,7 +15,7 @@ export default defineConfig({
     name: '互传',
     description: '手机和电脑互传文字、照片：手机上点一下，电脑上直接 Ctrl+V。同一个 Wi-Fi 下直连，内容不经过任何服务器。',
     minimum_chrome_version: '116',
-    permissions: ['offscreen', 'notifications', 'clipboardWrite', 'downloads', 'contextMenus', 'activeTab', 'scripting', 'storage'],
+    permissions: ['offscreen', 'notifications', 'clipboardWrite', 'clipboardRead', 'downloads', 'contextMenus', 'activeTab', 'scripting', 'storage'],
     // 右键发网页上的图时才问用户要（自动测试时直接给，免得弹窗卡住）
     ...(process.env.VITE_E2E ? { host_permissions: ['<all_urls>'] } : { optional_host_permissions: ['<all_urls>'] }),
     action: { default_title: '互传' },

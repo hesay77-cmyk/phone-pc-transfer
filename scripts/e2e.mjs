@@ -138,6 +138,25 @@ const phoneImgOk = await phone.evaluate(async (n) => {
 check('电脑发图片到手机：手机显示，一字节不差', phoneImgOk);
 check('手机上有「存到相册」', await phone.isVisible('text=存到相册'));
 
+// 截图后：在侧边栏按 Ctrl+V（不用先点输入框），或点「发刚截的图」
+const putShot = (w, h) => panel.evaluate(async ([w, h]) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.fillStyle = '#e11d48'; g.fillRect(0, 0, w, h);
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': await new Promise((r) => c.toBlob(r, 'image/png')) })]);
+}, [w, h]);
+const phoneImgs = () => phone.locator('.item[data-kind="image"] img').count();
+let nImg = await phoneImgs();
+await putShot(320, 200);
+await panel.click('h1');
+await panel.keyboard.press('Control+V');
+await phone.waitForFunction((n) => document.querySelectorAll('.item[data-kind="image"] img').length > n, nImg, { timeout: 10000 })
+  .then(() => check('截图后在侧边栏按 Ctrl+V：手机收到', true), () => check('截图后在侧边栏按 Ctrl+V：手机收到', false));
+nImg = await phoneImgs();
+await putShot(200, 320);
+await panel.click('button:has-text("发刚截的图")');
+await phone.waitForFunction((n) => document.querySelectorAll('.item[data-kind="image"] img').length > n, nImg, { timeout: 10000 })
+  .then(() => check('点「发刚截的图」：手机收到', true), async () => check('点「发刚截的图」：手机收到', false, await panel.textContent('.send')));
+
 // 验证码大字显示
 await panel.fill('textarea', '384920');
 await panel.click('button:has-text("发到手机")');
