@@ -80,7 +80,7 @@ function testPng(w = 900, h = 700) {
 }
 
 const ctx = await chromium.launchPersistentContext(join(work, 'profile'), {
-  headless: false, args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`]
+  headless: false, args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`], ...(process.env.E2E_SHOTS ? { deviceScaleFactor: 2 } : {})
 });
 let [sw] = ctx.serviceWorkers();
 if (!sw) sw = await ctx.waitForEvent('serviceworker');
@@ -92,7 +92,7 @@ const pairUrl = await panel.getAttribute('.qr', 'data-url');
 check('插件显示配对二维码', /^http:\/\/localhost:8080\/#k=[A-Za-z0-9_-]{43}$/.test(pairUrl), pairUrl);
 
 const phoneBrowser = await chromium.launch({ headless: false });
-const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, ...(process.env.E2E_SHOTS ? { deviceScaleFactor: 2 } : {}) });
 await phoneCtx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:8080' });
 let phone = await phoneCtx.newPage();
 phone.on('pageerror', (e) => console.log('[手机页面出错]', e.message));
@@ -257,7 +257,11 @@ const tabState = () => panel.evaluate(() => ({
 await panel.waitForSelector('.tabs .t-pc.on', { timeout: 3000 }).catch(() => {});
 const afterSend = await tabState();
 check('侧边栏分两栏：刚发到手机后显示「发到手机的」，只有电脑发出的', afterSend.on === 'pc' && afterSend.from === 'pc', JSON.stringify(afterSend));
-if (process.env.E2E_SHOTS) { await panel.setViewportSize({ width: 380, height: 1000 }); await panel.screenshot({ path: process.env.E2E_SHOTS + '/panel-pc.png' }); }
+if (process.env.E2E_SHOTS) {
+  await panel.setViewportSize({ width: 380, height: 1000 }); await panel.screenshot({ path: process.env.E2E_SHOTS + '/panel-pc.png' });
+  await phone.screenshot({ path: process.env.E2E_SHOTS + '/phone-mid.png' });
+  await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: process.env.E2E_SHOTS + '/phone-mid-dark.png' }); await phone.emulateMedia({ colorScheme: null });
+}
 
 // 网页上右键「发到手机」（测试脚本点不了真的右键菜单，直接调用插件里处理菜单的那段）
 const web = await ctx.newPage();
@@ -528,6 +532,9 @@ if (process.env.E2E_SHOTS) {
   await panel.setViewportSize({ width: 380, height: 900 });
   await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel.png'), fullPage: true });
   if (!phone.isClosed()) await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone.png'), fullPage: true });
+  await panel.emulateMedia({ colorScheme: 'dark' });
+  await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-dark.png'), fullPage: true });
+  if (!phone.isClosed()) { await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-dark.png'), fullPage: true }); }
 }
 
 console.log(failures ? `\n${failures} 项没通过` : '\n全部通过');

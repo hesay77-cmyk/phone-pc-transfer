@@ -1,12 +1,22 @@
 :root {
-  --bg: #fff; --fg: #1f1f1f; --muted: #6b6b6b; --line: #e6e6e6; --card: #f4f4f5;
-  --ok: #1a7f37; --bad: #cf222e; --wait: #9a6700; --accent: #2563eb;
+  --bg: #f4f5f9; --surface: #ffffff; --fg: #141824; --muted: #6b7280; --line: #e6e8ee; --card: #f1f2f6;
+  --accent: #5b5bf0; --accent-soft: #eef0ff;
+  --ok: #059669; --ok-soft: #e8f8f1; --bad: #dc2626; --bad-soft: #fdeeee; --wait: #b45309; --wait-soft: #fff6e5;
+  --shadow: 0 1px 2px rgba(20, 24, 36, .04), 0 4px 16px rgba(20, 24, 36, .07);
+  --grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #111214; --fg: #ececec; --muted: #9a9a9a; --line: #2f3033; --card: #1d1e21; --ok: #4ac26b; --bad: #ff7b72; --wait: #d29922; --accent: #6ea8fe; }
+  :root {
+    --bg: #0f1116; --surface: #181b22; --fg: #eceef4; --muted: #9ba1ae; --line: #272b35; --card: #20242d;
+    --accent: #8b8ff9; --accent-soft: rgba(139, 143, 249, .14);
+    --ok: #34d399; --ok-soft: rgba(52, 211, 153, .12); --bad: #f87171; --bad-soft: rgba(248, 113, 113, .12); --wait: #fbbf24; --wait-soft: rgba(251, 191, 36, .12);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .3);
+  }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 button { font: inherit; }
-textarea { width: 100%; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); }
+textarea { width: 100%; font: inherit; padding: 11px 13px; border: 1px solid transparent; border-radius: 14px; background: var(--card); color: var(--fg); transition: border-color .15s, background .15s; }
+textarea:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+textarea::placeholder { color: var(--muted); }

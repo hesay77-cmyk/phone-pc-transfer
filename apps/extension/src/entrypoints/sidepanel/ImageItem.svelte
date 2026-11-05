@@ -52,9 +52,10 @@
 {/if}
 
 <style>
-  img { max-width: 100%; max-height: 280px; display: block; border-radius: 8px; margin: 4px 0 8px; cursor: grab; }
+  img { max-width: 100%; max-height: 280px; display: block; border-radius: 10px; margin: 2px 0 8px; cursor: grab; box-shadow: 0 0 0 1px var(--line); }
   .gone { color: var(--muted); font-size: 12.5px; margin: 4px 0; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .row button { padding: 3px 12px; font-size: 12px; border-radius: 8px; }
   .small { font-size: 12px; margin-top: 4px; }
   .bad { color: var(--bad); }
 </style>

@@ -66,7 +66,8 @@
 {/if}
 
 <style>
-  img { display: block; max-width: 100%; max-height: 60vh; border-radius: 10px; margin: 6px 0 2px; -webkit-touch-callout: default; }
-  .btn { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); background: var(--bg, #fff); color: var(--fg); border-radius: 10px; margin: 6px 6px 0 0; font-size: 15px; }
-  .tip { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+  img { display: block; max-width: 100%; max-height: 60vh; border-radius: 12px; margin: 8px 0 10px; -webkit-touch-callout: default; }
+  .btn { display: inline-flex; align-items: center; padding: 7px 15px; border: none; background: var(--card); color: var(--fg); border-radius: 11px; margin: 0 6px 0 0; font-size: 14.5px; font-weight: 550; }
+  .btn:active { opacity: .7; }
+  .tip { font-size: 13.5px; color: var(--muted); margin: 8px 0 0; }
 </style>

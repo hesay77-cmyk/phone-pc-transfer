@@ -46,7 +46,7 @@
     if (manifestLink) {
       const abs = (p: string) => new URL(p, location.href).href;
       const man = {
-        name: '互传', short_name: '互传', display: 'standalone', background_color: '#ffffff', theme_color: '#2563eb',
+        name: '互传', short_name: '互传', display: 'standalone', background_color: '#f4f5f9', theme_color: '#f4f5f9',
         start_url: location.href, scope: abs('./'),
         icons: [{ src: abs('icon-192.png'), sizes: '192x192', type: 'image/png' }, { src: abs('icon-512.png'), sizes: '512x512', type: 'image/png' }]
       };
@@ -220,10 +220,27 @@
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 </script>
 
+{#snippet icon(name: 'clip' | 'image' | 'send')}
+  <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+    {#if name === 'clip'}<rect x="7" y="4" width="10" height="4" rx="1.5" /><path d="M7 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1" />
+    {:else if name === 'image'}<rect x="3.5" y="4.5" width="17" height="15" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 3.5" />
+    {:else}<path d="M4 12 20 4l-6 16-3-7-7-1Z" />{/if}
+  </svg>
+{/snippet}
+
 <main>
   <header>
-    <h1>互传</h1>
-    <div class="status {status.cls}" data-link={link}><span class="dot"></span>{status.text}</div>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <defs><clipPath id="lc"><rect x="15" y="6" width="11" height="19" rx="3" /></clipPath></defs>
+        <rect width="32" height="32" rx="9" fill="#fff" />
+        <rect x="4.5" y="9" width="17" height="12" rx="3" fill="#a78bfa" />
+        <rect x="15" y="6" width="11" height="19" rx="3" fill="#818cf8" />
+        <rect x="4.5" y="9" width="17" height="12" rx="3" fill="#4f46e5" clip-path="url(#lc)" />
+      </svg>
+      <h1>互传</h1>
+      <div class="status {status.cls}" data-link={link}><span class="dot"></span><span>{status.text}</span></div>
+    </div>
     {#if link === 'blocked'}
       <p class="hint">电脑找到了，但这个 Wi-Fi 不让手机和电脑直接连（有些公司或公共场所的 Wi-Fi 会这样）。手机和电脑换成同一个家里的 Wi-Fi 就能用。这边会一直自动重试。</p>
     {/if}
@@ -234,9 +251,9 @@
   </header>
 
   {#if scanning}
-    <section><Scanner onSecret={adopt} onClose={() => (scanning = false)} /></section>
+    <section class="card"><Scanner onSecret={adopt} onClose={() => (scanning = false)} /></section>
   {:else if !secret}
-    <section>
+    <section class="card">
       {#if standalone}
         <p class="big-hint">第一次用，扫一下电脑上的二维码配对（只用扫这一次）。</p>
       {:else}
@@ -269,30 +286,36 @@
         {/if}
       </section>
     {/if}
-    <section>
-      <button class="big" onclick={pasteAndSend}>粘贴并发送到电脑</button>
-      <button class="big alt" onclick={() => fileInput?.click()}>发照片到电脑</button>
+    <section class="card hero">
+      <button class="big" onclick={pasteAndSend}>{@render icon('clip')}粘贴并发送到电脑</button>
+      <button class="big alt" onclick={() => fileInput?.click()}>{@render icon('image')}发照片到电脑</button>
       <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onFiles} />
       {#if note}<p class="note">{note}</p>{/if}
-      {#each sent as s (s.id)}
-        <div class="sent" data-state={s.state}>
-          {s.label} ·
-          {#if s.state === 'done'}<span class="ok">电脑已收到</span>
-          {:else if s.state === 'cancelled'}已取消，不发了
-          {:else if s.state === 'expired'}放了一天也没送到，不发了
-          {:else if s.state === 'failed'}<span class="bad">没发出去</span>
-          {:else if s.state === 'sending'}发送中{s.pct !== undefined ? ` ${s.pct}%` : '…'}
-          {:else}等连上电脑后自动发{/if}
-          {#if s.state === 'waiting' || s.state === 'sending'}<button class="link" onclick={() => cancelSent(s.id)}>不发了</button>{/if}
+      {#if sent.length}
+        <div class="sents">
+          {#each sent as s (s.id)}
+            <div class="sent" data-state={s.state}>
+              <span class="what">{s.label}</span>
+              {#if s.state === 'done'}<span class="chip ok">电脑已收到 ✓</span>
+              {:else if s.state === 'cancelled'}<span class="chip">已取消，不发了</span>
+              {:else if s.state === 'expired'}<span class="chip">放了一天也没送到，不发了</span>
+              {:else if s.state === 'failed'}<span class="chip bad">没发出去</span>
+              {:else if s.state === 'sending'}<span class="chip wait">发送中{s.pct !== undefined ? ` ${s.pct}%` : '…'}</span>
+              {:else}<span class="chip wait">等连上电脑后自动发</span>{/if}
+              {#if s.state === 'waiting' || s.state === 'sending'}<button class="link" onclick={() => cancelSent(s.id)}>不发了</button>{/if}
+            </div>
+          {/each}
         </div>
-      {/each}
-      <textarea rows="2" bind:value={txt} placeholder="也可以在这里打字，再点发送"></textarea>
-      <button class="btn" onclick={sendTyped}>发送</button>
+      {/if}
+      <div class="compose">
+        <textarea rows="1" bind:value={txt} placeholder="或者在这里打字"></textarea>
+        <button class="send-btn" onclick={sendTyped} aria-label="发送">{@render icon('send')}<span>发送</span></button>
+      </div>
     </section>
 
-    <section>
-      <h2>电脑发来的</h2>
-      {#if got.length === 0}<p class="hint">还没有。电脑上可以在网页里右键「发到手机」，或者在互传侧边栏里发文字、网址、图片过来。</p>{/if}
+    <section class="got">
+      <h2>电脑发来的{#if got.length}<span class="n">{got.length}</span>{/if}</h2>
+      {#if got.length === 0}<p class="empty">还没有。电脑上可以在网页里右键「发到手机」，或者在互传侧边栏里发文字、网址、图片过来。</p>{/if}
       {#each got as g (g.id)}
         <div class="item" data-kind={g.kind ?? 'text'}>
           <div class="meta">{time(g.time)}{#if g.size} · {kb(g.size)}{/if}</div>
@@ -302,12 +325,14 @@
             {@const t = g.text ?? ''}
             <div class="text" class:code={isCode(t)}>{isCode(t) ? t.trim() : t}</div>
             {#if g.cut}<p class="hint">太长了，记录里只留了开头</p>{/if}
-            {#if isUrl(t)}<a class="btn" href={t.trim()} target="_blank" rel="noopener">打开网址</a>{/if}
-            <button class="btn" onclick={(e) => copy(t.trim(), e)}>复制</button>
+            <div class="acts">
+              {#if isUrl(t)}<a class="btn" href={t.trim()} target="_blank" rel="noopener">打开网址</a>{/if}
+              <button class="btn" onclick={(e) => copy(t.trim(), e)}>复制</button>
+            </div>
           {/if}
         </div>
       {/each}
-      {#if got.length}<button class="link" onclick={clearGot}>清空记录</button>{/if}
+      {#if got.length}<p class="center"><button class="link" onclick={clearGot}>清空记录</button></p>{/if}
     </section>
   {/if}
 
@@ -318,32 +343,67 @@
 </main>
 
 <style>
-  main { padding: max(14px, env(safe-area-inset-top)) 16px max(30px, env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 2px; }
-  h2 { font-size: 16px; margin: 0 0 8px; }
-  section { border-top: 1px solid var(--line); padding: 14px 0; }
-  .status { font-size: 15px; margin-bottom: 8px; }
-  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: var(--muted); }
-  .ok { color: var(--ok); } .ok .dot { background: var(--ok); }
-  .wait { color: var(--wait); } .wait .dot { background: var(--wait); }
-  .bad { color: var(--bad); } .bad .dot { background: var(--bad); }
+  main { padding: max(16px, env(safe-area-inset-top)) 16px max(30px, env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+  header { margin-bottom: 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .logo { width: 32px; height: 32px; flex: none; filter: drop-shadow(0 2px 6px rgba(79, 70, 229, .22)); }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: .5px; margin: 0; }
+  h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 650; margin: 0 0 10px; }
+  .n { font-size: 12px; font-weight: 600; padding: 0 8px; line-height: 20px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+  .ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+  .status { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 550; background: var(--card); color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; }
+  .status.ok { background: var(--ok-soft); color: var(--ok); }
+  .status.wait { background: var(--wait-soft); color: var(--wait); }
+  .status.wait .dot { animation: pulse 1.2s ease-in-out infinite; }
+  .status.bad { background: var(--bad-soft); color: var(--bad); }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .bad { color: var(--bad); }
+  header .hint { margin: 10px 0 0; }
+
+  .card { background: var(--surface); border-radius: 22px; padding: 16px; margin: 0 0 16px; box-shadow: var(--shadow); }
   .hint { font-size: 13.5px; color: var(--muted); margin: 0 0 8px; }
-  .big-hint { font-size: 18px; line-height: 1.6; }
-  .big { display: block; width: 100%; font-size: 19px; font-weight: 600; padding: 18px; margin: 0 0 12px; border: none; border-radius: 16px; background: #2563eb; color: #fff; }
-  .big.alt { background: var(--card); color: var(--fg); border: 1px solid var(--line); }
-  .big:active { opacity: .7; }
-  .note { font-size: 14px; color: var(--wait); margin: 0 0 8px; }
-  .sent { font-size: 14px; color: var(--muted); margin: 0 0 6px; }
-  textarea { margin-top: 6px; }
-  .btn { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 10px; margin: 6px 6px 0 0; text-decoration: none; font-size: 15px; }
-  .home-tip { background: #eff6ff; border: none; border-radius: 14px; padding: 12px 14px; margin: 4px 0 6px; font-size: 15px; }
-  .home-tip p { margin: 0 0 6px; }
-  .home-tip ol { margin: 0 0 8px; padding-left: 22px; line-height: 1.6; }
-  .btn.plain { border-color: transparent; background: transparent; color: var(--muted); }
-  .item { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
-  .meta { font-size: 12px; color: var(--muted); }
-  .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 4px; font-size: 17px; max-height: 50vh; overflow: auto; }
-  .text.code { font-size: 40px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; margin: 6px 0; }
-  .link { border: none; background: none; color: var(--muted); text-decoration: underline; font-size: 12px; padding: 0; }
-  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 10px; }
+  .big-hint { font-size: 18px; line-height: 1.6; margin: 0 0 14px; }
+  .center { text-align: center; margin: 8px 0 0; }
+
+  .big { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; font-size: 18px; font-weight: 650; padding: 17px; margin: 0 0 10px; border: none; border-radius: 16px; background: var(--grad); color: #fff; box-shadow: 0 8px 20px rgba(99, 102, 241, .32); transition: transform .08s, opacity .15s; }
+  .big .ic { width: 22px; height: 22px; }
+  .big.alt { background: var(--card); color: var(--fg); box-shadow: none; }
+  .big.alt .ic { color: var(--accent); }
+  .big:active { transform: scale(.98); opacity: .85; }
+  .note { font-size: 14px; color: var(--wait); background: var(--wait-soft); border-radius: 12px; padding: 8px 12px; margin: 2px 0 10px; }
+
+  .sents { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; }
+  .sent { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 13.5px; color: var(--muted); }
+  .what { color: var(--fg); font-weight: 500; }
+  .chip { padding: 1px 9px; border-radius: 8px; font-size: 12.5px; font-weight: 550; background: var(--card); }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.wait { background: var(--wait-soft); color: var(--wait); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+
+  .compose { display: flex; gap: 8px; align-items: flex-end; margin-top: 4px; }
+  .compose textarea { flex: 1; min-height: 46px; resize: none; field-sizing: content; max-height: 40vh; }
+  .send-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 46px; padding: 0 16px; border: none; border-radius: 14px; background: var(--accent-soft); color: var(--accent); font-weight: 650; font-size: 15px; }
+  .send-btn .ic { width: 18px; height: 18px; }
+  .send-btn:active { opacity: .7; }
+
+  .btn { display: inline-flex; align-items: center; padding: 7px 15px; border: none; background: var(--card); color: var(--fg); border-radius: 11px; margin: 0; text-decoration: none; font-size: 14.5px; font-weight: 550; }
+  .btn:active { opacity: .7; }
+  .home-tip { background: var(--accent-soft); border-radius: 18px; padding: 14px 16px; margin: 0 0 16px; font-size: 15px; }
+  .home-tip p { margin: 0 0 10px; }
+  .home-tip b { color: var(--accent); }
+  .home-tip ol { margin: 0 0 10px; padding-left: 22px; line-height: 1.65; }
+  .home-tip .btn { background: var(--surface); margin-right: 6px; }
+  .home-tip .btn.plain, .btn.plain { background: transparent; color: var(--muted); }
+
+  .got { margin-top: 6px; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 22px 18px; margin: 0; border: 1.5px dashed var(--line); border-radius: 18px; }
+  .item { background: var(--surface); border-radius: 18px; padding: 12px 14px 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 10px; font-size: 17px; max-height: 50vh; overflow: auto; }
+  .text.code { font-size: 40px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; margin: 6px 0 10px; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .link { border: none; background: none; color: var(--muted); text-decoration: underline; font-size: 13px; padding: 0; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 18px; }
 </style>

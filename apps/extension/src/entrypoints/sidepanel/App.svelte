@@ -170,11 +170,12 @@
     s = await engine({ to: 'engine', type: 'clear-items' });
   }
   async function dismiss(what: 'newPhone' | 'skippedSecret') { s = await engine({ to: 'engine', type: 'dismiss', what }); }
-  const pcStatus = (it: Item) => it.delivered ? '发到手机 · 手机已收到 ✓'
-    : it.dropped === 'cancelled' ? '发到手机 · 已取消，不发了'
-    : it.dropped === 'expired' ? '发到手机 · 放了一天也没送到，不发了'
-    : it.dropped === 'failed' ? '发到手机 · 没发出去'
-    : '发到手机 · 等手机打开网页';
+  /** 发到手机的一条现在怎么样了：文字 + 颜色 */
+  const pcStatus = (it: Item) => it.delivered ? { cls: 'ok', text: '手机已收到 ✓' }
+    : it.dropped === 'cancelled' ? { cls: 'off', text: '已取消，不发了' }
+    : it.dropped === 'expired' ? { cls: 'off', text: '放了一天也没送到，不发了' }
+    : it.dropped === 'failed' ? { cls: 'bad', text: '没发出去' }
+    : { cls: 'wait', text: '等手机打开网页' };
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -207,48 +208,65 @@
 
 <svelte:document onpaste={onPaste} />
 
+{#snippet icon(name: 'send' | 'clip' | 'image' | 'phone' | 'pc' | 'qr' | 'info')}
+  <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+    {#if name === 'send'}<path d="M4 12 20 4l-6 16-3-7-7-1Z" />
+    {:else if name === 'clip'}<rect x="7" y="4" width="10" height="4" rx="1.5" /><path d="M7 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1" />
+    {:else if name === 'image'}<rect x="3.5" y="4.5" width="17" height="15" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 3.5" />
+    {:else if name === 'phone'}<rect x="7" y="2.5" width="10" height="19" rx="2.5" /><path d="M11 18.5h2" />
+    {:else if name === 'pc'}<rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />
+    {:else if name === 'qr'}<rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" />
+    {:else}<circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 8h.01" />{/if}
+  </svg>
+{/snippet}
+
 <main>
   <header>
-    <h1>互传</h1>
-    <div class="status {status.cls}" data-link={s?.link ?? ''}><span class="dot"></span>{status.text}</div>
-    {#if s?.link === 'blocked'}<div class="small">有些公司或公共场所的 Wi-Fi 会这样。手机和电脑换成同一个家里的 Wi-Fi 就能用；这边会一直自动重试。</div>{/if}
-    {#if s?.newerPeer}<div class="small bad">手机那边的版本比插件新，请更新插件</div>{/if}
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <defs><clipPath id="lc"><rect x="15" y="6" width="11" height="19" rx="3" /></clipPath></defs>
+        <rect width="32" height="32" rx="9" fill="#fff" />
+        <rect x="4.5" y="9" width="17" height="12" rx="3" fill="#a78bfa" />
+        <rect x="15" y="6" width="11" height="19" rx="3" fill="#818cf8" />
+        <rect x="4.5" y="9" width="17" height="12" rx="3" fill="#4f46e5" clip-path="url(#lc)" />
+      </svg>
+      <h1>互传</h1>
+    </div>
+    <div class="status {status.cls}" data-link={s?.link ?? ''}><span class="dot"></span><span>{status.text}</span></div>
+    {#if s?.link === 'blocked'}<p class="small">有些公司或公共场所的 Wi-Fi 会这样。手机和电脑换成同一个家里的 Wi-Fi 就能用；这边会一直自动重试。</p>{/if}
+    {#if s?.newerPeer}<p class="small bad">手机那边的版本比插件新，请更新插件</p>{/if}
   </header>
 
   {#if failed}
-    <p class="bad">插件后台没启动起来。请到 chrome://extensions 里把「互传」关掉再打开。</p>
+    <p class="tip bad">插件后台没启动起来。请到 chrome://extensions 里把「互传」关掉再打开。</p>
   {:else if s}
     {#if !s.everPaired || showQr}
-      <section class="pair">
-        <h2>{s.everPaired ? '换一台手机' : '第一步：用 iPhone 扫码'}</h2>
+      <section class="card pair">
+        <h2>{@render icon('qr')}{s.everPaired ? '换一台手机' : '第一步：用 iPhone 扫码'}</h2>
         <p class="hint">用 iPhone 自带的相机扫下面的码，会打开互传网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
-        <Qr text={s.pairingUrl} />
-        <p class="small">
+        <div class="qrbox"><Qr text={s.pairingUrl} /></div>
+        <p class="small center">
           {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>收起</button> · {/if}
           <button class="link" onclick={reset}>换一个新码</button>
         </p>
       </section>
     {/if}
 
-    <section class="send" class:dragging aria-label="发到手机"
+    <section class="card send" class:dragging aria-label="发到手机"
       ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
-      <h2>发到手机</h2>
       <label class="auto" class:on={s.autoSend}>
-        <input type="checkbox" checked={s.autoSend} onchange={(e) => setAuto((e.target as HTMLInputElement).checked)} />
-        <span><b>复制就发</b>：在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上互传网页开着时）</span>
+        <span class="auto-text"><b>复制就发</b><span>在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上的互传网页要开着）</span></span>
+        <input type="checkbox" role="switch" checked={s.autoSend} onchange={(e) => setAuto((e.target as HTMLInputElement).checked)} />
       </label>
       <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder="输入或粘贴文字、代码、网址，按 Ctrl+Enter 发送"></textarea>
       <div class="row">
-        <button class="primary" onclick={send}>发到手机</button>
-        <button onclick={sendClipboard}>发刚复制的</button>
-        <button onclick={() => fileInput?.click()}>选图片…</button>
+        <button class="primary" onclick={send}>{@render icon('send')}发到手机</button>
+        <button onclick={sendClipboard}>{@render icon('clip')}发刚复制的</button>
+        <button onclick={() => fileInput?.click()}>{@render icon('image')}选图片…</button>
       </div>
       <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
       {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
-      <p class="hint">
-        在任何软件里复制了文字或截了图，点「发刚复制的」就行；常用的话打开上面的「复制就发」，复制完自动发。
-        网页上选中文字、或在链接和图片上右键，也能「发到手机」。
-      </p>
+      <p class="hint">复制了文字或截了图，点「发刚复制的」就行。网页上选中文字、在链接或图片上右键，也能发到手机。</p>
     </section>
 
     {#if needImagePermission || permTip}
@@ -283,45 +301,47 @@
       </section>
     {/if}
 
-    <section>
+    <section class="recent">
       <div class="tabs" role="tablist" aria-label="最近">
         <button role="tab" class="t-phone" class:on={tab === 'phone'} aria-selected={tab === 'phone'} onclick={() => showTab('phone')}>
-          手机发来的<span class="n">{fromPhone.length}</span>
+          {@render icon('phone')}手机发来的<span class="n">{fromPhone.length}</span>
         </button>
         <button role="tab" class="t-pc" class:on={tab === 'pc'} aria-selected={tab === 'pc'} onclick={() => showTab('pc')}>
-          发到手机的<span class="n">{toPhone.length}</span>
+          {@render icon('pc')}发到手机的<span class="n">{toPhone.length}</span>
         </button>
       </div>
       {#if shown.length === 0}
-        <p class="hint">
+        <p class="empty">
           {#if tab === 'phone'}手机发来的文字会自动复制好，直接 Ctrl+V；照片会自动存进「下载\互传」文件夹。
           {:else}在上面打字、点「发刚复制的」、或在网页上右键「发到手机」，发出去的东西都在这里，能看到手机收到没有。{/if}
         </p>
       {/if}
       <div class="items">
         {#each shown as it (it.id)}
+          {@const st = it.from === 'pc' ? pcStatus(it) : null}
           <div class="item" data-kind={it.kind} data-from={it.from}>
             <div class="meta">
-              {it.from === 'phone' ? '手机发来' : pcStatus(it)}
-              · {time(it.time)}{#if it.kind === 'image'} · {kb(it.size)}{/if}
-              {#if it.kind === 'text' && it.from === 'phone' && it.copied} · 已复制{/if}
+              {#if st}<span class="who">发到手机</span><span class="st {st.cls}">{st.text}</span>
+              {:else}<span class="who">手机发来</span>{#if it.kind === 'text' && it.copied}<span class="st ok">已复制</span>{/if}{/if}
+              <span class="when">{time(it.time) + (it.kind === 'image' ? ' · ' + kb(it.size) : '')}</span>
             </div>
             {#if it.kind === 'text'}
               <div class="text">{it.text}</div>
               {#if it.cut}<div class="small">太长了，记录里只留了开头（手机发来时整段已经复制好了）</div>{/if}
-              <button onclick={(e) => copyText(it, e)}>复制</button>
             {:else}
               <ImageItem item={it} onShow={showFile} onNeedPermission={needPermission} />
             {/if}
-            {#if it.from === 'pc' && !it.delivered && !it.dropped}
-              <button class="cancel" onclick={() => cancel(it)}>不发了</button>
+            {#if it.kind === 'text' || (it.from === 'pc' && !it.delivered && !it.dropped)}
+              <div class="acts">
+                {#if it.kind === 'text'}<button class="sm" onclick={(e) => copyText(it, e)}>复制</button>{/if}
+                {#if it.from === 'pc' && !it.delivered && !it.dropped}<button class="sm cancel" onclick={() => cancel(it)}>不发了</button>{/if}
+              </div>
             {/if}
           </div>
         {/each}
       </div>
-      {#if s.items.length}<p class="small"><button class="link" onclick={clearItems}>清空记录</button></p>{/if}
+      {#if s.items.length}<p class="small center"><button class="link" onclick={clearItems}>清空记录</button></p>{/if}
     </section>
-
 
     <footer>
       {#if s.everPaired && !showQr}<button class="link" onclick={() => (showQr = true)}>换一台手机 / 显示二维码</button> · {/if}
@@ -332,42 +352,87 @@
 </main>
 
 <style>
-  main { padding: 12px 14px 40px; }
-  header { margin-bottom: 4px; }
-  h1 { font-size: 18px; margin: 0 0 4px; }
-  h2 { font-size: 15px; margin: 0 0 6px; }
-  section { border-top: 1px solid var(--line); padding: 12px 0; }
-  .status { font-size: 13.5px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: var(--muted); }
-  .ok { color: var(--ok); } .ok .dot { background: var(--ok); }
-  .wait { color: var(--wait); } .wait .dot { background: var(--wait); }
-  .idle { color: var(--muted); }
+  main { padding: 14px 14px 40px; }
+  header { padding: 2px 2px 12px; }
+  .brand { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+  .logo { width: 28px; height: 28px; flex: none; filter: drop-shadow(0 2px 6px rgba(79, 70, 229, .22)); }
+  h1 { font-size: 19px; font-weight: 700; letter-spacing: .5px; margin: 0; cursor: default; }
+  h2 { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 650; margin: 0 0 10px; }
+  h2 :global(.ic) { color: var(--accent); }
+  .ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+  .status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 550; background: var(--card); color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; }
+  .status.ok { background: var(--ok-soft); color: var(--ok); }
+  .status.ok .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .status.wait { background: var(--wait-soft); color: var(--wait); }
+  .status.wait .dot { animation: pulse 1.2s ease-in-out infinite; }
+  .status.bad { background: var(--bad-soft); color: var(--bad); }
+  @keyframes pulse { 50% { opacity: .3; } }
   .bad { color: var(--bad); }
+
+  .card { background: var(--surface); border-radius: 16px; padding: 14px; margin: 0 0 12px; box-shadow: var(--shadow); }
   .hint, .small { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
-  .items { display: flex; flex-direction: column; gap: 8px; }
-  .item { background: var(--card); border-radius: 10px; padding: 8px 10px; border-left: 4px solid transparent; }
-  .item[data-from="phone"] { border-left-color: var(--accent); }
-  .item[data-from="pc"] { border-left-color: var(--ok); }
-  .tabs { display: flex; gap: 0; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .tabs button { flex: 1; border: none; border-radius: 0; padding: 8px 4px; font-weight: 600; background: transparent; color: var(--muted); }
-  .tabs button + button { border-left: 1px solid var(--line); }
-  .tabs .t-phone.on { background: var(--accent); color: #fff; }
-  .tabs .t-pc.on { background: var(--ok); color: #fff; }
-  .tabs .n { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 11.5px; line-height: 18px; background: rgba(127,127,127,.18); }
-  .tabs .on .n { background: rgba(255,255,255,.25); }
-  .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-  .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; max-height: 220px; overflow: auto; }
-  .cancel { margin-top: 6px; }
-  textarea { margin-bottom: 6px; }
-  .auto { display: flex; gap: 8px; align-items: flex-start; background: var(--card); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; font-size: 13px; cursor: pointer; }
-  .auto.on { background: #dcfce7; color: #166534; }
-  .auto input { margin-top: 2px; width: 16px; height: 16px; flex: none; }
-  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
-  .result { padding: 8px 10px; border-radius: 8px; font-size: 13.5px; margin: 4px 0 8px; background: #fef3c7; color: #78350f; }
-  .result.ok { background: #dcfce7; color: #166534; }
-  .send.dragging { outline: 2px dashed #2563eb; outline-offset: 2px; border-radius: 8px; }
-  .perm div { margin-top: 8px; }
-  .tip { background: #fef3c7; color: #78350f; border-radius: 10px; padding: 10px 12px; font-size: 13px; border: none; margin: 8px 0; }
-  footer { border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: 12px; }
-  pre { white-space: pre-wrap; font-size: 11.5px; max-height: 260px; overflow: auto; }
+  .hint:last-child { margin-bottom: 0; }
+  .center { text-align: center; }
+  .small.center { margin: 10px 0 0; }
+
+  .pair .qrbox { display: flex; justify-content: center; padding: 6px 0 2px; }
+
+  .auto { display: flex; gap: 12px; align-items: center; background: var(--card); border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; font-size: 12.5px; cursor: pointer; transition: background .2s; }
+  .auto.on { background: var(--ok-soft); }
+  .auto-text { flex: 1; display: flex; flex-direction: column; color: var(--muted); }
+  .auto-text b { color: var(--fg); font-size: 13.5px; font-weight: 650; }
+  .auto.on .auto-text b { color: var(--ok); }
+  .auto input { appearance: none; -webkit-appearance: none; margin: 0; flex: none; position: relative; width: 38px; height: 22px; border-radius: 11px; background: color-mix(in srgb, var(--muted) 40%, transparent); cursor: pointer; transition: background .2s; }
+  .auto input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s; }
+  .auto input:checked { background: var(--ok); }
+  .auto input:checked::before { transform: translateX(16px); }
+
+  textarea { margin-bottom: 10px; min-height: 76px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .row button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 11px; }
+  .row .primary { flex: 1 1 100%; padding: 10px 12px; font-weight: 600; font-size: 14.5px; }
+  .row button:not(.primary) { flex: 1 1 0; white-space: nowrap; }
+  .result { padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 500; margin: 2px 0 10px; background: var(--wait-soft); color: var(--wait); }
+  .result.ok { background: var(--ok-soft); color: var(--ok); }
+  .send.dragging { outline: 2px dashed var(--accent); outline-offset: 3px; }
+
+  .tip { background: var(--wait-soft); color: var(--fg); border-radius: 14px; padding: 11px 13px; font-size: 12.5px; margin: 0 0 12px; border: 1px solid color-mix(in srgb, var(--wait) 22%, transparent); }
+  .tip b { color: var(--wait); }
+  .perm div { margin-top: 10px; }
+
+  .recent { margin-top: 18px; }
+  .tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 12px; background: color-mix(in srgb, var(--card) 70%, var(--line)); border-radius: 13px; }
+  .tabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 4px; border-radius: 10px; font-weight: 600; font-size: 13px; background: transparent; color: var(--muted); }
+  .tabs button:hover { color: var(--fg); background: transparent; }
+  .tabs .on { background: var(--surface); box-shadow: 0 1px 3px rgba(20, 24, 36, .12); }
+  .tabs .t-phone.on { color: var(--accent); }
+  .tabs .t-pc.on { color: var(--ok); }
+  .tabs .n { min-width: 20px; padding: 0 6px; border-radius: 10px; font-size: 11px; line-height: 18px; background: color-mix(in srgb, var(--muted) 18%, transparent); color: inherit; }
+  .tabs .t-phone.on .n { background: var(--accent-soft); }
+  .tabs .t-pc.on .n { background: var(--ok-soft); }
+  .empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 18px 16px; margin: 0; border: 1.5px dashed var(--line); border-radius: 14px; }
+
+  .items { display: flex; flex-direction: column; gap: 10px; }
+  .item { position: relative; background: var(--surface); border-radius: 14px; padding: 10px 12px 11px 15px; box-shadow: var(--shadow); overflow: hidden; }
+  .item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+  .item[data-from="phone"]::before { background: var(--grad); }
+  .item[data-from="pc"]::before { background: var(--ok); }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+  .who { font-weight: 600; color: var(--fg); }
+  .st { padding: 1px 7px; border-radius: 6px; font-weight: 550; background: var(--card); }
+  .st.ok { background: var(--ok-soft); color: var(--ok); }
+  .st.wait { background: var(--wait-soft); color: var(--wait); }
+  .st.bad { background: var(--bad-soft); color: var(--bad); }
+  .when { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; max-height: 220px; overflow: auto; }
+  .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .sm { padding: 3px 12px; font-size: 12px; border-radius: 8px; }
+  .cancel { color: var(--bad); }
+
+  footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; text-align: center; }
+  footer details { margin-top: 6px; text-align: left; }
+  footer summary { cursor: pointer; text-align: center; }
+  pre { white-space: pre-wrap; font-size: 11.5px; max-height: 260px; overflow: auto; background: var(--surface); border-radius: 10px; padding: 8px 10px; }
 </style>
