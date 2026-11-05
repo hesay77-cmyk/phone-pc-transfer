@@ -238,7 +238,7 @@ async function onData(m) {
     addItem(item);
     item.copy = await copyText(m.text);
     log('收到文字（' + m.text.length + ' 字），自动复制：' + item.copy.summary);
-    result('clipText', item.copy.ok, item.copy.summary + '。请到终端里按 Ctrl+V 确认');
+    result('clipText', item.copy.ok, item.copy.summary + '。请在记事本里按 Ctrl+V 确认');
     notify('已复制到剪贴板', m.text.slice(0, 80));
     push();
   } else if (m.t === 'img-start') {

@@ -8,9 +8,9 @@ const userChoice = JSON.parse(localStorage.getItem('userChoice') || '{}');
 const CHECKS = [
   { key: 'connect', name: '家里 Wi-Fi 下，手机和电脑能直接连上',
     how: '手机扫码打开网页后，这里会自动显示结果。' },
-  { key: 'clipText', name: '你在终端里时，文字也能自动进剪贴板',
-    how: '先点一下终端窗口（让 Chrome 不在最前面），再用手机发一段文字，然后在终端里按 Ctrl+V。',
-    ask: [['clipTextUser', true, '终端里能粘贴出来'], ['clipTextUser', false, '粘贴不出来']] },
+  { key: 'clipText', name: '你在用别的软件时，手机发的字也能自动进剪贴板',
+    how: '打开记事本点一下（让 Chrome 不在最前面），再用手机发一段文字，然后在记事本里按 Ctrl+V。',
+    ask: [['clipTextUser', true, '能粘贴出来'], ['clipTextUser', false, '粘贴不出来']] },
   { key: 'saveImg', name: '收到的图自动存进电脑',
     how: '手机发一张图过来，点图下面的「打开所在文件夹」，看照片是不是已经在「下载 → 互传」文件夹里。',
     ask: [['saveImgUser', true, '照片在文件夹里'], ['saveImgUser', false, '没找到']] },
