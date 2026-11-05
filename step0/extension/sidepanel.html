@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>互传测试</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <h1>互传测试 <small>第 0 步</small></h1>
+    <div id="status" class="status"></div>
+  </header>
+
+  <section>
+    <h2>1. 配对</h2>
+    <p class="hint">用 iPhone 自带的相机扫下面这个码，会打开手机测试网页。手机和电脑要连同一个 Wi-Fi。</p>
+    <div id="qr" class="qr"></div>
+    <p class="small"><span id="room"></span> · <button id="reset" class="link">换一个配对码</button></p>
+  </section>
+
+  <section>
+    <h2>2. 测试清单</h2>
+    <p class="hint">带按钮的项目，试完后点一下告诉我结果。全部做完，点最下面的「复制测试结果」，粘贴发给 Claude。</p>
+    <ol id="checks" class="checks"></ol>
+  </section>
+
+  <section>
+    <h2>3. 发到手机</h2>
+    <textarea id="out" rows="2" placeholder="输入或粘贴一段文字，比如一个网址"></textarea>
+    <button id="send">发到手机</button>
+    <span id="sendTip" class="small"></span>
+  </section>
+
+  <section>
+    <h2>4. 收到的东西</h2>
+    <p class="hint">图片可以直接用鼠标拖进网页。</p>
+    <div id="items" class="items"><p class="small">还没收到东西</p></div>
+  </section>
+
+  <section>
+    <button id="report" class="primary">复制测试结果</button>
+    <span id="reportTip" class="small"></span>
+    <details>
+      <summary>运行记录</summary>
+      <pre id="log"></pre>
+    </details>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="lib/qrcode.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
