@@ -253,8 +253,11 @@ async function onData(m) {
     addItem(item);
     item.copy = await copyImage(blob, dataUrl);
     log('收到图片 ' + kb(blob.size) + '，' + (meta.w || '?') + '×' + (meta.h || '?') + '，传输用时 ' + ms + ' 毫秒；自动复制：' + item.copy.summary);
-    item.saved = await chrome.runtime.sendMessage({ to: 'bg', type: 'save-image', url: dataUrl, filename: photoName(blob.type), asciiName: photoName(blob.type, true) })
+    // 用 blob 网址交给 Chrome 保存（比 data 网址正规，大图也不会超长）
+    const blobUrl = URL.createObjectURL(blob);
+    item.saved = await chrome.runtime.sendMessage({ to: 'bg', type: 'save-image', url: blobUrl, filename: photoName(blob.type), asciiName: photoName(blob.type, true) })
       .catch((e) => ({ ok: false, detail: '存不进去：' + e.message }));
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     log(item.saved.ok ? '已存到电脑：' + item.saved.path : '自动保存失败：' + item.saved.detail);
     result('saveImg', item.saved.ok, item.saved.ok ? '已存到 ' + item.saved.path : item.saved.detail);
     result('imgTransfer', blob.size === meta.size, '收到 ' + kb(blob.size) + '（手机那边是 ' + kb(meta.size) + '），' + (meta.w || '?') + '×' + (meta.h || '?') + '，用时 ' + ms + ' 毫秒');

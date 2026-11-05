@@ -94,12 +94,16 @@ function waitDownload(id, ms) {
       resolve({ id, ...r });
     };
     const tm = setTimeout(() => finish({ ok: false, detail: '20 秒还没存完' }), ms);
-    const check = (st, err) => {
+    const check = (st, err, danger) => {
       if (st === 'complete') finish({ ok: true });
       if (st === 'interrupted') finish({ ok: false, detail: '保存被中断：' + (err || '未知原因') });
+      if (danger && !['safe', 'accepted'].includes(danger)) finish({ ok: false, detail: 'Chrome 拦下了这次保存（' + danger + '）' });
     };
-    const on = (d) => { if (d.id === id && d.state) check(d.state.current, d.error && d.error.current); };
+    const on = (d) => {
+      if (d.id !== id) return;
+      if (d.state || d.danger || d.error) chrome.downloads.search({ id }).then(([it]) => it && check(it.state, it.error, it.danger));
+    };
     chrome.downloads.onChanged.addListener(on);
-    chrome.downloads.search({ id }).then(([it]) => { if (it) check(it.state, it.error); });
+    chrome.downloads.search({ id }).then(([it]) => { if (it) check(it.state, it.error, it.danger); });
   });
 }
