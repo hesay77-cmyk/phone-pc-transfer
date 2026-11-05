@@ -5,174 +5,181 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Tapaste · 手机电脑互传</title>
 <meta name="description" content="手机上点一下，电脑上直接粘。文字、照片一秒到电脑，不用装 App，不经过服务器。">
-<meta name="theme-color" content="#2f4bff">
+<meta name="theme-color" content="#f6f7fb">
 <link rel="icon" href="icon.png">
 <style>
-/* 大色块：整屏钴蓝 + 柠檬黄 + 粉，巨大的 Tap. Paste. 是主角；动画讲一件事：点一下手机，东西飞到电脑 */
+/* 安静的浅色底 + 一点钴蓝；动效只讲一件事：往下滚，看一段字从手机走到电脑 */
 :root{
-  --blue:#2f4bff; --blue2:#2338e0; --ink:#0d1030; --white:#ffffff; --paper:#f3f4ff;
-  --lemon:#e8ff5a; --pink:#ff8fc7; --muted:#4b5078;
-  --display:"Arial Black","Helvetica Neue",system-ui,sans-serif;
+  --bg:#f6f7fb; --card:#ffffff; --ink:#0b0d17; --muted:#646a80; --line:rgba(11,13,23,.08);
+  --blue:#2f4bff; --blue-soft:#e8ebff; --lime:#d9ff3f; --sel:#c9d3ff;
+  --display:"SF Pro Display","Helvetica Neue","Arial",system-ui,sans-serif;
   --body:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;background:var(--blue)}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
-.w{max-width:1180px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
-.btn{height:58px;padding:0 30px;border-radius:999px;font-size:18px;font-weight:800;display:inline-flex;align-items:center;gap:8px;transition:transform .2s,box-shadow .2s}
-.btn:hover{transform:translateY(-3px) rotate(-1deg)}
-.btn.y{background:var(--lemon);color:var(--ink);box-shadow:0 6px 0 var(--ink)}
-.btn.y:hover{box-shadow:0 9px 0 var(--ink)}
-.btn.o{border:2px solid rgba(255,255,255,.65);color:#fff}
-.btn.k{background:var(--ink);color:#fff}
-.btn[aria-disabled="true"]{opacity:.5;pointer-events:none;box-shadow:none}
-.soon{font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--pink);color:var(--ink)}
-:focus-visible{outline:3px solid var(--lemon);outline-offset:3px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
+.w{max-width:1160px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.btn{height:52px;padding:0 26px;border-radius:999px;font-size:16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .25s,background .25s,box-shadow .25s}
+.btn.ink{background:var(--ink);color:#fff}
+.btn.ink:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(11,13,23,.18)}
+.btn.ghost{background:rgba(255,255,255,.6);border:1px solid var(--line);backdrop-filter:blur(8px)}
+.btn.ghost:hover{background:#fff}
+.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.soon{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue)}
 
-/* ---------- 首屏 ---------- */
-.hero{background:var(--blue);color:#fff;position:relative;overflow:hidden;padding-bottom:90px}
-nav{display:flex;justify-content:space-between;align-items:center;height:78px;position:relative;z-index:5}
-.logo{font:900 26px/1 var(--display);letter-spacing:-1px;display:flex;align-items:center;gap:10px}
-.logo img{width:30px;height:30px;border-radius:9px}
-nav .links{display:flex;gap:28px;align-items:center;font-weight:700;font-size:15px}
-nav .links a:not(.btn){opacity:.85}
-nav .links a:not(.btn):hover{opacity:1}
-nav .btn{height:44px;padding:0 20px;font-size:15px;box-shadow:0 4px 0 var(--ink)}
-.top{position:relative;display:grid;grid-template-columns:1fr 430px;gap:20px;align-items:center;margin-top:30px}
-.big{font:900 clamp(84px,14.5vw,196px)/.86 var(--display);letter-spacing:-.065em;margin:0;position:relative;z-index:2;user-select:none}
-.big .tap{display:inline-block;transform-origin:50% 100%;animation:slam .7s cubic-bezier(.2,1.6,.4,1) both}
-.big .tap.press{animation:squish .32s ease-out}
-.big .paste{display:block;padding-left:10%;color:var(--lemon);white-space:nowrap}
-.big .paste i{font-style:normal;display:inline-block;animation:drop .7s cubic-bezier(.3,1.7,.5,1) both}
-.big .paste.wave i{animation:wave .6s ease both}
-@keyframes slam{from{transform:scale(1.4);opacity:0;filter:blur(8px)}to{transform:none;opacity:1;filter:none}}
-@keyframes squish{40%{transform:scale(1.06,.82)}100%{transform:none}}
-@keyframes drop{from{transform:translateY(-120%) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
-@keyframes wave{40%{transform:translateY(-14%) rotate(-4deg)}100%{transform:none}}
-.sub{display:flex;justify-content:space-between;align-items:flex-end;gap:30px 40px;margin-top:46px;position:relative;z-index:2;flex-wrap:wrap}
-.sub p{font-size:24px;line-height:1.55;max-width:19em;margin:0;font-weight:700;text-wrap:balance}
-.sub .cta{display:flex;gap:14px;flex-wrap:wrap}
-.sub .note{width:100%;font-size:14px;opacity:.75;margin-top:-10px}
+/* 导航 */
+nav{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:50;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+nav.solid{background:rgba(246,247,251,.78);backdrop-filter:blur(14px);border-color:var(--line)}
+nav .w{height:68px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:9px;font:700 19px/1 var(--display);letter-spacing:-.4px}
+.logo img{width:26px;height:26px;border-radius:7px}
+nav .links{display:flex;align-items:center;gap:28px;font-size:14px;color:var(--muted)}
+nav .links a:not(.btn):hover{color:var(--ink)}
+nav .btn{height:38px;padding:0 16px;font-size:14px}
 
-/* 舞台：手机 → 电脑 */
-.stage{position:relative;width:430px;height:400px;z-index:3}
-.phone{position:absolute;left:0;top:20px;width:176px;height:330px;border-radius:32px;background:var(--ink);padding:8px;transform:rotate(-6deg);box-shadow:0 30px 50px rgba(8,12,70,.45)}
-.phone .s{height:100%;border-radius:25px;background:#fff;padding:36px 12px 12px;display:flex;flex-direction:column;gap:10px;position:relative}
-.phone .s::before{content:"";position:absolute;top:9px;left:50%;width:56px;height:14px;border-radius:9px;background:var(--ink);transform:translateX(-50%)}
-.phone .lbl{font:800 11px/1 var(--display);color:var(--muted);letter-spacing:.5px}
-.phone .slot{flex:1;border-radius:16px;background:var(--paper);display:flex;align-items:flex-start;padding:10px}
-.phone .go{height:44px;border-radius:14px;background:var(--blue);color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .12s}
-.phone .go.down{transform:scale(.9)}
-.ripple{position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px;border-radius:50%;border:3px solid var(--lemon);opacity:0;pointer-events:none}
-.ripple.on{animation:ripple .6s ease-out}
-@keyframes ripple{from{transform:scale(.4);opacity:1}to{transform:scale(5);opacity:0}}
-.finger{position:absolute;width:34px;height:34px;border-radius:50%;background:rgba(232,255,90,.95);box-shadow:0 0 0 6px rgba(232,255,90,.3);left:200px;top:360px;opacity:0;transition:left .5s cubic-bezier(.3,.8,.3,1),top .5s cubic-bezier(.3,.8,.3,1),opacity .3s,transform .12s;z-index:6}
-.finger.down{transform:scale(.75)}
-.pc{position:absolute;right:0;bottom:6px;width:262px;border-radius:18px;background:#fff;color:var(--ink);transform:rotate(4deg);box-shadow:0 30px 50px rgba(8,12,70,.45);overflow:hidden}
-.pc .bar{height:30px;background:var(--ink);display:flex;align-items:center;gap:6px;padding:0 12px;color:#fff;font-size:11px;font-weight:700}
-.pc .bar b{width:9px;height:9px;border-radius:50%;background:var(--pink)}
-.pc .bar b+b{background:var(--lemon)}.pc .bar b+b+b{background:#7cf0c4}
-.pc .bar span{margin-left:auto;opacity:.75}
-.pc .in{padding:14px;min-height:150px;display:flex;flex-direction:column;gap:10px}
-.pc .landing{min-height:58px;border:2px dashed #cfd3f5;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#9ba0cc;font-size:12px;font-weight:700}
-.pc .landing.full{border-color:transparent}
-.chip{align-self:flex-start;background:var(--lemon);border-radius:999px;padding:6px 12px;font-weight:800;font-size:13px;transform:scale(0);transition:transform .35s cubic-bezier(.3,1.8,.5,1)}
-.chip.on{transform:none}
-.keys{display:flex;gap:8px}
-.key{font:900 13px/1 var(--display);padding:8px 10px;border-radius:9px;background:var(--paper);border:2px solid var(--ink);border-bottom-width:5px;transform:scale(0);transition:transform .3s cubic-bezier(.3,1.8,.5,1)}
-.key.on{transform:none}
-.item{border-radius:14px;padding:10px 12px;background:var(--pink);color:var(--ink);font-weight:800;font-size:14px;line-height:1.35;width:100%}
-.item.photo{height:80px;padding:0;background:linear-gradient(135deg,#ffb36b,var(--pink) 55%,#8f7bff)}
-.fly{position:absolute;z-index:5;transform-origin:center;will-change:transform;pointer-events:none}
-.sticker{position:absolute;left:47%;top:92px;z-index:4;width:124px;height:124px;border-radius:50%;background:var(--pink);color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;
-  font:900 18px/1.15 var(--body);animation:spin 16s linear infinite;box-shadow:0 10px 0 var(--ink)}
-@keyframes spin{from{transform:rotate(-12deg)}to{transform:rotate(348deg)}}
-.blob{position:absolute;border-radius:50%;filter:blur(2px);opacity:.25;pointer-events:none}
-.blob.a{width:520px;height:520px;background:#5a6dff;right:-160px;top:-180px;animation:float 9s ease-in-out infinite}
-.blob.b{width:300px;height:300px;background:var(--blue2);left:-100px;bottom:-120px;animation:float 11s ease-in-out infinite reverse}
-@keyframes float{50%{translate:30px 40px}}
+/* 首屏 */
+.hero{position:relative;padding:150px 0 80px;text-align:center;overflow:hidden}
+.aurora{position:absolute;inset:-20% -10% auto;height:120%;pointer-events:none;z-index:0;filter:blur(70px);opacity:.55}
+.aurora i{position:absolute;border-radius:50%;display:block}
+.aurora .a{width:46vw;height:46vw;left:8%;top:0;background:#b9c4ff;animation:drift 18s ease-in-out infinite alternate}
+.aurora .b{width:34vw;height:34vw;right:10%;top:12%;background:#eaffb0;animation:drift 22s ease-in-out infinite alternate-reverse}
+.aurora .c{width:30vw;height:30vw;left:40%;top:30%;background:#dcd6ff;animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(6vw,4vw) scale(1.12)}}
+.hero .w{position:relative;z-index:1}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);background:rgba(255,255,255,.7);border:1px solid var(--line);padding:6px 14px;border-radius:999px;backdrop-filter:blur(6px)}
+.pill b{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+h1{margin:26px 0 0;font:700 clamp(68px,13.5vw,184px)/.95 var(--display);letter-spacing:-.055em}
+h1 .word{display:inline-block;white-space:nowrap}
+h1 .word+.word{margin-left:.18em}
+h1 .ch{display:inline-block}
+h1 .paste{color:var(--blue)}
+.tagline{margin:28px auto 0;font-size:clamp(20px,2.4vw,28px);font-weight:600;letter-spacing:-.3px;max-width:22em;text-wrap:balance}
+.tagline span{display:inline-block}
+.desc{margin:16px auto 0;font-size:17px;line-height:1.75;color:var(--muted);max-width:30em}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.meta{margin-top:16px;font-size:13px;color:var(--muted)}
+.cue{margin:70px auto 0;width:1px;height:56px;background:linear-gradient(var(--line),var(--muted));position:relative;overflow:hidden}
+.cue::after{content:"";position:absolute;left:0;top:-40%;width:1px;height:40%;background:var(--blue);animation:cue 2.2s ease-in-out infinite}
+@keyframes cue{to{top:100%}}
 
-/* ---------- 走马灯 ---------- */
-.mq-wrap{overflow:hidden;margin-top:-26px;padding:14px 0;position:relative;z-index:6}
-.marquee{background:var(--lemon);border-top:3px solid var(--ink);border-bottom:3px solid var(--ink);overflow:hidden;transform:rotate(-1.5deg);margin:0 -20px}
-.marquee .t{display:flex;width:max-content;animation:run 26s linear infinite}
-.marquee span{font:900 26px/1 var(--display);padding:18px 0;white-space:nowrap}
-.marquee span::after{content:"✦";margin:0 26px;color:var(--blue)}
-@keyframes run{to{transform:translateX(-50%)}}
+/* 故事：滚动讲完一次传送 */
+.story{position:relative}
+.story .pinbox{min-height:100vh;display:flex;align-items:center;padding:80px 0 40px}
+.story .grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:40px;align-items:center;width:100%}
+.steps{position:relative;min-height:260px}
+.step{position:absolute;inset:0 0 auto 0}
+.step .k{font:600 13px/1 var(--display);letter-spacing:2px;color:var(--blue);margin-bottom:16px}
+.step h2{font-size:clamp(32px,3.8vw,46px);line-height:1.1;letter-spacing:-1.5px;margin:0 0 16px;text-wrap:balance}
+.step p{font-size:18px;line-height:1.75;color:var(--muted);margin:0;max-width:24em}
+.dots{display:flex;gap:8px;margin-top:30px}
+.dots i{width:28px;height:3px;border-radius:2px;background:var(--line);overflow:hidden;position:relative}
+.dots i b{position:absolute;inset:0;background:var(--ink);transform:scaleX(0);transform-origin:left}
+.scene-wrap{position:relative;width:100%;aspect-ratio:560/430}
+.scene{position:absolute;left:0;top:0;width:560px;height:430px;transform-origin:0 0}
+.phone{position:absolute;left:0;top:30px;width:190px;height:380px;border-radius:40px;background:var(--ink);padding:9px;box-shadow:0 40px 80px rgba(11,13,23,.18)}
+.phone .s{height:100%;border-radius:32px;background:#fff;padding:52px 16px 16px;font-size:14px;line-height:1.75;position:relative}
+.phone .s::before{content:"";position:absolute;top:12px;left:50%;width:62px;height:18px;border-radius:10px;background:var(--ink);transform:translateX(-50%)}
+.phone .t{font-weight:700;margin-bottom:6px}
+.phone .hl{background:linear-gradient(var(--sel),var(--sel)) no-repeat 0 0/0% 100%;-webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:2px;padding:1px 0}
+.phone .grey{color:#a0a4b4;margin-top:6px}
+.menu{position:absolute;left:30px;top:150px;display:flex;background:#1c1f2a;color:#fff;font-size:12px;border-radius:10px;overflow:hidden;box-shadow:0 10px 20px rgba(0,0,0,.2);opacity:0}
+.menu span{padding:8px 11px;display:inline-block}
+.menu .send{background:var(--blue);font-weight:700}
+.tapdot{position:absolute;width:30px;height:30px;border-radius:50%;background:rgba(47,75,255,.25);border:2px solid var(--blue);left:118px;top:144px;opacity:0;transform:scale(1.6)}
+.packet{position:absolute;left:30px;top:150px;padding:9px 13px;border-radius:12px;background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;opacity:0;box-shadow:0 14px 30px rgba(11,13,23,.25);z-index:5}
+.laptop{position:absolute;right:0;top:0;width:340px}
+.laptop .lid{background:#e6e8ef;border-radius:16px 16px 4px 4px;padding:9px;box-shadow:0 40px 80px rgba(11,13,23,.12)}
+.laptop .scr{aspect-ratio:16/11;border-radius:8px;background:#fff;position:relative;overflow:hidden}
+.laptop .base{height:12px;background:linear-gradient(#d6d9e2,#bfc3ce);border-radius:0 0 12px 12px;margin:0 -7%}
+.note{position:absolute;left:14px;right:14px;top:14px;bottom:14px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.note .bar{height:24px;background:#f2f3f7;border-bottom:1px solid var(--line);font-size:10px;color:var(--muted);display:flex;align-items:center;padding:0 10px}
+.note .body{padding:12px;font-size:13px;line-height:1.7}
+.note .paste{display:inline-block;clip-path:inset(0 100% 0 0)}
+.note .caret{display:inline-block;width:1.5px;height:14px;background:var(--blue);vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.toast{position:absolute;right:24px;bottom:26px;background:var(--ink);color:#fff;font-size:11px;font-weight:600;padding:8px 11px;border-radius:9px;display:flex;align-items:center;gap:6px;opacity:0}
+.toast i{width:14px;height:14px;border-radius:50%;background:var(--lime);color:var(--ink);font-style:normal;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.keys{position:absolute;right:30px;top:300px;display:flex;gap:10px}
+.key{height:54px;min-width:54px;padding:0 14px;border-radius:12px;background:#fff;border:1px solid #d9dce5;box-shadow:0 5px 0 #d9dce5,0 12px 24px rgba(11,13,23,.08);font:600 17px/54px var(--display);text-align:center;opacity:0}
 
-/* ---------- 内容区 ---------- */
-section{padding:100px 0}
-h2{font:900 56px/1.04 var(--body);letter-spacing:-2px;margin:0 0 16px;text-wrap:balance}
-.lede{font-size:19px;color:var(--muted);margin:0 0 48px;max-width:32em;line-height:1.7}
-.feat{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-.f{border-radius:28px;padding:30px 26px;min-height:290px;display:flex;flex-direction:column;gap:14px;border:3px solid var(--ink);transition:transform .25s}
-.f:hover{transform:translateY(-6px) rotate(-1.2deg)}
-.f:nth-child(2):hover{transform:translateY(-6px) rotate(1.2deg)}
-.f .big2{font:900 54px/1 var(--display);letter-spacing:-2px;margin-bottom:auto}
-.f h3{font-size:22px;margin:0}
-.f p{margin:0;font-size:15.5px;line-height:1.65}
-.f.c1{background:var(--lemon)}.f.c2{background:var(--pink)}.f.c3{background:#fff}.f.c4{background:var(--ink);color:#fff;border-color:var(--ink)}
-.f.c4 p{opacity:.8}
+/* 能做什么 */
+section{padding:120px 0}
+.head{max-width:640px;margin-bottom:56px}
+.eyebrow{font:600 13px/1 var(--display);letter-spacing:2px;color:var(--blue);margin-bottom:16px}
+h2.big{font-size:clamp(34px,4.6vw,58px);line-height:1.1;letter-spacing:-1.5px;margin:0 0 16px;text-wrap:balance}
+.head p{font-size:18px;line-height:1.75;color:var(--muted);margin:0}
+.bento{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:30px;overflow:hidden;min-height:250px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px}
+.card::before{content:"";position:absolute;inset:0;background:radial-gradient(420px circle at var(--x,50%) var(--y,-20%),rgba(47,75,255,.09),transparent 60%);opacity:0;transition:opacity .4s;pointer-events:none}
+.card:hover::before{opacity:1}
+.card.wide{grid-column:span 2}
+.card h3{font-size:22px;margin:0;letter-spacing:-.3px}
+.card p{margin:0;color:var(--muted);font-size:15.5px;line-height:1.7;max-width:30em}
+.vis{position:absolute;top:28px;left:30px;right:30px}
+.thumbs{display:flex;gap:10px}
+.thumbs div{width:74px;height:74px;border-radius:14px}
+.t1{background:linear-gradient(135deg,#ffd3a8,#ff9eb5)}.t2{background:linear-gradient(135deg,#b8d7ff,#8b9dff)}.t3{background:linear-gradient(135deg,#d6f7b0,#7fd6a8)}.t4{background:linear-gradient(135deg,#f3e5ff,#c4b5fd)}
+.folder{font-size:12px;color:var(--muted);margin-top:12px;font-family:var(--display)}
+.kbd{display:inline-flex;gap:8px}
+.kbd span{height:46px;min-width:46px;padding:0 12px;border-radius:11px;background:var(--bg);border:1px solid #d9dce5;box-shadow:0 4px 0 #d9dce5;font:600 15px/46px var(--display);text-align:center}
+.arrows{font:600 40px/1 var(--display);color:var(--blue)}
+.lan{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.lan b{height:2px;flex:1;max-width:200px;background:repeating-linear-gradient(90deg,var(--blue) 0 8px,transparent 8px 14px)}
+.lan span{padding:7px 12px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-weight:600}
 
-.how{background:var(--blue);color:#fff}
-.how .lede{color:rgba(255,255,255,.8)}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.st{border-radius:28px;padding:32px;display:flex;flex-direction:column;gap:56px;background:#fff;color:var(--ink);box-shadow:0 10px 0 var(--ink);transition:transform .25s}
-.st:hover{transform:translateY(-6px)}
-.st b{font:900 72px/1 var(--display);letter-spacing:-3px;color:var(--blue)}
-.st .where{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1px;background:var(--paper);border-radius:999px;padding:4px 10px;margin-bottom:10px}
-.st h3{font-size:24px;margin:0 0 6px}.st p{margin:0;font-size:16px;line-height:1.65;color:var(--muted)}
+/* 三步 */
+.how{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.track{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+.track .line{position:absolute;left:0;right:0;top:22px;height:1px;background:var(--line)}
+.track .line b{position:absolute;inset:0;background:var(--blue);transform:scaleX(0);transform-origin:left}
+.node{position:relative}
+.node .n{width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font:600 16px/1 var(--display);margin-bottom:26px;position:relative;z-index:1}
+.node .where{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;margin-bottom:8px}
+.node h3{font-size:22px;margin:0 0 8px}
+.node p{margin:0;color:var(--muted);line-height:1.75;font-size:15.5px}
 
-.dl{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.d{border:3px solid var(--ink);border-radius:28px;padding:30px;background:#fff;display:flex;flex-direction:column;gap:10px}
-.d .tag{align-self:flex-start;font-size:12px;font-weight:800;letter-spacing:1px;border-radius:999px;padding:4px 10px;background:var(--lemon)}
-.d:nth-child(2) .tag{background:var(--pink)}.d:nth-child(3) .tag{background:var(--paper)}
-.d h3{font-size:24px;margin:6px 0 0}.d p{margin:0 0 18px;color:var(--muted);line-height:1.65;flex:1}
-.d .btn{justify-content:center}
-.phone-tip{margin-top:28px;font-size:17px;font-weight:700;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.phone-tip span{background:var(--ink);color:var(--lemon);border-radius:999px;padding:6px 14px;font-size:14px}
+/* 下载 */
+.dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.d{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:30px;display:flex;flex-direction:column;gap:8px}
+.d .tag{font-size:12px;color:var(--muted)}
+.d h3{font-size:22px;margin:0}
+.d p{margin:0 0 20px;color:var(--muted);line-height:1.7;flex:1;font-size:15.5px}
 
-.faq{display:grid;grid-template-columns:1fr 1.4fr;gap:60px;align-items:start}
-details{border-bottom:3px solid var(--ink);padding:22px 0}
-details:first-child{border-top:3px solid var(--ink)}
-summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:20px;font-size:19px;font-weight:800}
+/* 常见问题 */
+.faq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:60px}
+details{border-top:1px solid var(--line);padding:22px 0}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:20px;font-size:18px;font-weight:600}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"+";flex:none;width:34px;height:34px;border-radius:50%;background:var(--lemon);display:flex;align-items:center;justify-content:center;font:900 20px/1 var(--display);transition:transform .3s,background .3s}
-details[open] summary::after{transform:rotate(45deg);background:var(--pink)}
-details p{margin:12px 0 0;color:var(--muted);line-height:1.75;font-size:16px;max-width:36em}
+summary::after{content:"";flex:none;width:10px;height:10px;margin-top:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .3s}
+details[open] summary::after{transform:rotate(-135deg)}
+details p{margin:12px 0 0;color:var(--muted);line-height:1.8;font-size:16px;max-width:34em}
 
-footer{background:var(--blue);color:#fff;overflow:hidden;padding:70px 0 30px}
-footer .huge{font:900 clamp(70px,19vw,250px)/.95 var(--display);letter-spacing:-.07em;color:var(--lemon);margin:0 0 24px;white-space:nowrap}
-footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;opacity:.85}
+footer{padding:90px 0 40px;overflow:hidden}
+footer .huge{font:700 clamp(64px,15vw,210px)/1 var(--display);letter-spacing:-.06em;color:transparent;-webkit-text-stroke:1.2px rgba(11,13,23,.16);white-space:nowrap;margin-bottom:30px}
+footer .row{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:14px}
 
-.pop{animation:pop .7s cubic-bezier(.2,1.4,.4,1) both}
-@keyframes pop{from{transform:translateY(50px) rotate(-3deg)}to{transform:none}}
-
-@media (max-width:1000px){
-  .top{grid-template-columns:minmax(0,1fr)}
-  .stage{margin:10px auto 0}
-  .sticker{left:auto;right:16px;top:70px;width:96px;height:96px;font-size:14px}
-  .feat{grid-template-columns:repeat(2,1fr)}
-  .steps,.dl{grid-template-columns:1fr}
-  .faq{grid-template-columns:1fr;gap:20px}
+@media (max-width:900px){
   nav .links a:not(.btn){display:none}
-  h2{font-size:42px}
+  .hero{padding-top:120px}
+  .story .grid{grid-template-columns:minmax(0,1fr);gap:20px}
+  .story .scene-col{order:-1}
+  .steps{min-height:230px}
+  .bento,.dl{grid-template-columns:minmax(0,1fr)}
+  .card.wide{grid-column:auto}
+  .track{grid-template-columns:minmax(0,1fr);gap:40px}
+  .track .line{display:none}
+  .faq{grid-template-columns:minmax(0,1fr);gap:10px}
+  section{padding:90px 0}
 }
 @media (max-width:560px){
-  .hero{padding-bottom:70px}
-  .sub p{font-size:19px}
-  .sub .cta,.sub .cta .btn{width:100%;justify-content:center}
-  .feat{grid-template-columns:1fr}
-  .f{min-height:0}
-  section{padding:72px 0}
-  h2{font-size:34px;letter-spacing:-1px}
-  .marquee span{font-size:20px}
-}
-@media (max-width:470px){
-  .stage{margin:10px 0 -80px 50%;transform:translateX(-50%) scale(.8);transform-origin:top center}
-  .big .paste{padding-left:6%}
+  .story .pinbox{padding-top:76px}
+  .step h2{font-size:30px}
+  .step p{font-size:16px}
+  .cta .btn{flex:1 1 100%}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
@@ -181,83 +188,86 @@ footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;f
 </head>
 <body>
 
+<nav id="nav"><div class="w">
+  <a class="logo" href="#"><img src="icon.png" alt="">Tapaste</a>
+  <div class="links"><a href="#story">怎么回事</a><a href="#features">能做什么</a><a href="#faq">常见问题</a><a class="btn ink" href="#download">下载</a></div>
+</div></nav>
+
 <header class="hero">
-  <div class="blob a"></div><div class="blob b"></div>
+  <div class="aurora" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
   <div class="w">
-    <nav>
-      <a class="logo" href="#"><img src="icon.png" alt="">tapaste</a>
-      <div class="links"><a href="#features">能做什么</a><a href="#how">怎么用</a><a href="#faq">常见问题</a><a class="btn y" href="#download">下载插件</a></div>
-    </nav>
-
-    <div class="top">
-      <h1 class="big" aria-label="Tap. Paste."><span class="tap" id="tapWord">Tap.</span><span class="paste" id="pasteWord"><i>P</i><i>a</i><i>s</i><i>t</i><i>e</i><i>.</i></span></h1>
-
-      <div class="stage" id="stage" aria-hidden="true">
-        <div class="phone" id="phone"><div class="s">
-          <div class="lbl">我的手机</div>
-          <div class="slot" id="slot"></div>
-          <div class="go" id="go">发到电脑<span class="ripple" id="ripple"></span></div>
-        </div></div>
-        <div class="pc" id="pc">
-          <div class="bar"><b></b><b></b><b></b><span>电脑</span></div>
-          <div class="in">
-            <div class="landing" id="landing">等手机发过来…</div>
-            <div class="chip" id="chip">✓ 已复制</div>
-            <div class="keys"><span class="key" id="k1">Ctrl</span><span class="key" id="k2">V</span></div>
-          </div>
-        </div>
-        <div class="finger" id="finger"></div>
-      </div>
-    </div>
-
-    <div class="sub">
-      <p>手机上点一下，电脑上直接粘。文字、照片，一秒到电脑。</p>
-      <div class="cta"><a class="btn y" href="#download">下载电脑插件</a><a class="btn o" href="#how">怎么用</a></div>
-      <div class="note">Chrome、Edge 都能用 · 手机不用装 App，扫码就行</div>
-    </div>
+    <div class="pill"><b></b>手机电脑互传 · 同一 Wi-Fi 直连</div>
+    <h1 aria-label="Tap. Paste."><span class="word tap">Tap.</span><span class="word paste">Paste.</span></h1>
+    <p class="tagline"><span>手机上点一下，</span><span>电脑上直接粘。</span></p>
+    <p class="desc">文字、照片一秒到电脑。字自动进剪贴板，照片自动存进文件夹。不用装 App，不用登录。</p>
+    <div class="cta"><a class="btn ink" href="#download">下载电脑插件</a><a class="btn ghost" href="#story">看看怎么回事</a></div>
+    <div class="meta">Chrome、Edge 都能用 · 手机用浏览器扫码配对</div>
+    <div class="cue" aria-hidden="true"></div>
   </div>
-  <div class="sticker">不用装<br>App!</div>
 </header>
 
-<div class="mq-wrap"><div class="marquee" aria-hidden="true"><div class="t">
-  <span>会议地址</span><span>取件码</span><span>原图照片</span><span>一长段代码</span><span>网址链接</span><span>截图</span><span>银行卡号</span><span>购物清单</span>
-  <span>会议地址</span><span>取件码</span><span>原图照片</span><span>一长段代码</span><span>网址链接</span><span>截图</span><span>银行卡号</span><span>购物清单</span>
-</div></div></div>
+<section class="story" id="story" style="padding:0">
+  <div class="pinbox" id="pinbox"><div class="w grid">
+    <div>
+      <div class="steps" id="steps">
+        <div class="step"><div class="k">01 · 手机上</div><h2>长按，选中你要的那段字</h2><p>地址、取件码、一段聊天记录，跟平时复制一样选中就行。</p></div>
+        <div class="step"><div class="k">02 · 手机上</div><h2>点一下「发到电脑」</h2><p>不用打开任何 App，不用登录，也不用找数据线。</p></div>
+        <div class="step"><div class="k">03 · 路上</div><h2>一秒，它就到了</h2><p>同一个 Wi-Fi 下，手机直接把它送到电脑，中间不经过任何服务器。</p></div>
+        <div class="step"><div class="k">04 · 电脑上</div><h2>按 Ctrl + V，粘出来</h2><p>字已经在电脑剪贴板里了。记事本、网页、AI 聊天框，哪里都能粘。</p></div>
+      </div>
+      <div class="dots" id="dots"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+    </div>
+    <div class="scene-col">
+      <div class="scene-wrap" id="sceneWrap"><div class="scene" id="scene" aria-hidden="true">
+        <div class="laptop"><div class="lid"><div class="scr">
+          <div class="note"><div class="bar">记事本</div><div class="body">地址：<span class="paste" id="pasted">朝阳区建国路 88 号 3 楼，晚上 7 点</span><span class="caret"></span></div></div>
+          <div class="toast" id="toast"><i>✓</i>已复制到剪贴板</div>
+        </div></div><div class="base"></div></div>
+        <div class="phone"><div class="s">
+          <div class="t">周五聚餐</div>
+          <span class="hl" id="selbg">朝阳区建国路 88 号 3 楼，晚上 7 点</span>
+          <div class="grey">记得带伞</div>
+        </div></div>
+        <div class="menu" id="menu"><span>拷贝</span><span class="send">发到电脑</span></div>
+        <div class="tapdot" id="tapdot"></div>
+        <div class="packet" id="packet">朝阳区建国路 88 号 3 楼，晚上 7 点</div>
+        <div class="keys"><div class="key" id="kc">Ctrl</div><div class="key" id="kv">V</div></div>
+      </div></div>
+    </div>
+  </div></div>
+</section>
 
 <section id="features"><div class="w">
-  <h2 class="rv">不打断你手上的事。</h2>
-  <p class="lede rv">不用找数据线，不用给自己发邮件，也不用在电脑上登聊天软件。手机上点一下，东西就在电脑上等你了。</p>
-  <div class="feat">
-    <div class="f c1 rv"><div class="big2">Ctrl+V</div><h3>复制就到</h3><p>手机发来的字自动进电脑剪贴板。记事本、网页、AI 聊天框，按 Ctrl+V 就粘出来。</p></div>
-    <div class="f c2 rv"><div class="big2">原图</div><h3>照片直接存好</h3><p>照片原图自动存进电脑「下载」文件夹，还能从侧边栏直接拖进网页、聊天框。</p></div>
-    <div class="f c3 rv"><div class="big2">⇄</div><h3>电脑也能发手机</h3><p>网页上选中字或图片，右键「发到手机」。电脑上复制的长文字也能一键送过去。</p></div>
-    <div class="f c4 rv"><div class="big2">0</div><h3>不经过服务器</h3><p>同一个 Wi-Fi 下，手机直接连电脑。你传的东西不会上传到任何地方。</p></div>
+  <div class="head rv"><div class="eyebrow">能做什么</div><h2 class="big">只做一件事，把它做顺。</h2><p>手机和电脑之间来回送东西。打开就能用，用完不用管。</p></div>
+  <div class="bento">
+    <div class="card wide rv"><div class="vis"><div class="thumbs"><div class="t1"></div><div class="t2"></div><div class="t3"></div><div class="t4"></div></div><div class="folder">下载 › 互传</div></div><h3>照片原图，直接存好</h3><p>手机照片原图送到电脑，自动存进「下载」文件夹。还能从侧边栏直接拖进网页、聊天框。</p></div>
+    <div class="card rv"><div class="vis"><div class="kbd"><span>Ctrl</span><span>V</span></div></div><h3>复制就到</h3><p>手机发来的字自动进电脑剪贴板，按 Ctrl+V 就粘出来。</p></div>
+    <div class="card rv"><div class="vis"><div class="arrows">⇄</div></div><h3>电脑也能发手机</h3><p>网页上选中字或图片，右键「发到手机」。</p></div>
+    <div class="card wide rv"><div class="vis"><div class="lan"><span>手机</span><b></b><span>电脑</span></div></div><h3>不经过服务器</h3><p>同一个 Wi-Fi 下，手机直接连电脑。你传的东西不会上传到任何地方，配对暗号藏在二维码里。</p></div>
   </div>
 </div></section>
 
-<section id="how" class="how"><div class="w">
-  <h2 class="rv">三步，以后天天省事。</h2>
-  <p class="lede rv">只要配对一次。以后打开手机网页，它自己就连上电脑了。</p>
-  <div class="steps">
-    <div class="st rv"><b>1</b><div><span class="where">在电脑上</span><h3>装上插件</h3><p>Chrome 或 Edge 装好 Tapaste，点右上角图标，侧边栏里出现一个二维码。</p></div></div>
-    <div class="st rv"><b>2</b><div><span class="where">在手机上</span><h3>扫一下码</h3><p>用相机扫码打开网页，配对就好了。可以「添加到主屏幕」，以后一点就开。</p></div></div>
-    <div class="st rv"><b>3</b><div><span class="where">手机和电脑</span><h3>点一下就到</h3><p>手机上粘贴文字或选照片，点「发到电脑」。字进了剪贴板，照片存进了文件夹。</p></div></div>
+<section class="how" id="how"><div class="w">
+  <div class="head rv"><div class="eyebrow">怎么开始</div><h2 class="big">三步，只做一次。</h2><p>配对好以后，打开手机网页，它自己就连上电脑。</p></div>
+  <div class="track" id="track">
+    <div class="line"><b id="trackLine"></b></div>
+    <div class="node rv"><div class="n">1</div><div class="where">在电脑上</div><h3>装上插件</h3><p>Chrome 或 Edge 装好 Tapaste，点右上角图标，侧边栏里会出现一个二维码。</p></div>
+    <div class="node rv"><div class="n">2</div><div class="where">在手机上</div><h3>扫一下二维码</h3><p>用相机扫码打开网页，配对就好了。可以「添加到主屏幕」，以后一点就开。</p></div>
+    <div class="node rv"><div class="n">3</div><div class="where">手机和电脑</div><h3>点一下就到</h3><p>手机上粘贴文字或选照片，点「发到电脑」。字进剪贴板，照片进文件夹。</p></div>
   </div>
 </div></section>
 
 <section id="download"><div class="w">
-  <h2 class="rv">下载电脑插件</h2>
-  <p class="lede rv">按你用的浏览器选一个。国内不用梯子也能装。</p>
+  <div class="head rv"><div class="eyebrow">下载</div><h2 class="big">选你用的浏览器</h2><p>国内不用梯子也能装。手机不用下载，扫电脑上的二维码就行。</p></div>
   <div class="dl">
-    <div class="d rv"><span class="tag">国内推荐</span><h3>Chrome 安装包</h3><p>下载安装包，照着图文步骤 2 分钟装好，不用打开 Chrome 商店。</p><a class="btn y" aria-disabled="true">下载安装包 <span class="soon">快好了</span></a></div>
-    <div class="d rv"><span class="tag">Windows 自带</span><h3>Microsoft Edge</h3><p>从微软商店一键安装，以后自动更新。</p><a class="btn k" aria-disabled="true">去 Edge 商店 <span class="soon">快好了</span></a></div>
-    <div class="d rv"><span class="tag">能上 Google</span><h3>Chrome 商店</h3><p>能打开 Chrome 商店的话，从这里装最省事，以后自动更新。</p><a class="btn k" aria-disabled="true">去 Chrome 商店 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">国内推荐</span><h3>Chrome 安装包</h3><p>下载安装包，照着图文步骤 2 分钟装好，不用打开 Chrome 商店。</p><a class="btn ink" aria-disabled="true">下载安装包 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">Windows 自带</span><h3>Microsoft Edge</h3><p>从微软商店一键安装，以后自动更新。</p><a class="btn ghost" aria-disabled="true">去 Edge 商店 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">能上 Google</span><h3>Chrome 商店</h3><p>能打开 Chrome 商店的话，从这里装最省事，以后自动更新。</p><a class="btn ghost" aria-disabled="true">去 Chrome 商店 <span class="soon">快好了</span></a></div>
   </div>
-  <div class="phone-tip rv"><span>手机呢？</span>不用下载。装好插件后，用手机相机扫电脑上的二维码就行。</div>
 </div></section>
 
 <section id="faq" style="padding-top:20px"><div class="w faq">
-  <h2 class="rv">常见问题</h2>
+  <div class="rv"><div class="eyebrow">常见问题</div><h2 class="big">还想知道的</h2></div>
   <div>
     <details><summary>手机要装 App 吗？</summary><p>不用。手机上就是一个网页，扫码打开就能用。想用得顺手，可以把它「添加到主屏幕」，像 App 一样一点就开。</p></details>
     <details><summary>我传的东西安全吗？</summary><p>手机和电脑在同一个 Wi-Fi 下直接连，内容不经过任何服务器。配对用的暗号藏在二维码里，别人不扫你的码就连不上。</p></details>
@@ -268,68 +278,81 @@ footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;f
 </div></section>
 
 <footer><div class="w">
-  <div class="huge" aria-hidden="true">tapaste</div>
-  <div class="row"><span>Tap + Paste：手机上点一下，电脑上直接粘贴。</span><span>手机电脑互传</span></div>
+  <div class="huge" aria-hidden="true">Tap. Paste.</div>
+  <div class="row"><span>Tapaste：手机上点一下，电脑上直接粘贴。</span><span>手机电脑互传</span></div>
 </div></footer>
 
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/ScrollTrigger.min.js"></script>
 <script>
 (function(){
+var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
 var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-var $=function(id){return document.getElementById(id)};
+var nav=$('#nav');addEventListener('scroll',function(){nav.classList.toggle('solid',scrollY>20)},{passive:true});
 
-/* Paste. 字母依次掉下来 */
-var letters=$('pasteWord').querySelectorAll('i');
-letters.forEach(function(el,i){el.style.animationDelay=(0.45+i*0.07)+'s'});
+/* 演示画面按容器宽度缩放 */
+var wrap=$('#sceneWrap'),scene=$('#scene');
+function fit(){scene.style.transform='scale('+(wrap.clientWidth/560)+')'}
+fit();addEventListener('resize',fit);
 
-/* 往下滚时卡片弹一下（不滚也都看得见） */
-if(!reduce&&'IntersectionObserver' in window){
-  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting&&e.boundingClientRect.top>innerHeight*.5){e.target.classList.add('pop');}io.unobserve(e.target)})},{threshold:0});
-  document.querySelectorAll('.rv').forEach(function(el,i){el.style.animationDelay=(i%4)*80+'ms';io.observe(el)});
+/* 卡片：鼠标处有一圈淡淡的光 */
+$$('.card').forEach(function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();c.style.setProperty('--x',(e.clientX-r.left)+'px');c.style.setProperty('--y',(e.clientY-r.top)+'px')})});
+
+var steps=$$('.step'), bars=$$('#dots b');
+function showFinal(){
+  steps.forEach(function(s,i){s.style.opacity=i===3?1:0});bars.forEach(function(b){b.style.transform='scaleX(1)'});
+  $('#selbg').style.backgroundSize='100% 100%';$('#toast').style.opacity=1;$('#kc').style.opacity=1;$('#kv').style.opacity=1;$('#pasted').style.clipPath='inset(0 0 0 0)';
 }
+if(!window.gsap||reduce){showFinal();return}
+gsap.registerPlugin(ScrollTrigger);
 
-/* 首屏动画：手指点手机 → 东西飞到电脑 → 已复制 → Ctrl V → Paste. 跳一下 */
-var stage=$('stage'),slot=$('slot'),go=$('go'),ripple=$('ripple'),finger=$('finger'),landing=$('landing'),chip=$('chip'),k1=$('k1'),k2=$('k2'),tapW=$('tapWord'),pasteW=$('pasteWord');
-var items=[
-  {html:'会议改到下午 3 点，地址：建国路 88 号',chip:'✓ 已复制',keys:true},
-  {photo:true,chip:'✓ 已存进电脑',keys:false},
-  {html:'取件码 8-2-4017',chip:'✓ 已复制',keys:true}
-];
-var n=0;
-function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
-function make(it){var d=document.createElement('div');d.className='item'+(it.photo?' photo':'');if(!it.photo)d.textContent=it.html;return d}
-function pos(el){var x=0,y=0;while(el&&el!==stage){x+=el.offsetLeft;y+=el.offsetTop;el=el.offsetParent}return{x:x,y:y}}
-function flyTo(el,from,to,ms){return new Promise(function(res){var t0=null,dx=to.x-from.x,dy=to.y-from.y;
-  (function f(t){t0=t0||t;var k=Math.min(1,(t-t0)/ms),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
-    var x=from.x+dx*e,y=from.y+dy*e-Math.sin(e*Math.PI)*130,r=-6+10*e+Math.sin(e*Math.PI)*-18,s=1+Math.sin(e*Math.PI)*.12;
-    el.style.transform='translate('+x+'px,'+y+'px) rotate('+r+'deg) scale('+s+')';
-    if(k<1)requestAnimationFrame(f);else res()})(performance.now())})}
-function replay(el,cls){el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls)}
+/* 首屏：字母从模糊里浮上来 */
+$$('h1 .word').forEach(function(w){var t=w.textContent;w.textContent='';t.split('').forEach(function(ch){var s=document.createElement('span');s.className='ch';s.textContent=ch;w.appendChild(s)})});
+var intro=gsap.timeline({defaults:{ease:'expo.out'}});
+intro.from('.pill',{y:16,opacity:0,duration:1})
+  .from('h1 .ch',{yPercent:60,opacity:0,filter:'blur(14px)',duration:1.4,stagger:.045},.1)
+  .from('.tagline span',{y:24,opacity:0,filter:'blur(8px)',duration:1.1,stagger:.12},.7)
+  .from(['.desc','.cta','.meta'],{y:20,opacity:0,duration:1,stagger:.08},.95)
+  .from('.cue',{opacity:0,duration:1},1.4);
 
-async function loop(){
-  var it=items[n++%items.length];
-  landing.innerHTML='等手机发过来…';landing.classList.remove('full');chip.classList.remove('on');k1.classList.remove('on');k2.classList.remove('on');
-  slot.innerHTML='';var card=make(it);slot.appendChild(card);
-  await sleep(900);
-  var g=pos(go);finger.style.opacity=1;finger.style.left=(g.x+go.offsetWidth/2-17)+'px';finger.style.top=(g.y+go.offsetHeight/2-17)+'px';
-  await sleep(600);
-  finger.classList.add('down');go.classList.add('down');replay(ripple,'on');replay(tapW,'press');
-  await sleep(160);finger.classList.remove('down');go.classList.remove('down');
-  await sleep(120);finger.style.opacity=0;
-  var from=pos(card),w=card.offsetWidth;card.style.visibility='hidden';
-  var fl=make(it);fl.classList.add('fly');fl.style.width=w+'px';fl.style.left='0';fl.style.top='0';stage.appendChild(fl);
-  var to=pos(landing);
-  await flyTo(fl,from,{x:to.x+(landing.offsetWidth-w)/2,y:to.y},900);
-  fl.remove();landing.innerHTML='';landing.classList.add('full');var put=make(it);landing.appendChild(put);
-  chip.textContent=it.chip;chip.classList.add('on');
-  if(it.keys){await sleep(450);k1.classList.add('on');await sleep(160);k2.classList.add('on');}
-  await sleep(200);replay(pasteW,'wave');
-  letters.forEach(function(el,i){el.style.animationDelay=(i*0.06)+'s'});
-  await sleep(2400);
-  finger.style.left='200px';finger.style.top='360px';
-  loop();
+/* 故事：钉住画面，滚动推进四步 */
+gsap.set(steps,{opacity:0,y:20});gsap.set(steps[0],{opacity:1,y:0});
+function stepTo(tl,i,at){
+  if(i>0)tl.to(steps[i-1],{opacity:0,y:-20,duration:.4},at);
+  tl.to(steps[i],{opacity:1,y:0,duration:.4},at+.15);
 }
-if(reduce){slot.appendChild(make(items[0]));landing.innerHTML='';landing.appendChild(make(items[0]));chip.classList.add('on');k1.classList.add('on');k2.classList.add('on')}
-else setTimeout(loop,700);
+var pk=$('#packet'),menu=$('#menu'),dot=$('#tapdot');
+var tl=gsap.timeline({defaults:{ease:'power2.inOut'},scrollTrigger:{trigger:'#pinbox',start:'top top',end:'+=2600',pin:true,scrub:.8,anticipatePin:1}});
+tl.to(bars[0],{scaleX:1,duration:1,ease:'none'},0)
+  .to('#selbg',{backgroundSize:'100% 100%',duration:.8},.1)
+  .to(menu,{opacity:1,y:-6,duration:.3},.8);
+stepTo(tl,1,1);
+tl.to(bars[1],{scaleX:1,duration:1,ease:'none'},1)
+  .to(dot,{opacity:1,scale:1,duration:.25,ease:'power3.out'},1.3)
+  .to('#menu .send',{scale:.9,duration:.12,yoyo:true,repeat:1},1.55)
+  .to(dot,{opacity:0,scale:2,duration:.3},1.7)
+  .to(menu,{opacity:0,duration:.25},1.75)
+  .set(pk,{x:0,y:0,opacity:0},1.8)
+  .to(pk,{opacity:1,y:-14,duration:.2},1.8);
+stepTo(tl,2,2);
+tl.to(bars[2],{scaleX:1,duration:1,ease:'none'},2)
+  .to(pk,{x:268,duration:.85,ease:'power2.inOut'},2.05)
+  .to(pk,{keyframes:{y:[-14,-150,-96]},duration:.85,ease:'sine.inOut'},2.05)
+  .to(pk,{scale:.55,opacity:0,duration:.25},2.75)
+  .to('#toast',{opacity:1,y:4,duration:.3,ease:'back.out(2)'},2.8);
+stepTo(tl,3,3);
+tl.to(bars[3],{scaleX:1,duration:1,ease:'none'},3)
+  .to('#kc',{opacity:1,y:-4,duration:.25},3.1)
+  .to('#kv',{opacity:1,y:-4,duration:.25},3.2)
+  .to(['#kc','#kv'],{y:2,boxShadow:'0 1px 0 #d9dce5,0 6px 12px rgba(11,13,23,.06)',duration:.12},3.45)
+  .to('#pasted',{clipPath:'inset(0 0% 0 0)',duration:.6,ease:'steps(16)'},3.5)
+  .to(['#kc','#kv'],{y:-4,boxShadow:'0 5px 0 #d9dce5,0 12px 24px rgba(11,13,23,.08)',duration:.15},3.6)
+  .to({},{duration:.4});
+
+/* 其他区块：进入视野时轻轻浮上来 */
+ScrollTrigger.batch('.rv',{start:'top 88%',once:true,onEnter:function(els){gsap.from(els,{y:36,opacity:0,duration:1.1,ease:'expo.out',stagger:.08})}});
+gsap.to('#trackLine',{scaleX:1,ease:'none',scrollTrigger:{trigger:'#track',start:'top 80%',end:'bottom 60%',scrub:.6}});
+gsap.from('footer .huge',{yPercent:30,opacity:0,ease:'none',scrollTrigger:{trigger:'footer',start:'top bottom',end:'bottom bottom',scrub:.6}});
 })();
 </script>
 </body>
