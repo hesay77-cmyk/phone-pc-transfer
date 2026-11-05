@@ -27,3 +27,23 @@ describe('消息格式', () => {
     expect([...ids][0]).toHaveLength(12);
   });
 });
+
+import { asciiFileName, isShowableImage, safeFileName } from '../src/files';
+
+describe('文件名和类型', () => {
+  it('能显示的图片 / 普通文件', () => {
+    expect(isShowableImage('image/jpeg')).toBe(true);
+    expect(isShowableImage('image/heic')).toBe(false);
+    expect(isShowableImage('application/pdf')).toBe(false);
+  });
+  it('Windows 不允许的字符换掉，保留扩展名', () => {
+    expect(safeFileName('报告:2026/11?.docx')).toBe('报告_2026_11_.docx');
+    expect(safeFileName('  ')).toBe('文件');
+    const long = safeFileName('长'.repeat(200) + '.pdf');
+    expect(long.length).toBe(120);
+    expect(long.endsWith('.pdf')).toBe(true);
+  });
+  it('备用英文名', () => {
+    expect(asciiFileName('报告.docx')).toMatch(/^file-\d{8}-\d{6}\.docx$/);
+  });
+});

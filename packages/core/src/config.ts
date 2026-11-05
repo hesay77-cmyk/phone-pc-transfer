@@ -19,6 +19,8 @@ export const CONFIG = {
   },
   /** 同一个 Wi-Fi 直连不需要 STUN；以后做跨网络再加 */
   iceServers: [] as RTCIceServer[],
-  /** 图片分块大小 */
-  chunkSize: 16 * 1024
+  /** 图片/文件分块大小 */
+  chunkSize: 16 * 1024,
+  /** 一次能发的文件最大多大（整个文件要放在内存里，手机上太大会卡死） */
+  maxFileBytes: 200 * 1024 * 1024
 };

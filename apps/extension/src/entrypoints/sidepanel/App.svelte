@@ -1,6 +1,8 @@
 <script lang="ts">
   import { browser } from 'wxt/browser';
+  import { CONFIG, sizeText } from '@hutong/core';
   import { putFile } from '../../lib/files';
+  import FileItem from './FileItem.svelte';
   import type { EngineState, Item, SendResult, ToBg, ToEngine, ToPanel } from '../../lib/types';
   import ImageItem from './ImageItem.svelte';
   import Qr from './Qr.svelte';
@@ -82,18 +84,18 @@
     showResult(r);
   }
 
-  /** 发图片：选的、粘贴的、拖进来的都走这里（先放进小数据库，再让引擎发） */
-  async function sendImages(files: File[]) {
-    const imgs = files.filter((f) => f.type.startsWith('image/'));
-    if (!imgs.length) { if (files.length) { sendOk = false; sendTip = '现在只能发图片'; } return; }
-    for (const f of imgs) {
+  /** 发图片和文件：选的、粘贴的、拖进来的都走这里（先放进小数据库，再让引擎发） */
+  async function sendFiles(files: File[]) {
+    for (const f of files) {
+      if (f.size > MAX_FILE) { sendOk = false; sendTip = `「${f.name}」太大了（${sizeText(f.size)}），现在一次最多发 ${sizeText(MAX_FILE)}`; continue; }
       const fileId = 'up:' + Math.random().toString(36).slice(2);
       await putFile(fileId, f);
       const r: SendResult = await engine({ to: 'engine', type: 'send-file', fileId, name: f.name || shotName() });
-      showResult(r, imgs.length > 1 ? '' : '图片');
+      showResult(r, files.length > 1 ? '' : f.type.startsWith('image/') ? '图片' : `「${f.name}」`);
     }
   }
 
+  const MAX_FILE = CONFIG.maxFileBytes;
   const shotName = () => `截图 ${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`;
 
   /** 侧边栏里任何地方按 Ctrl+V：剪贴板里是图片（比如刚截的图）就直接发到手机 */
@@ -101,10 +103,10 @@
     // 往输入框里粘文字时（剪贴板里同时有字和图，比如从 Word 复制的）照常粘文字
     if (e.target instanceof HTMLTextAreaElement && e.clipboardData?.types.includes('text/plain')) return;
     const files = Array.from(e.clipboardData?.items ?? [])
-      .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+      .filter((i) => i.kind === 'file')
       .map((i) => i.getAsFile())
       .filter((f): f is File => !!f);
-    if (files.length) { e.preventDefault(); void sendImages(files); }
+    if (files.length) { e.preventDefault(); void sendFiles(files); }
   }
 
   /** 按钮：把剪贴板里的图（刚截的图）发到手机 */
@@ -116,7 +118,7 @@
         if (t) files.push(new File([await it.getType(t)], shotName(), { type: t }));
       }
       if (!files.length) { sendOk = false; sendTip = '剪贴板里没有图片。先截图（Win+Shift+S），再点这个按钮'; return; }
-      await sendImages(files);
+      await sendFiles(files);
     } catch {
       sendOk = false;
       sendTip = '读不到剪贴板里的图。可以点一下上面的输入框，再按 Ctrl+V';
@@ -126,14 +128,14 @@
   function onDrop(e: DragEvent) {
     e.preventDefault();
     dragging = false;
-    void sendImages(Array.from(e.dataTransfer?.files ?? []));
+    void sendFiles(Array.from(e.dataTransfer?.files ?? []));
   }
 
   function onPick() {
     if (!fileInput) return;
     const files = Array.from(fileInput.files ?? []);
     fileInput.value = '';
-    void sendImages(files);
+    void sendFiles(files);
   }
 
   async function reset() {
@@ -187,21 +189,23 @@
     <section>
       <h2>收到的</h2>
       {#if s.items.length === 0}
-        <p class="hint">手机发来的文字会自动复制好，直接 Ctrl+V；照片会自动存进「下载\互传」文件夹。</p>
+        <p class="hint">手机发来的文字会自动复制好，直接 Ctrl+V；照片和文件会自动存进「下载\互传」文件夹。</p>
       {/if}
       <div class="items">
         {#each s.items as it (it.id)}
           <div class="item" data-kind={it.kind} data-from={it.from}>
             <div class="meta">
               {it.from === 'phone' ? '手机发来' : it.delivered ? '发到手机 · 手机已收到' : '发到手机 · 等手机打开网页'}
-              · {time(it.time)}{#if it.kind === 'image'} · {kb(it.size)}{/if}
+              · {time(it.time)}{#if it.kind !== 'text'} · {kb(it.size)}{/if}
               {#if it.kind === 'text' && it.from === 'phone' && it.copied} · 已复制{/if}
             </div>
             {#if it.kind === 'text'}
               <div class="text">{it.text}</div>
               <button onclick={(e) => copyText(it, e)}>复制</button>
-            {:else}
+            {:else if it.kind === 'image'}
               <ImageItem item={it} onShow={showFile} />
+            {:else}
+              <FileItem item={it} onShow={showFile} />
             {/if}
           </div>
         {/each}
@@ -215,11 +219,11 @@
       <div class="row">
         <button class="primary" onclick={send}>发到手机</button>
         <button onclick={sendClipboardImage}>发刚截的图</button>
-        <button onclick={() => fileInput?.click()}>选图片…</button>
+        <button onclick={() => fileInput?.click()}>选文件…</button>
       </div>
-      <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
+      <input bind:this={fileInput} type="file" multiple hidden onchange={onPick} />
       {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
-      <p class="hint">截图（Win+Shift+S）后点「发刚截的图」，或在这里按 Ctrl+V。图片也可以直接拖到这里。在网页上选中文字、或在链接和图片上点右键，也能「发到手机」。</p>
+      <p class="hint">截图（Win+Shift+S）后点「发刚截的图」，或在这里按 Ctrl+V。图片、文档等文件可以直接拖到这里。在网页上选中文字、或在链接和图片上点右键，也能「发到手机」。</p>
       {#if needImagePermission}<button onclick={allowImages}>允许发网页上的图</button>{/if}
     </section>
 

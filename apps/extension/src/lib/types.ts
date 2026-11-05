@@ -10,7 +10,7 @@ export interface SavedInfo { ok: boolean; path?: string; downloadId?: number; de
 export interface Item {
   id: string;
   from: 'phone' | 'pc';
-  kind: 'text' | 'image';
+  kind: 'text' | 'image' | 'file';
   time: number;
   text?: string;
   size?: number;
@@ -58,7 +58,7 @@ export type ToEngine =
   | { to: 'engine'; type: 'send-text'; text: string }
   /** 网页上右键「把这张图发到手机」：引擎自己去下载这张图 */
   | { to: 'engine'; type: 'send-image-url'; url: string }
-  /** 侧边栏里选的/粘贴的/拖进来的图：先放进小数据库，再告诉引擎 id */
+  /** 侧边栏里选的/粘贴的/拖进来的图或文件：先放进小数据库，再告诉引擎 id */
   | { to: 'engine'; type: 'send-file'; fileId: string; name: string }
   | { to: 'engine'; type: 'reset-pairing' }
   /** 侧边栏开着、看过了：清掉图标上的数字 */
