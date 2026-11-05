@@ -247,7 +247,7 @@
 
 <svelte:window onscroll={onScroll} />
 
-<div class="glow" aria-hidden="true"></div>
+<div class="glow" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
 <nav class="bar" class:scrolled aria-hidden={!scrolled}><span>Tapaste</span></nav>
 
 <main>
@@ -380,8 +380,13 @@
 
 <style>
   /* 顶上一层很淡的品牌色光晕 */
-  .glow { position: absolute; inset: 0 0 auto 0; height: 360px; pointer-events: none; z-index: 0;
-    background: radial-gradient(60% 70% at 15% 0%, var(--glow1), transparent 70%), radial-gradient(55% 60% at 95% 10%, var(--glow2), transparent 70%); }
+  .glow { position: absolute; inset: 0 0 auto 0; height: 420px; overflow: hidden; pointer-events: none; z-index: 0; opacity: var(--blob-o); }
+  .glow i { position: absolute; width: 260px; height: 260px; border-radius: 50%; filter: blur(70px); animation: drift 18s ease-in-out infinite alternate; }
+  .b1 { background: #9db7ff; left: -70px; top: -90px; }
+  .b2 { background: #f3b4f0; right: -80px; top: -60px; animation-delay: -6s !important; }
+  .b3 { background: #ffd2a8; left: 40%; top: 60px; width: 200px !important; height: 200px !important; animation-delay: -12s !important; }
+  .b4 { background: #a8ecf5; left: -40px; top: 150px; width: 180px !important; height: 180px !important; animation-delay: -3s !important; }
+  @keyframes drift { from { transform: translate(0, 0) scale(1); } to { transform: translate(30px, 24px) scale(1.12); } }
 
   /* 毛玻璃顶栏：滚过大标题才出现 */
   .bar { position: fixed; top: 0; left: 0; right: 0; z-index: 10; height: calc(44px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top);
@@ -397,7 +402,8 @@
 
   /* 大标题 */
   .large { padding: 2px 4px 16px; animation: rise .6s var(--ease) both; }
-  h1 { font-size: 34px; line-height: 1.12; font-weight: 700; letter-spacing: .01em; margin: 0 0 8px; }
+  h1 { font-size: 34px; line-height: 1.12; font-weight: 700; letter-spacing: .01em; margin: 0 0 8px; width: fit-content;
+    background: linear-gradient(90deg, #0a84ff, #7a5cff 40%, #e15fd0 75%, #ff8a3d); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .status { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 500; color: var(--label2); transition: color .3s; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--label3); flex: none; transition: background .3s, box-shadow .3s; }
   .status.ok { color: var(--green-text); }

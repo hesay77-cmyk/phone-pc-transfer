@@ -8,7 +8,7 @@
   --red: #ff3b30; --red-soft: rgba(255, 59, 48, .12);
   --bar: rgba(242, 242, 247, .72);
   --grad: linear-gradient(140deg, #6366f1 0%, #8b5cf6 100%);
-  --glow1: rgba(99, 102, 241, .20); --glow2: rgba(168, 85, 247, .16);
+  --blob-o: .55;
   --ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: light dark;
 }
@@ -21,7 +21,7 @@
     --orange: #ff9f0a; --orange-text: #ffb340; --orange-soft: rgba(255, 159, 10, .16);
     --red: #ff453a; --red-soft: rgba(255, 69, 58, .16);
     --bar: rgba(18, 18, 20, .72);
-    --glow1: rgba(99, 102, 241, .28); --glow2: rgba(168, 85, 247, .18);
+    --blob-o: .22;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
