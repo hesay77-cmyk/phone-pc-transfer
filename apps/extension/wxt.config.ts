@@ -13,7 +13,7 @@ export default defineConfig({
   vite: () => ({ define: { __APP_VERSION__: JSON.stringify(pkg.version) } }),
   manifest: {
     name: 'Tapaste',
-    description: '手机和电脑之间互传文字和照片。点一下就到另一边，同一个 Wi-Fi 直连，内容不经过服务器。',
+    description: '手机和电脑之间互传文字、照片和文件。点一下就到另一边，同一个 Wi-Fi 直连，内容不经过服务器。',
     minimum_chrome_version: '116',
     permissions: ['offscreen', 'notifications', 'clipboardWrite', 'clipboardRead', 'downloads', 'contextMenus', 'activeTab', 'scripting', 'storage'],
     // 右键发网页上的图时才问用户要（自动测试时直接给，免得弹窗卡住）
