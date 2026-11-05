@@ -4,3 +4,4 @@ node_modules/
 dist/
 .wxt/
 deploy-log.txt
+apps/site/downloads/
