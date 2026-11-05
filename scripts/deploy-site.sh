@@ -26,8 +26,8 @@ cp -r /tmp/tapaste-upload/* /var/lib/tapaste/public/
 chmod -R a+rX /var/lib/tapaste
 rm -rf /tmp/tapaste-upload
 
-CONFS=$(grep -rlE 'server_name[^;]*[[:space:]]hidaydream\.com' /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null || true)
-[ -n "$CONFS" ] || { echo "找不到 hidaydream.com 的 nginx 配置，没改"; exit 1; }
+CONFS=$(grep -RlE 'server_name[^;]*[[:space:]]hidaydream\.com' /etc/nginx/sites-enabled /etc/nginx/conf.d /etc/nginx/nginx.conf 2>/dev/null | xargs -r -n1 readlink -f | sort -u || true)
+[ -n "$CONFS" ] || { echo "找不到 hidaydream.com 的 nginx 配置，没改。server_name 有这些："; grep -Rn server_name /etc/nginx 2>/dev/null | head -20; exit 1; }
 for f in $CONFS; do
   real=$(readlink -f "$f")
   if grep -q 'location \^~ /tapaste/' "$real"; then echo "已配置过：$real"; continue; fi
