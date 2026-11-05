@@ -77,11 +77,16 @@ h1 .shine{background:linear-gradient(100deg,#9aa6ff 0%,#ffffff 40%,#e3ff6b 60%,#
 .cap .k{font:400 11.5px/1 var(--display);letter-spacing:3px;color:var(--lime);margin-bottom:18px}
 .cap h2{font:300 clamp(30px,3.4vw,46px)/1.15 var(--body);letter-spacing:-.02em;margin:0 0 16px;text-wrap:balance}
 .cap p{margin:0;color:var(--muted);font-size:16px;font-weight:300;line-height:1.85}
-.ctrl{margin-top:34px;display:flex;flex-direction:column;align-items:flex-start;gap:22px}
+.ctrl{margin-top:40px;display:flex;align-items:center;gap:22px}
 .prog{display:flex;gap:8px}
-.play{position:relative;cursor:pointer;border:0;font:inherit}
-.play::after{content:"";position:absolute;inset:-6px;border-radius:999px;border:1px solid rgba(227,255,107,.55);animation:ring 2s ease-out infinite;pointer-events:none}
-.play.used::after{display:none}
+.play{position:relative;flex:none;width:58px;height:58px;padding:0;border-radius:50%;cursor:pointer;display:grid;place-items:center;color:#fff;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.35);transition:background .3s,transform .3s}
+.play:hover{background:rgba(255,255,255,.14);transform:scale(1.06)}
+.play:active{transform:scale(.94)}
+.play svg{width:22px;height:22px;transition:transform .7s cubic-bezier(.2,.8,.2,1)}
+.play.back svg{transform:rotate(180deg)}
+.play::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:1px solid rgba(227,255,107,.5);animation:ring 2.4s ease-out infinite;pointer-events:none}
 #story{cursor:pointer}
 .prog i{width:34px;height:2px;background:var(--line);position:relative;overflow:hidden}
 .prog b{position:absolute;inset:0;background:var(--fg);transform:scaleX(0);transform-origin:left}
@@ -205,68 +210,76 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 @keyframes nb2{50%{transform:translate(-6vw,10vh) scale(.9)}}
 @keyframes nb3{50%{transform:translate(-8vw,-6vh) scale(1.15)}}
 
-/* ---------- 真实的样子：电脑侧边栏 + 手机网页 ---------- */
+/* ---------- 真实的样子：电脑侧边栏 + 手机网页（深色界面，和真的深色模式一样）---------- */
 #look{padding-top:120px}
 #look .head{margin-left:auto;margin-right:auto;text-align:center}
 .show-wrap{position:relative}
-.show-wrap::before{content:"";position:absolute;left:50%;top:46%;width:80%;height:80%;transform:translate(-50%,-50%);background:radial-gradient(ellipse,rgba(124,92,255,.38),rgba(14,127,216,.12) 45%,transparent 70%);filter:blur(30px);pointer-events:none}
+.show-wrap::before{content:"";position:absolute;left:52%;top:50%;width:86%;height:86%;transform:translate(-50%,-50%);background:radial-gradient(ellipse,rgba(110,90,255,.42),rgba(14,127,216,.14) 45%,transparent 70%);filter:blur(40px);pointer-events:none}
 .show{position:relative;width:1060px;height:640px;transform-origin:top left}
 .lap{position:absolute;left:170px;top:0;width:860px}
-.lap .scr2{height:540px;border-radius:18px 18px 6px 6px;padding:9px;background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.22);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(0,0,0,.4)}
-.lap .base2{height:16px;margin:0 -46px;border-radius:2px 2px 16px 16px;background:linear-gradient(rgba(255,255,255,.32),rgba(255,255,255,.08));box-shadow:0 20px 50px rgba(0,0,0,.5)}
-.bro{height:100%;border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column;color:#1d1d1f;font-family:var(--body)}
-.bro-top{height:38px;flex:none;display:flex;align-items:center;gap:7px;padding:0 12px;background:#eceef3;border-bottom:1px solid #dfe1e7}
-.bro-top i{width:10px;height:10px;border-radius:50%;background:#d0d3da}
-.bro-top .addr{margin-left:14px;flex:1;max-width:340px;height:24px;border-radius:999px;background:#fff;display:flex;align-items:center;padding:0 12px;font-size:11.5px;color:#8a8f9c}
-.bro-top .ext{margin-left:auto;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:#fff;position:relative}
-.bro-top .ext img{width:16px;height:16px;border-radius:4px}
-.bro-top .ext b{position:absolute;right:-5px;top:-5px;min-width:15px;height:15px;border-radius:8px;background:#5856d6;color:#fff;font-size:9.5px;font-weight:600;display:grid;place-items:center;padding:0 3px}
+.lap .scr2{height:540px;border-radius:20px 20px 8px 8px;padding:10px;background:#0b0c10;border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 50px 120px rgba(0,0,0,.7)}
+.lap .base2{position:relative;height:18px;margin:0 -52px;border-radius:3px 3px 18px 18px;background:linear-gradient(#5a5d6b,#2a2c35 60%,#16171d);box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.lap .base2::after{content:"";position:absolute;left:50%;top:0;width:120px;height:6px;margin-left:-60px;border-radius:0 0 8px 8px;background:#1d1e25}
+.bro{height:100%;border-radius:11px;overflow:hidden;background:#121318;display:flex;flex-direction:column;color:#f5f5f7;font-family:var(--body)}
+.bro-top{height:40px;flex:none;display:flex;align-items:center;gap:7px;padding:0 14px;background:#1d1e24;border-bottom:1px solid #2a2b33}
+.bro-top i{width:11px;height:11px;border-radius:50%}
+.bro-top i:nth-child(1){background:#ff5f57}.bro-top i:nth-child(2){background:#febc2e}.bro-top i:nth-child(3){background:#28c840}
+.bro-top .addr{margin-left:16px;flex:1;max-width:360px;height:26px;border-radius:8px;background:#121318;display:flex;align-items:center;padding:0 12px;font-size:12px;color:#8e8e93}
+.bro-top .ext{margin-left:auto;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:#2a2b33;position:relative}
+.bro-top .ext img{width:17px;height:17px;border-radius:4px}
+.bro-top .ext b{position:absolute;right:-6px;top:-6px;min-width:17px;height:17px;border-radius:9px;background:#5e5ce6;color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 4px;box-shadow:0 0 0 2px #1d1e24}
 .bro-body{flex:1;display:flex;min-height:0}
-.web{flex:1;padding:30px 34px;display:flex;flex-direction:column;gap:12px;background:#fff}
-.web .hero2{height:150px;border-radius:12px;background:linear-gradient(120deg,#ffe3c9,#ffc2d4 50%,#d9d4ff)}
-.web i{display:block;height:9px;border-radius:5px;background:#eceef2}
+.web{flex:1;padding:30px 36px;display:flex;flex-direction:column;gap:14px;background:#121318}
+.web .hero2{height:170px;border-radius:14px;background:radial-gradient(60% 90% at 25% 30%,#ffb46b,transparent 60%),radial-gradient(60% 90% at 75% 70%,#ff5f9e,transparent 60%),linear-gradient(120deg,#3b2a8f,#7a3fbf 55%,#1b6fd8);position:relative;overflow:hidden}
+.web .hero2::after{content:"";position:absolute;inset:auto 0 0 0;height:45%;background:linear-gradient(transparent,rgba(0,0,0,.35))}
+.web .ttl{font-size:19px;font-weight:600;letter-spacing:-.2px;color:#f5f5f7}
+.web i{display:block;height:9px;border-radius:5px;background:#24252c}
 .web .row{display:flex;gap:12px}
-.web .row div{flex:1;height:84px;border-radius:10px;background:#f3f4f7}
-.side{width:300px;flex:none;background:#f2f2f7;border-left:1px solid #e3e4ea;padding:14px 14px 0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.s-h{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;letter-spacing:-.2px}
-.s-h img{width:24px;height:24px;border-radius:6px}
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:#1f8a3b;background:#e3f6e8;border-radius:999px;padding:3px 9px}
-.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#34c759}
+.web .row div{flex:1;height:80px;border-radius:12px;background:#1c1d23;border:1px solid #24252c}
+.side{width:310px;flex:none;background:#000;border-left:1px solid #24252c;padding:16px 14px 0;display:flex;flex-direction:column;gap:11px;overflow:hidden}
+.s-h{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:600;letter-spacing:-.2px}
+.s-h img{width:26px;height:26px;border-radius:7px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:#30d158;background:rgba(48,209,88,.14);border-radius:999px;padding:4px 10px}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 8px #30d158}
 .s-h .pill{margin-left:auto}
-.s-card{background:#fff;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.s-in{height:54px;border-radius:10px;background:#f2f2f7;padding:8px 10px;font-size:11px;color:#9a9ca5;line-height:1.5}
-.s-go{height:34px;border-radius:10px;background:linear-gradient(90deg,#6366f1,#8b5cf6);color:#fff;font-size:12.5px;font-weight:600;display:grid;place-items:center;box-shadow:0 6px 16px rgba(99,102,241,.35)}
-.s-two{display:flex;gap:6px}.s-two span{flex:1;height:28px;border-radius:9px;background:#f2f2f7;font-size:11px;display:grid;place-items:center;color:#3a3a40}
-.s-tabs{display:flex;gap:4px;padding:3px;border-radius:10px;background:#e5e5ea;font-size:11px}
-.s-tabs span{flex:1;text-align:center;padding:5px 0;border-radius:8px;color:#6e6e73}
-.s-tabs span.on{background:#fff;color:#1d1d1f;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.s-list{display:flex;flex-direction:column;gap:7px}
-.s-it{background:#fff;border-radius:12px;padding:9px 10px;display:flex;gap:9px;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.s-it .ph2{flex:none;width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#ffb36b,#ff6b8b)}
+.s-card{background:#1c1c1e;border-radius:16px;padding:11px;display:flex;flex-direction:column;gap:9px}
+.s-in{height:56px;border-radius:11px;background:#2c2c2e;padding:9px 11px;font-size:11.5px;color:#8e8e93;line-height:1.5}
+.s-go{height:38px;border-radius:12px;background:linear-gradient(90deg,#5e5ce6,#8b5cf6);color:#fff;font-size:13px;font-weight:600;display:grid;place-items:center;box-shadow:0 8px 22px rgba(94,92,230,.45)}
+.s-two{display:flex;gap:7px}.s-two span{flex:1;height:30px;border-radius:10px;background:#2c2c2e;font-size:11.5px;display:grid;place-items:center;color:#e5e5ea}
+.s-tabs{display:flex;gap:4px;padding:3px;border-radius:11px;background:#1c1c1e;font-size:11.5px}
+.s-tabs span{flex:1;text-align:center;padding:6px 0;border-radius:9px;color:#8e8e93}
+.s-tabs span.on{background:#3a3a3c;color:#fff;font-weight:600}
+.s-list{display:flex;flex-direction:column;gap:8px}
+.s-it{background:#1c1c1e;border-radius:14px;padding:10px 11px;display:flex;gap:10px;align-items:center}
+.s-it .ph2{flex:none;width:42px;height:42px;border-radius:9px;background:linear-gradient(135deg,#ffb36b,#ff6b8b)}
 .s-it .tx{flex:1;min-width:0}
-.s-it .tx b{display:block;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.s-it .tx b.code{font-size:17px;letter-spacing:3px}
-.s-it .tx small{display:block;font-size:10px;color:#8a8f9c;margin-top:2px}
-.s-it .cp{flex:none;font-size:10.5px;font-weight:600;color:#5856d6;background:#ececfb;border-radius:999px;padding:4px 9px}
-.s-it.new{box-shadow:0 0 0 2px rgba(99,102,241,.5),0 6px 20px rgba(99,102,241,.25)}
-.mob{position:absolute;left:30px;top:120px;width:252px;height:510px;border-radius:46px;padding:8px;background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,.07));border:1px solid rgba(255,255,255,.28);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);box-shadow:0 40px 100px rgba(0,0,0,.65),0 0 0 1px rgba(0,0,0,.4);z-index:2}
-.mob-in{position:relative;height:100%;border-radius:38px;overflow:hidden;background:radial-gradient(120% 50% at 20% 0%,#e4e2ff,transparent 60%),radial-gradient(90% 40% at 100% 5%,#ffe0f1,transparent 60%),#f2f2f7;padding:46px 14px 14px;color:#1d1d1f;display:flex;flex-direction:column;gap:10px;font-family:var(--body)}
-.mob-in::before{content:"";position:absolute;left:50%;top:11px;width:76px;height:22px;border-radius:999px;background:#0b0b0f;transform:translateX(-50%)}
-.m-t{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1.05;background:linear-gradient(90deg,#3b82f6,#8b5cf6 55%,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content}
+.s-it .tx b{display:block;font-size:12.5px;font-weight:600;color:#f5f5f7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-it .tx b.code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;font-weight:500;color:#c9c8ff}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:-.2px}
+.bubble.mono{font-size:13px;color:#d6d5ff}
+.s-it .tx small{display:block;font-size:10.5px;color:#8e8e93;margin-top:3px}
+.s-it .cp{flex:none;font-size:11px;font-weight:600;color:#a5a4ff;background:rgba(94,92,230,.22);border-radius:999px;padding:5px 11px}
+.s-it.new{box-shadow:0 0 0 1.5px #7d7aff,0 8px 26px rgba(94,92,230,.45)}
+.mob{position:absolute;left:24px;top:110px;width:262px;height:530px;border-radius:50px;padding:3px;z-index:2;
+  background:linear-gradient(145deg,#8a8d9b,#3a3c46 25%,#22232b 55%,#5c5f6c 85%,#2b2c34);box-shadow:0 50px 110px rgba(0,0,0,.75),0 0 60px rgba(110,90,255,.18)}
+.mob-bz{height:100%;border-radius:47px;padding:7px;background:#000}
+.mob-in{position:relative;height:100%;border-radius:40px;overflow:hidden;background:radial-gradient(120% 45% at 15% 0%,rgba(94,92,230,.55),transparent 60%),radial-gradient(90% 35% at 100% 0%,rgba(236,72,153,.35),transparent 60%),#000;padding:50px 14px 14px;color:#f5f5f7;display:flex;flex-direction:column;gap:10px;font-family:var(--body)}
+.mob-in::before{content:"";position:absolute;left:50%;top:11px;width:80px;height:24px;border-radius:999px;background:#000;box-shadow:0 0 0 1px #111;transform:translateX(-50%)}
+.m-t{font-size:32px;font-weight:700;letter-spacing:-.6px;line-height:1.05;background:linear-gradient(90deg,#60a5fa,#a78bfa 55%,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content}
 .m-tiles{display:flex;gap:8px}
-.m-tiles div{flex:1;height:86px;border-radius:18px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;font-size:11.5px;font-weight:600;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.m-tiles div:first-child{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 8px 20px rgba(99,102,241,.35)}
-.m-tiles svg{width:20px;height:20px}
-.m-in{height:36px;border-radius:12px;background:#fff;display:flex;align-items:center;padding:0 6px 0 12px;font-size:11.5px;color:#9a9ca5}
-.m-in i{margin-left:auto;width:24px;height:24px;border-radius:50%;background:#f2f2f7;display:grid;place-items:center;font-style:normal;color:#6e6e73;font-size:12px}
-.m-h{font-size:15px;font-weight:700;margin-top:4px}
-.m-h span{color:#8e8e93;font-weight:500;margin-left:4px}
-.m-c{background:#fff;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.m-c small{font-size:10px;color:#8e8e93}
-.m-c b{font-size:14px;font-weight:600}
-.m-c span{align-self:flex-start;font-size:10.5px;font-weight:600;color:#5856d6;background:#ececfb;border-radius:999px;padding:4px 10px}
+.m-tiles div{flex:1;height:92px;border-radius:20px;padding:11px;display:flex;flex-direction:column;justify-content:space-between;font-size:12px;font-weight:600;background:#1c1c1e;color:#f5f5f7}
+.m-tiles div:first-child{background:linear-gradient(135deg,#5e5ce6,#8b5cf6);color:#fff;box-shadow:0 10px 26px rgba(94,92,230,.5)}
+.m-tiles svg{width:21px;height:21px}
+.m-in{height:38px;border-radius:13px;background:#1c1c1e;display:flex;align-items:center;padding:0 6px 0 12px;font-size:12px;color:#8e8e93}
+.m-in i{margin-left:auto;width:26px;height:26px;border-radius:50%;background:#2c2c2e;display:grid;place-items:center;font-style:normal;color:#e5e5ea;font-size:12px}
+.m-h{font-size:16px;font-weight:700;margin-top:4px}
+.m-h span{color:#8e8e93;font-weight:500;margin-left:5px}
+.m-c{background:#1c1c1e;border-radius:18px;padding:11px 13px;display:flex;flex-direction:column;gap:6px}
+.m-c small{font-size:10.5px;color:#8e8e93}
+.m-c b{font-size:15px;font-weight:600}
+.m-c span{align-self:flex-start;font-size:11px;font-weight:600;color:#a5a4ff;background:rgba(94,92,230,.22);border-radius:999px;padding:5px 11px}
 .beam{position:absolute;left:0;top:0;width:10px;height:10px;margin:-5px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(139,92,246,.9),0 0 30px 10px rgba(99,102,241,.5);z-index:3;opacity:0;pointer-events:none}
-.capt{display:flex;justify-content:center;gap:60px;margin-top:34px;font-size:13px;color:var(--muted);letter-spacing:.5px}
+.capt{display:flex;justify-content:center;gap:60px;margin-top:40px;font-size:13px;color:var(--muted);letter-spacing:.5px}
 .capt b{color:var(--fg);font-weight:400;margin-right:8px}
 
 /* ---------- 能传什么：两行慢慢滑过的小标签 ---------- */
@@ -332,7 +345,7 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
     <div class="hint" id="hint"><span class="pulse"></span><span id="hintT">点一下「发到电脑」试试</span></div>
     <div class="ph" id="ph">
       <div class="ph-top"><i></i>已连上电脑</div>
-      <button class="it on" data-k="text" data-v="取件码 8-2-4017"><span class="ic">字</span>取件码 8-2-4017</button>
+      <button class="it on" data-k="text" data-v="git pull && npm run build"><span class="ic mono">&lt;/&gt;</span><span class="mono">npm run build</span></button>
       <button class="it" data-k="photo"><span class="pic"></span>刚拍的照片</button>
       <button class="it" data-k="text" data-v="文三路 90 号 3 幢 502"><span class="ic">字</span>文三路 90 号</button>
       <button class="send" id="send">发到电脑</button>
@@ -350,50 +363,50 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
 <section class="story" id="story" style="padding:0">
   <div class="cap-wrap"><div class="w" style="width:100%"><div class="caps" id="caps">
-    <div class="cap"><div class="k">01 / 在手机上</div><h2>选好，点一下</h2><p>一个取件码、一个地址、一张刚拍的照片。点「发到电脑」。</p></div>
+    <div class="cap"><div class="k">01 / 在手机上</div><h2>选好，点一下</h2><p>一段代码、一个地址、一张刚拍的照片。点「发到电脑」。</p></div>
     <div class="cap"><div class="k">02 / 路上</div><h2>直接过去</h2><p>同一个 Wi-Fi 下，手机把它亲手交给电脑。不绕路，也不留在别处。</p></div>
     <div class="cap"><div class="k">03 / 在电脑上</div><h2>已经在那了</h2><p>文字已经复制好，照片已经存进「下载」文件夹。电脑上不用再点什么。</p></div>
     <div class="cap"><div class="k">04 / 以后</div><h2>一直连着</h2><p>只扫一次码。以后打开就连上，电脑上的东西也能一点发回手机。</p></div>
   </div>
-  <div class="ctrl"><div class="prog" id="prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div><button class="btn light play" id="play" type="button">点一下</button></div>
+  <div class="ctrl"><button class="play" id="play" type="button" aria-label="播放"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button><div class="prog" id="prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
   </div></div>
 </section>
 
 <div class="solid">
 <section id="look"><div class="w">
   <div class="head rv"><div class="eyebrow">真实的样子</div><h2 class="big">电脑上一个侧边栏，手机上一个网页。</h2><p>不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。</p></div>
-  <div class="show-wrap rv" id="showWrap"><div class="show" id="show">
+  <div class="show-wrap" id="showWrap"><div class="show" id="show">
     <div class="lap" id="lap"><div class="scr2"><div class="bro">
       <div class="bro-top"><i></i><i></i><i></i><span class="addr">你正在看的网页</span><span class="ext"><img src="icon.png" alt=""><b id="badge">2</b></span></div>
       <div class="bro-body">
-        <div class="web"><div class="hero2"></div><i style="width:62%"></i><i style="width:88%"></i><i style="width:74%"></i><div class="row"><div></div><div></div><div></div></div><i style="width:80%"></i><i style="width:55%"></i></div>
+        <div class="web"><div class="hero2"></div><div class="ttl">周末去海边</div><i style="width:62%"></i><i style="width:88%"></i><i style="width:74%"></i><div class="row"><div></div><div></div><div></div></div><i style="width:80%"></i><i style="width:55%"></i></div>
         <div class="side" id="side">
           <div class="s-h"><img src="icon.png" alt="">Tapaste<span class="pill">已连上手机</span></div>
           <div class="s-card"><div class="s-in">输入或粘贴文字、代码、网址</div><div class="s-go">发到手机</div><div class="s-two"><span>发刚复制的</span><span>选图片…</span></div></div>
           <div class="s-tabs"><span class="on">手机发来的</span><span>发到手机的</span></div>
           <div class="s-list" id="slist">
-            <div class="s-it"><div class="tx"><b class="code">384920</b><small>08:51 · 已复制</small></div><span class="cp">复制</span></div>
+            <div class="s-it"><div class="tx"><b class="code">git pull &amp;&amp; npm run build</b><small>08:51 · 已复制</small></div><span class="cp">复制</span></div>
             <div class="s-it"><div class="tx"><b>明天上午 10 点在三楼会议室</b><small>08:48 · 已复制</small></div><span class="cp">复制</span></div>
             <div class="s-it"><span class="ph2" style="background:linear-gradient(135deg,#8ec5fc,#6c7cff)"></span><div class="tx"><b>照片 · 2.4 MB</b><small>08:40 · 存进 下载/互传</small></div></div>
           </div>
         </div>
       </div>
     </div></div><div class="base2"></div></div>
-    <div class="mob" id="mob"><div class="mob-in">
+    <div class="mob" id="mob"><div class="mob-bz"><div class="mob-in">
       <div class="m-t">Tapaste</div><div><span class="pill">已连上电脑</span></div>
       <div class="m-tiles"><div id="mtile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2.5"/><path d="M9 4h6v3H9zM12 11v6M9 14h6"/></svg><span>粘贴并发送到电脑</span></div><div><svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 16l-5-5-8 8"/></svg><span>发照片到电脑</span></div></div>
       <div class="m-in">或者在这里打字<i>↑</i></div>
       <div class="m-h">电脑发来的<span>2</span></div>
       <div class="m-c"><small>08:50</small><b>明早 9 点开会</b><span>复制</span></div>
       <div class="m-c"><small>08:46</small><b>文三路 90 号 3 幢 502</b><span>复制</span></div>
-    </div></div>
+    </div></div></div>
     <i class="beam" id="beam"></i>
   </div></div>
   <div class="capt rv"><span><b>电脑</b>Chrome / Edge 侧边栏</span><span><b>手机</b>扫码打开的网页，不用装 App</span></div>
 </div></section>
 
 <div class="uses" aria-label="能传的东西">
-  <div class="lane"><span style="--c:#e3ff6b">取件码</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span><span style="--c:#e3ff6b">取件码</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span><span style="--c:#e3ff6b">取件码</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span><span style="--c:#e3ff6b">取件码</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span></div>
+  <div class="lane"><span style="--c:#e3ff6b">邮箱地址</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span><span style="--c:#e3ff6b">邮箱地址</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span><span style="--c:#e3ff6b">邮箱地址</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span><span style="--c:#e3ff6b">邮箱地址</span><span style="--c:#8b8fff">验证码</span><span style="--c:#ff9f6b">快递地址</span><span style="--c:#6bd3ff">会议链接</span><span style="--c:#ff6b9a">刚拍的照片</span><span style="--c:#b98bff">截图</span><span style="--c:#6bffb8">一段代码</span></div>
   <div class="lane r"><span style="--c:#6bd3ff">电话号码</span><span style="--c:#e3ff6b">网址</span><span style="--c:#ff9f6b">发票照片</span><span style="--c:#8b8fff">聊天里的一段话</span><span style="--c:#ff6b9a">文章里的一段</span><span style="--c:#6bffb8">表格里的数字</span><span style="--c:#b98bff">备忘</span><span style="--c:#6bd3ff">电话号码</span><span style="--c:#e3ff6b">网址</span><span style="--c:#ff9f6b">发票照片</span><span style="--c:#8b8fff">聊天里的一段话</span><span style="--c:#ff6b9a">文章里的一段</span><span style="--c:#6bffb8">表格里的数字</span><span style="--c:#b98bff">备忘</span><span style="--c:#6bd3ff">电话号码</span><span style="--c:#e3ff6b">网址</span><span style="--c:#ff9f6b">发票照片</span><span style="--c:#8b8fff">聊天里的一段话</span><span style="--c:#ff6b9a">文章里的一段</span><span style="--c:#6bffb8">表格里的数字</span><span style="--c:#b98bff">备忘</span><span style="--c:#6bd3ff">电话号码</span><span style="--c:#e3ff6b">网址</span><span style="--c:#ff9f6b">发票照片</span><span style="--c:#8b8fff">聊天里的一段话</span><span style="--c:#ff6b9a">文章里的一段</span><span style="--c:#6bffb8">表格里的数字</span><span style="--c:#b98bff">备忘</span></div>
 </div>
 
@@ -401,7 +414,7 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   <div class="head rv"><div class="eyebrow">能做什么</div><h2 class="big">那些每天都有的小事。</h2><p>以前要发给自己、插数据线、登网盘的，现在点一下。</p></div>
   <div class="bento">
     <div class="card wide rv"><div class="vis"><div class="thumbs"><div class="t1"></div><div class="t2"></div><div class="t3"></div><div class="t4"></div></div><div class="path">下载 / 互传</div></div><h3>原图，直接存好</h3><p>刚拍的照片、截图，原图送到电脑，自己进「下载」文件夹。也能从侧边栏直接拖进网页。</p></div>
-    <div class="card rv"><div class="vis"><div class="bubble">取件码 8-2-4017</div></div><h3>到了就能用</h3><p>取件码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。</p></div>
+    <div class="card rv"><div class="vis"><div class="bubble mono">git pull &amp;&amp; npm run build</div></div><h3>到了就能用</h3><p>一段代码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。</p></div>
     <div class="card rv"><div class="vis"><div class="swap">⇄</div></div><h3>电脑也能发手机</h3><p>网页上的字和图，右键「发到手机」。别的软件里的一大段字，复制一下就到手机。</p></div>
     <div class="card wide rv"><div class="vis"><div class="lan"><span>手机</span><b></b><span>电脑</span></div></div><h3>只在你家里走</h3><p>东西只在你的手机和电脑之间直接传，不上传，也不存在任何服务器上。不用注册，不用登录。</p></div>
   </div>
@@ -448,19 +461,19 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 /* 中英文：中文写在页面里；英文按系统语言自动切换，也可以点右上角手动换（记在本机） */
 (function(){
 var EN={
-'怎么回事':'How it works','真实的样子':'The real thing','电脑上一个侧边栏，手机上一个网页。':'A side panel on your computer. A web page on your phone.','不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。':'Nothing to learn. Open the side panel in your browser, scan the code on your phone. That’s it.','你正在看的网页':'any web page','已连上手机':'Phone connected','输入或粘贴文字、代码、网址':'Type or paste text, code, a link','发到手机':'Send to phone','发刚复制的':'Send clipboard','选图片…':'Pick image…','手机发来的':'From phone','发到手机的':'Sent to phone','08:51 · 已复制':'08:51 · Copied','明天上午 10 点在三楼会议室':'10am tomorrow, 3rd floor room','08:48 · 已复制':'08:48 · Copied','照片 · 2.4 MB':'Photo · 2.4 MB','08:40 · 存进 下载/互传':'08:40 · Saved to Downloads','复制':'Copy','已连上电脑':'Connected','粘贴并发送到电脑':'Paste & send to computer','发照片到电脑':'Send photo to computer','或者在这里打字':'Or type here','电脑发来的':'From computer','明早 9 点开会':'9am meeting','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','电脑':'Computer','Chrome / Edge 侧边栏':'Chrome / Edge side panel','手机':'Phone','扫码打开的网页，不用装 App':'A web page you scan to open. No app.','取件码':'Pickup codes','验证码':'Verification codes','快递地址':'Addresses','会议链接':'Meeting links','刚拍的照片':'Photos just taken','截图':'Screenshots','一段代码':'Code snippets','电话号码':'Phone numbers','网址':'Links','发票照片':'Receipts','聊天里的一段话':'A line from a chat','文章里的一段':'A paragraph from an article','表格里的数字':'Numbers from a sheet','备忘':'Notes','刚收到 · 已复制':'Just now · Copied','点一下':'Tap','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
+'怎么回事':'How it works','真实的样子':'The real thing','电脑上一个侧边栏，手机上一个网页。':'A side panel on your computer. A web page on your phone.','不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。':'Nothing to learn. Open the side panel in your browser, scan the code on your phone. That’s it.','你正在看的网页':'any web page','周末去海边':'A weekend by the sea','已连上手机':'Phone connected','输入或粘贴文字、代码、网址':'Type or paste text, code, a link','发到手机':'Send to phone','发刚复制的':'Send clipboard','选图片…':'Pick image…','手机发来的':'From phone','发到手机的':'Sent to phone','08:51 · 已复制':'08:51 · Copied','明天上午 10 点在三楼会议室':'10am tomorrow, 3rd floor room','08:48 · 已复制':'08:48 · Copied','照片 · 2.4 MB':'Photo · 2.4 MB','08:40 · 存进 下载/互传':'08:40 · Saved to Downloads','复制':'Copy','已连上电脑':'Connected','粘贴并发送到电脑':'Paste & send to computer','发照片到电脑':'Send photo to computer','或者在这里打字':'Or type here','电脑发来的':'From computer','明早 9 点开会':'9am meeting','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','电脑':'Computer','Chrome / Edge 侧边栏':'Chrome / Edge side panel','手机':'Phone','扫码打开的网页，不用装 App':'A web page you scan to open. No app.','邮箱地址':'Email addresses','验证码':'Verification codes','快递地址':'Addresses','会议链接':'Meeting links','刚拍的照片':'Photos just taken','截图':'Screenshots','一段代码':'Code snippets','电话号码':'Phone numbers','网址':'Links','发票照片':'Receipts','聊天里的一段话':'A line from a chat','文章里的一段':'A paragraph from an article','表格里的数字':'Numbers from a sheet','备忘':'Notes','刚收到 · 已复制':'Just now · Copied','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
 '点一下，':'Tap once.','就到另一边。':'It’s already there.',
 '手机和电脑之间互传文字和照片。':'Send text and photos between your phone and computer.',
 '不用数据线，不用登录，手机不用装 App。':'No cables. No sign-in. No app on your phone.',
 '下载电脑插件':'Get the extension','看看怎么用':'See how it works',
 '电脑：Chrome 或 Edge　·　手机：自带浏览器，扫码就行':'Computer: Chrome or Edge　·　Phone: any browser, just scan',
 '点一下「发到电脑」试试':'Tap “Send to computer” to try it',
-'已连上电脑':'Connected','字':'T','取件码 8-2-4017':'Code 8-2-4017','刚拍的照片':'Photo just taken',
+'已连上电脑':'Connected','字':'T','刚拍的照片':'Photo just taken',
 '文三路 90 号':'12 Elm Street','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','发到电脑':'Send to computer',
 '下载 / 互传':'Downloads / Tapaste','明早 9 点开会':'9am meeting','右键 · 发到手机':'Send to phone',
 '手机':'Phone','电脑':'Computer',
 '01 / 在手机上':'01 / On your phone','选好，点一下':'Pick it. Tap once.',
-'一个取件码、一个地址、一张刚拍的照片。点「发到电脑」。':'A pickup code, an address, a photo you just took. Tap “Send to computer”.',
+'一段代码、一个地址、一张刚拍的照片。点「发到电脑」。':'A code snippet, an address, a photo you just took. Tap “Send to computer”.',
 '02 / 路上':'02 / On the way','直接过去':'Straight across',
 '同一个 Wi-Fi 下，手机把它亲手交给电脑。不绕路，也不留在别处。':'On the same Wi‑Fi, your phone hands it straight to your computer. No detours, no copies left anywhere.',
 '03 / 在电脑上':'03 / On your computer','已经在那了':'Already there',
@@ -472,7 +485,7 @@ var EN={
 '原图，直接存好':'Full-size photos, saved',
 '刚拍的照片、截图，原图送到电脑，自己进「下载」文件夹。也能从侧边栏直接拖进网页。':'Photos and screenshots arrive at full size and land in your Downloads folder. Drag them from the side panel straight into a web page.',
 '到了就能用':'Ready to use',
-'取件码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。':'Pickup codes, addresses, a bit of chat. Already copied on your computer, ready wherever you need it.',
+'一段代码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。':'Code snippets, addresses, a bit of chat. Already copied on your computer, ready wherever you need it.',
 '电脑也能发手机':'Computer to phone, too',
 '网页上的字和图，右键「发到手机」。别的软件里的一大段字，复制一下就到手机。':'Right-click text or images on a web page and choose “Send to phone”. Copy a long passage in any app, and it’s on your phone.',
 '只在你家里走':'It stays at home',
@@ -710,7 +723,7 @@ function showCap(i,tl,at){tl.to(caps[cur],{opacity:0,y:-24,filter:'blur(10px)',d
 /* 点一下往前播（手机 → 电脑 → 连在一起），再点一下倒着流回手机，来回循环 */
 var busy=false,fwd=true;
 function playStory(){
-  if(busy)return;busy=true;play.classList.add('used');
+  if(busy)return;busy=true;play.classList.toggle('back',fwd);
   var tl=gsap.timeline({onComplete:function(){busy=false;fwd=!fwd}});
   tl.to(st,{intro:1,glow:1,duration:.5},0);
   if(fwd){
@@ -738,7 +751,8 @@ gsap.to(['.hero .copy','.demo-wrap'],{opacity:0,y:-60,filter:'blur(8px)',ease:'n
   if(reduce||!window.gsap)return;
   gsap.to('#mob',{y:-14,duration:3.2,ease:'sine.inOut',yoyo:true,repeat:-1});
   gsap.to('#lap',{y:-6,duration:4.2,ease:'sine.inOut',yoyo:true,repeat:-1,delay:.6});
-  gsap.fromTo('#mob',{x:-60,rotate:-4},{x:0,rotate:0,duration:1.6,ease:'expo.out',scrollTrigger:{trigger:'#showWrap',start:'top 80%'}});
+  gsap.from('#lap',{scale:.94,opacity:0,transformOrigin:'50% 100%',duration:1.4,ease:'expo.out',scrollTrigger:{trigger:'#showWrap',start:'top 85%'}});
+  gsap.fromTo('#mob',{x:-70,opacity:0,rotate:-4},{x:0,opacity:1,rotate:0,duration:1.6,delay:.2,ease:'expo.out',scrollTrigger:{trigger:'#showWrap',start:'top 85%'}});
   gsap.from('#slist .s-it',{x:30,opacity:0,stagger:.12,duration:.9,ease:'expo.out',scrollTrigger:{trigger:'#showWrap',start:'top 70%'}});
   var beam=$('#beam'),tile=$('#mtile'),list=$('#slist'),badge=$('#badge'),n=2,k=0;
   var msgs=['刚拍的照片','验证码','快递地址','会议链接'];
@@ -759,7 +773,7 @@ gsap.to(['.hero .copy','.demo-wrap'],{opacity:0,y:-60,filter:'blur(8px)',ease:'n
     if(self.isActive&&!timer){setTimeout(once,1400);timer=setInterval(once,3600)}else if(!self.isActive&&timer){clearInterval(timer);timer=null}}});
 })();
 
-ScrollTrigger.batch('.rv',{start:'top 88%',once:true,onEnter:function(els){gsap.from(els,{y:40,opacity:0,filter:'blur(10px)',duration:1.1,ease:'expo.out',stagger:.08})}});
+ScrollTrigger.batch('.rv',{start:'top 88%',once:true,onEnter:function(els){gsap.from(els,{y:40,opacity:0,filter:'blur(10px)',duration:1.1,ease:'expo.out',stagger:.08,clearProps:'filter,transform,opacity'})}});
 })();
 </script>
 </body>
