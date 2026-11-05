@@ -30,6 +30,8 @@ export const CONFIG = {
    * 第一个在国内，第二、三个在国外（谷歌的国内连不上，不影响别的）。VITE_STUN_URLS=none 关掉。
    */
   iceServers: stunServers(env.VITE_STUN_URLS),
-  /** 图片分块大小 */
-  chunkSize: 16 * 1024
+  /** 图片/文件分块大小 */
+  chunkSize: 16 * 1024,
+  /** 一次能发的文件最大多大（收的一方要把整个文件放在内存里，手机上太大会卡死） */
+  maxFileBytes: 100 * 1024 * 1024
 };

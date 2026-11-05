@@ -171,6 +171,59 @@ const phoneImgOk = await phone.evaluate(async (n) => {
 check('电脑发图片到手机：手机显示，一字节不差', phoneImgOk);
 check('手机上有「存到相册」', await phone.isVisible('text=存到相册'));
 
+// 发文件（文档、压缩包等，不是照片）：两边都能发、能收，一字节不差
+const fakeFile = (n, seed) => { const b = Buffer.alloc(n); for (let i = 0; i < n; i++) b[i] = (i * seed + (i >> 8)) & 255; return b; };
+const sum = (b) => b.reduce((a, x) => (a * 31 + x) >>> 0, 7);
+const pdf = fakeFile(300 * 1024 + 123, 7);
+await phone.setInputFiles('input[type=file]', { name: '报价单 2026.pdf', mimeType: 'application/pdf', buffer: pdf });
+await panel.click('.tabs .t-phone').catch(() => {});
+const pcFile = panel.locator('.item[data-kind="file"][data-from="phone"]', { hasText: '报价单 2026.pdf' });
+const pcGotFile = await pcFile.waitFor({ timeout: 15000 }).then(() => true, () => false);
+await panel.waitForFunction(() => document.querySelector('.item[data-kind="file"]')?.innerText.includes('打开所在文件夹'), null, { timeout: 10000 }).catch(() => {});
+check('手机发文件：电脑收到并显示文件名', pcGotFile);
+const fileText = pcGotFile ? await pcFile.innerText() : '';
+check('文件自动存进下载文件夹', fileText.includes('打开所在文件夹'), fileText.includes('没能自动保存') ? fileText : '');
+const dl = await (ctx.serviceWorkers()[0] ?? sw).evaluate(async () => {
+  const [d] = await chrome.downloads.search({ orderBy: ['-startTime'], limit: 1 });
+  return d ? { name: d.filename.split(/[\\/]/).pop(), size: d.fileSize || d.bytesReceived, state: d.state } : null;
+}).catch((e) => ({ err: String(e) }));
+// （测试里 Chrome 的下载被测试工具接管，存下的名字是一串乱码，所以只核对大小）
+check('存下来的文件大小一字节不差', dl?.size === pdf.length && dl?.state === 'complete', JSON.stringify(dl));
+check('手机上显示「电脑已收到」', await phone.waitForFunction(() => document.querySelector('.sent')?.dataset.state === 'done' && document.querySelector('.sent').textContent.includes('报价单'), null, { timeout: 5000 }).then(() => true, () => false),
+  await phone.evaluate(() => document.querySelector('.sent')?.textContent ?? ''));
+const docx = fakeFile(180 * 1024 + 5, 13);
+await panel.setInputFiles('.send input[type=file]', { name: '会议纪要.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docx });
+const phFile = phone.locator('.item[data-kind="file"]', { hasText: '会议纪要.docx' });
+const phGotFile = await phFile.waitFor({ timeout: 15000 }).then(() => true, () => false);
+check('电脑发文件：手机收到并显示文件名', phGotFile);
+const phFileOk = phGotFile && await phone.evaluate(async ([n, want]) => {
+  const a = [...document.querySelectorAll('.item[data-kind="file"]')].find((e) => e.textContent.includes('会议纪要.docx'))?.querySelector('a[download]');
+  if (!a) return false;
+  const b = new Uint8Array(await (await fetch(a.href)).arrayBuffer());
+  return b.length === n && b.reduce((s, x) => (s * 31 + x) >>> 0, 7) === want;
+}, [docx.length, sum(docx)]);
+check('手机收到的文件一字节不差，有「存到手机」', phFileOk && await phFile.locator('text=存到手机').isVisible());
+await panel.click('.tabs .t-pc').catch(() => {});
+const pcSentFile = panel.locator('.item[data-kind="file"][data-from="pc"]', { hasText: '会议纪要.docx' });
+check('侧边栏里发出去的文件显示「已送到」', await pcSentFile.waitFor({ timeout: 5000 }).then(() => pcSentFile.innerText()).then((t) => !t.includes('等手机'), () => false));
+await panel.click('.tabs .t-phone').catch(() => {});
+if (process.env.E2E_SHOTS) {
+  await phone.evaluate(() => document.querySelector('.list')?.scrollIntoView({ block: 'start' })); await phone.waitForTimeout(500);
+  await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-files.png') });
+  await panel.waitForTimeout(400); await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-files.png') });
+}
+
+// 手机上点小垃圾桶：这一条删掉，刷新也不回来
+const nGot = await phone.locator('.item').count();
+await phFile.locator('.del').click();
+await phone.waitForFunction((n) => document.querySelectorAll('.item').length === n - 1, nGot, { timeout: 3000 }).catch(() => {});
+const gotSaved = await phone.evaluate(() => localStorage.getItem('hutong:phone:got') ?? '');
+check('手机删掉一条「电脑发来的」', (await phone.locator('.item').count()) === nGot - 1 && !gotSaved.includes('会议纪要'));
+const nSent = await phone.locator('.sent').count();
+await phone.locator('.sent').first().locator('.del').click();
+await phone.waitForFunction((n) => document.querySelectorAll('.sent').length === n - 1, nSent, { timeout: 3000 }).catch(() => {});
+check('手机删掉一条「发出去的」', (await phone.locator('.sent').count()) === nSent - 1);
+
 // 截图后：在侧边栏按 Ctrl+V（不用先点输入框），或点「发刚截的图」
 const putShot = (w, h) => panel.evaluate(async ([w, h]) => {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -510,6 +563,16 @@ await sleep(1500);
 check('取消了的不会送到后来连上的手机', !(await home.evaluate(() => document.body.innerText.includes('发错了不想发'))));
 check('电脑上提醒「有一台新手机连上了」', await panel.evaluate(() => document.body.innerText.includes('有一台新手机连上了')));
 await homeCtx.close();
+
+// 侧边栏点小垃圾桶：这一条删掉，重新打开侧边栏也不回来
+await panel.click('.tabs .t-pc').catch(() => {});
+await wrong.locator('.del').click({ timeout: 5000 }).catch(() => {});
+await panel.waitForTimeout(600);
+const goneNow = (await wrong.count()) === 0;
+await panel.reload();
+await panel.click('.tabs .t-pc', { timeout: 10000 }).catch(() => {});
+await panel.waitForSelector('.item', { timeout: 10000 }).catch(() => {});
+check('侧边栏删掉一条，重新打开也不回来', goneNow && (await wrong.count()) === 0, `点完=${goneNow}`);
 
 // 公司网络不让设备直接通信：两边都要说清楚，而不是一直转圈
 const blockCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });

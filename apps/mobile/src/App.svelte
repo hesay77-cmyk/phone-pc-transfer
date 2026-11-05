@@ -1,16 +1,17 @@
 <script lang="ts">
   import {
-    BlobStore, localKV, persistentOutbox, randomId, secretFromHash, startSession, trimForHistory,
+    BlobStore, CONFIG, isShowableImage, localKV, persistentOutbox, randomId, secretFromHash, sizeText, startSession, trimForHistory,
     type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Session
   } from '@hutong/core';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
-  import { fly } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
+  import PhoneFile from './PhoneFile.svelte';
   import PhoneImage from './PhoneImage.svelte';
   import Scanner from './Scanner.svelte';
 
   /** 电脑发来的一条。老版本存的没有 kind，都是文字 */
-  interface Got { id: string; kind?: 'text' | 'image'; text?: string; name?: string; size?: number; time: number; cut?: boolean }
+  interface Got { id: string; kind?: 'text' | 'image' | 'file'; text?: string; name?: string; size?: number; mime?: string; time: number; cut?: boolean }
   const MAX_GOT = 20;
   const photos = new BlobStore('hutong', 'files', MAX_GOT);
   interface Sent { id: string; label: string; state: 'sending' | 'waiting' | 'done' | 'cancelled' | 'expired' | 'failed'; pct?: number }
@@ -78,7 +79,7 @@
   /** 存记录：太长的文字只存开头，免得手机上的存储满了整个记录都存不上 */
   function saveGot() {
     kv.set('got', JSON.stringify(got.map((g) => {
-      if (g.kind === 'image' || !g.text) return g;
+      if (g.kind === 'image' || g.kind === 'file' || !g.text) return g;
       const t = trimForHistory(g.text);
       return t.cut ? { ...g, text: t.text, cut: true } : g;
     })));
@@ -90,6 +91,19 @@
     void photos.prune([]);
   }
   function cancelSent(id: string) { session?.transfer.cancel(id); }
+  /** 删掉一条「电脑发来的」（照片、文件也从手机上删掉） */
+  function deleteGot(id: string) {
+    got = got.filter((x) => x.id !== id);
+    saveGot();
+    void photos.delete(id);
+  }
+  /** 删掉一条「发出去的」：还没送到的顺便不发了 */
+  function deleteSent(id: string) {
+    session?.transfer.cancel(id);
+    sent = sent.filter((x) => x.id !== id);
+  }
+  /** 照片和文件存在手机上，只留最近的 */
+  const pruneBlobs = () => photos.prune(got.filter((x) => x.kind === 'image' || x.kind === 'file').map((x) => x.id));
 
   function device(): DeviceInfo {
     let id = kv.get('deviceId');
@@ -99,7 +113,9 @@
     return { id, role: 'phone', name, app: version };
   }
 
-  const label = (it: OutItem) => (it.kind === 'text' ? `${it.text.length} 个字` : `照片 ${kb(it.meta.size)}`);
+  const short = (n: string) => (n.length > 18 ? n.slice(0, 10) + '…' + n.slice(-6) : n);
+  const label = (it: OutItem) => (it.kind === 'text' ? `${it.text.length} 个字`
+    : isShowableImage(it.meta.mime) ? `照片 ${kb(it.meta.size)}` : `「${short(it.meta.name)}」${kb(it.meta.size)}`);
   const setSent = (id: string, p: Partial<Sent>) => { sent = sent.map((s) => (s.id === id ? { ...s, ...p } : s)); };
 
   async function start() {
@@ -126,11 +142,12 @@
           if (it.kind === 'text') g = { id: it.id, kind: 'text', text: it.text, time: Date.now() };
           else {
             await photos.put(it.id, it.blob);
-            g = { id: it.id, kind: 'image', name: it.meta.name, size: it.blob.size, time: Date.now() };
+            const mime = it.blob.type || it.meta.mime;
+            g = { id: it.id, kind: isShowableImage(mime) ? 'image' : 'file', name: it.meta.name, size: it.blob.size, mime, time: Date.now() };
           }
           got = [g, ...got.filter((x) => x.id !== g.id)].slice(0, MAX_GOT);
           saveGot();
-          void photos.prune(got.filter((x) => x.kind === 'image').map((x) => x.id));
+          void pruneBlobs();
         },
         progress: (it, r) => setSent(it.id, { state: 'sending', pct: Math.round(r * 100) }),
         delivered: (it) => { setSent(it.id, { state: 'done' }); note = ''; },
@@ -197,9 +214,12 @@
     const files = Array.from(fileInput.files ?? []);
     fileInput.value = '';
     for (const f of files) {
+      if (f.size > CONFIG.maxFileBytes) { note = `「${short(f.name)}」太大了（${sizeText(f.size)}），一次最多发 ${sizeText(CONFIG.maxFileBytes)}`; continue; }
       let w: number | undefined, h: number | undefined;
-      try { const b = await createImageBitmap(f); w = b.width; h = b.height; b.close(); } catch { /* 读不到尺寸不要紧 */ }
-      if (session) track(session.transfer.sendFile(f, { name: f.name, w, h }));
+      if (isShowableImage(f.type)) {
+        try { const b = await createImageBitmap(f); w = b.width; h = b.height; b.close(); } catch { /* 读不到尺寸不要紧 */ }
+      }
+      if (session) track(session.transfer.sendFile(f, { name: f.name || '文件', w, h }));
     }
   }
 
@@ -226,11 +246,12 @@
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 </script>
 
-{#snippet icon(name: 'clip' | 'image' | 'up' | 'tray')}
+{#snippet icon(name: 'clip' | 'image' | 'up' | 'tray' | 'trash')}
   <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
     {#if name === 'clip'}<rect x="7.5" y="3.5" width="9" height="4" rx="1.6" /><path d="M7.5 5.5H6.5a2.5 2.5 0 0 0-2.5 2.5v10.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V8a2.5 2.5 0 0 0-2.5-2.5h-1" /><path d="M9 14h6M12 11v6" />
     {:else if name === 'image'}<rect x="3" y="4.5" width="18" height="15" rx="3.5" /><circle cx="8.8" cy="9.8" r="1.7" /><path d="m3.5 17 5.2-4.6 4.1 3.6 2.6-2.1 5.1 4" />
     {:else if name === 'up'}<path d="M12 18.5V6M6.5 11.5 12 6l5.5 5.5" />
+    {:else if name === 'trash'}<path d="M4.5 7h15M9.5 7V5.2c0-.7.5-1.2 1.2-1.2h2.6c.7 0 1.2.5 1.2 1.2V7M6.5 7l.8 11.6c.1 1 .9 1.9 2 1.9h5.4c1 0 1.9-.8 2-1.9L17.5 7M10.2 11v5.5M13.8 11v5.5" />
     {:else}<path d="M3.5 13.5 6 5.5h12l2.5 8v4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-4Z" /><path d="M3.5 13.5h5l1 2h5l1-2h5" />{/if}
   </svg>
 {/snippet}
@@ -317,9 +338,9 @@
           {@render icon('clip')}<span>粘贴并发送到电脑</span>
         </button>
         <button class="tile" onclick={() => fileInput?.click()}>
-          {@render icon('image')}<span>发照片到电脑</span>
+          {@render icon('image')}<span>发照片或文件到电脑</span>
         </button>
-        <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onFiles} />
+        <input bind:this={fileInput} type="file" multiple hidden onchange={onFiles} />
       </section>
 
       <section class="compose rise" style="--d: 110ms">
@@ -332,8 +353,9 @@
       {#if sent.length}
         <section class="group list rise" style="--d: 150ms">
           {#each sent as s (s.id)}
-            <div class="sent" data-state={s.state} animate:flip={{ duration: 320, easing: cubicOut }} in:fly={pop}>
+            <div class="sent" data-state={s.state} animate:flip={{ duration: 320, easing: cubicOut }} in:fly={pop} out:fade={{ duration: 180 }}>
               <span class="what">{s.label}</span>
+              <span class="right">
               {#if s.state === 'done'}<span class="st ok">电脑已收到 ✓</span>
               {:else if s.state === 'cancelled'}<span class="st">已取消，不发了</span>
               {:else if s.state === 'expired'}<span class="st">放了一天也没送到，不发了</span>
@@ -341,6 +363,8 @@
               {:else if s.state === 'sending'}<span class="st wait">发送中{s.pct !== undefined ? ` ${s.pct}%` : '…'}</span>
               {:else}<span class="st wait">等连上电脑后自动发</span>{/if}
               {#if s.state === 'waiting' || s.state === 'sending'}<button class="link-btn" onclick={() => cancelSent(s.id)}>不发了</button>{/if}
+              <button class="del" onclick={() => deleteSent(s.id)} aria-label="删除这一条">{@render icon('trash')}</button>
+              </span>
             </div>
           {/each}
         </section>
@@ -349,13 +373,18 @@
       <section class="got rise" style="--d: 190ms">
         <h2>电脑发来的{#if got.length}<span class="count">{got.length}</span>{/if}</h2>
         {#if got.length === 0}
-          <div class="empty">{@render icon('tray')}<p>还没有。电脑上可以在网页里右键「发到手机」，或者在 Tapaste 侧边栏里发文字、网址、图片过来。</p></div>
+          <div class="empty">{@render icon('tray')}<p>还没有。电脑上可以在网页里右键「发到手机」，或者在 Tapaste 侧边栏里发文字、网址、图片、文件过来。</p></div>
         {/if}
         {#each got as g (g.id)}
-          <div class="item" data-kind={g.kind ?? 'text'} animate:flip={{ duration: 320, easing: cubicOut }} in:fly={pop}>
-            <div class="meta">{time(g.time)}{#if g.size} · {kb(g.size)}{/if}</div>
+          <div class="item" data-kind={g.kind ?? 'text'} animate:flip={{ duration: 320, easing: cubicOut }} in:fly={pop} out:fade={{ duration: 180 }}>
+            <div class="head">
+              <div class="meta">{time(g.time) + (g.size ? ' · ' + kb(g.size) : '')}</div>
+              <button class="del" onclick={() => deleteGot(g.id)} aria-label="删除这一条">{@render icon('trash')}</button>
+            </div>
             {#if g.kind === 'image'}
               <PhoneImage id={g.id} name={g.name ?? ''} store={photos} />
+            {:else if g.kind === 'file'}
+              <PhoneFile id={g.id} name={g.name ?? '文件'} mime={g.mime ?? ''} store={photos} />
             {:else}
               {@const t = g.text ?? ''}
               <div class="text" class:code={isCode(t)}>{isCode(t) ? t.trim() : t}</div>
@@ -455,7 +484,9 @@
   .list { padding: 0 0 0 16px; }
   .sent { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 48px; padding: 10px 16px 10px 0; font-size: 16px; }
   .sent + .sent { border-top: .5px solid var(--sep); }
-  .what { font-weight: 500; margin-right: auto; }
+  .what { font-weight: 500; margin-right: auto; overflow-wrap: anywhere; }
+  /* 状态、「不发了」、垃圾桶总在一起靠右；名字长时整组换到下一行 */
+  .right { display: flex; align-items: center; gap: 10px; margin-left: auto; white-space: nowrap; }
   .st { font-size: 15px; color: var(--label2); }
   .st.ok { color: var(--green-text); }
   .st.wait { color: var(--orange-text); }
@@ -469,7 +500,15 @@
   .empty .ic { width: 34px; height: 34px; color: var(--label3); stroke-width: 1.5; margin-bottom: 6px; }
   .empty p { margin: 0; }
   .item { background: var(--card); border-radius: 20px; padding: 14px 16px 16px; margin-bottom: 12px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px -8px 0 0; }
   .meta { font-size: 13px; color: var(--label2); font-variant-numeric: tabular-nums; }
+  /* 小垃圾桶：平时淡淡的，不抢眼 */
+  .del { flex: none; width: 32px; height: 32px; margin: -4px 0; display: grid; place-items: center; border: none; border-radius: 50%; background: transparent; color: var(--label3); cursor: pointer;
+    transition: background .2s var(--ease), color .2s var(--ease), transform .2s var(--ease); }
+  .del .ic { width: 19px; height: 19px; stroke-width: 1.7; }
+  .del:active { background: var(--red-soft); color: var(--red); transform: scale(.9); }
+  @media (hover: hover) { .del:hover { background: var(--red-soft); color: var(--red); } }
+  .sent .del { margin: -4px -6px -4px -2px; }
   .text { white-space: pre-wrap; word-break: break-all; margin: 6px 0 12px; font-size: 17px; max-height: 50vh; overflow: auto; }
   .text.code { font-size: 42px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; margin: 8px 0 12px; }
   .small { font-size: 14px; color: var(--label2); margin: -4px 0 10px; }

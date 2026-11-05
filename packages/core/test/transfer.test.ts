@@ -100,6 +100,24 @@ describe('发一条 / 收一条', () => {
     }
   });
 
+  it('收到的数据比说好的大小还多：整个丢掉，不确认', async () => {
+    const { b, received } = pair();
+    const msg = (body: MsgBody) => { const d = decode(encode(body)); if (!d.ok) throw new Error('bad'); return d.msg; };
+    const start = msg({ t: 'file-start', id: 'big', createdAt: 1, meta: { name: 'x.jpg', mime: 'image/jpeg', size: 10 } } as MsgBody);
+    b.handle(start);
+    b.handleBinary(new Uint8Array(8).buffer);
+    b.handleBinary(new Uint8Array(8).buffer);
+    b.handle(msg({ t: 'file-end', id: 'big' } as MsgBody));
+    for (let i = 0; i < 5; i++) await flush();
+    expect(received).toHaveLength(0);
+    // 同一个文件老老实实重发一次：能收到
+    b.handle(start);
+    b.handleBinary(new Uint8Array(10).buffer);
+    b.handle(msg({ t: 'file-end', id: 'big' } as MsgBody));
+    for (let i = 0; i < 5; i++) await flush();
+    expect(received).toHaveLength(1);
+  });
+
   it('图片中途丢了一块：不确认、不交给界面，重连后整张重发', async () => {
     const { a, pa, received, delivered } = pair();
     let dropped = false;

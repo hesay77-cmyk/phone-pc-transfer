@@ -1,7 +1,8 @@
 // 引擎：在看不见的小页面里一直开着。连手机、收东西、写剪贴板、存照片、发通知。
 
 import {
-  BlobStore, CONFIG, localKV, looksLikePassword, persistentOutbox, newSecret, pairingUrl, randomId, startSession, trimForHistory,
+  asciiFileName, BlobStore, CONFIG, isShowableImage, localKV, looksLikePassword, persistentOutbox, newSecret, pairingUrl, randomId, safeFileName,
+  sizeText, startSession, trimForHistory,
   type DeviceInfo, type Incoming, type Session
 } from '@hutong/core';
 import { browser } from 'wxt/browser';
@@ -47,6 +48,7 @@ export class Engine {
       if (msg.type === 'send-text') { reply(this.sendText(msg.text)); return; }
       if (msg.type === 'cancel') { if (!this.session?.transfer.cancel(msg.id)) this.patch(msg.id, { dropped: 'cancelled' }); reply(this.state); return; }
       if (msg.type === 'clear-items') { this.clearItems(); reply(this.state); return; }
+      if (msg.type === 'delete-item') { this.deleteItem(msg.id); reply(this.state); return; }
       if (msg.type === 'dismiss') {
         if (msg.what === 'newPhone') this.state.newPhone = undefined; else this.state.skippedSecretAt = undefined;
         this.push(); reply(this.state); return;
@@ -182,12 +184,14 @@ export class Engine {
   private async sendClipboard(): Promise<SendResult> {
     const c = readClipboard();
     if (!c.ok) { this.log('读剪贴板失败'); return { ok: false, error: '读不到剪贴板。可以把内容粘贴到侧边栏的输入框里再发' }; }
-    const imgs = c.files.filter((f) => f.type.startsWith('image/'));
-    if (imgs.length) {
+    // 截的图，或者在文件夹里复制的文件
+    if (c.files.length) {
       let r: SendResult = { ok: false };
       const t = new Date().toLocaleTimeString().replace(/:/g, '-');
-      for (const f of imgs) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : `截图 ${t}.png`);
-      return { ...r, what: imgs.length > 1 ? `${imgs.length} 张图` : '截图' };
+      for (const f of c.files) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : `截图 ${t}.png`);
+      const allImg = c.files.every((f) => f.type.startsWith('image/'));
+      const n = c.files.length;
+      return { ...r, what: allImg ? (n > 1 ? `${n} 张图` : '截图') : (n > 1 ? `${n} 个文件` : `「${c.files[0]!.name}」`) };
     }
     if (!c.text.trim()) return { ok: false, error: '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再发' };
     const r = this.sendText(c.text);
@@ -210,25 +214,36 @@ export class Engine {
     return this.sendBlob(blob, name);
   }
 
-  /** 侧边栏放进小数据库的图 */
+  /** 侧边栏放进小数据库的图片或文件 */
   private async sendStoredFile(fileId: string, name: string): Promise<SendResult> {
     const blob = await getFile(fileId);
     void deleteFile(fileId);
-    if (!blob) return { ok: false, error: '图片没读到，请再试一次' };
+    if (!blob) return { ok: false, error: '没读到这个文件，请再试一次' };
     return this.sendBlob(blob, name);
   }
 
+  /** 发图片或文件到手机。能直接显示的图片当照片发（侧边栏、手机上都能看到图），别的当文件 */
   private async sendBlob(blob: Blob, name: string): Promise<SendResult> {
     if (!this.session) return { ok: false, error: '插件还没准备好，请稍等再试' };
+    if (blob.size > CONFIG.maxFileBytes) {
+      return { ok: false, error: `「${name}」太大了（${sizeText(blob.size)}），一次最多发 ${sizeText(CONFIG.maxFileBytes)}` };
+    }
     let w: number | undefined, h: number | undefined;
-    try { const b = await createImageBitmap(blob); w = b.width; h = b.height; b.close(); }
-    catch { if (!blob.type.startsWith('image/')) return { ok: false, error: '这不是图片' }; }
+    let isImg = isShowableImage(blob.type);
+    // 有的网站给图片标的类型不对：能当图片打开的就当图片
+    if (isImg || !blob.type || blob.type === 'application/octet-stream') {
+      try {
+        const b = await createImageBitmap(blob);
+        w = b.width; h = b.height; b.close();
+        if (!isImg) { blob = new Blob([blob], { type: 'image/png' }); isImg = true; }
+      } catch { /* 不是图片，或读不到尺寸 */ }
+    }
     const out = this.session.transfer.sendFile(blob, { name, w, h });
-    await putFile(out.id, blob);
-    this.addItem({ id: out.id, from: 'pc', kind: 'image', time: Date.now(), size: blob.size, w, h, mime: blob.type, name, delivered: false });
-    this.log(`发图片到手机：${name}，${kb(blob.size)}`);
-    void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
-    return { ok: true, connected: this.session.link.ready };
+    if (isImg) await putFile(out.id, blob);
+    this.addItem({ id: out.id, from: 'pc', kind: isImg ? 'image' : 'file', time: Date.now(), size: blob.size, w, h, mime: blob.type, name, delivered: false });
+    this.log(`发${isImg ? '图片' : '文件'}到手机：${name}，${kb(blob.size)}`);
+    if (isImg) void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    return { ok: true, connected: this.session.link.ready, what: isImg ? '图片' : '文件' };
   }
 
   private async onReceived(it: Incoming) {
@@ -242,21 +257,30 @@ export class Engine {
       return;
     }
     const { blob, meta } = it;
-    this.log(`收到照片 ${kb(blob.size)}，${meta.w ?? '?'}×${meta.h ?? '?'}，用时 ${it.ms} 毫秒`);
-    await putFile(it.id, blob);
-    this.addItem({ id: it.id, from: 'phone', kind: 'image', time: Date.now(), size: blob.size, w: meta.w, h: meta.h, mime: blob.type });
-    // 自动存进电脑：「下载\互传」
+    const isImg = isShowableImage(blob.type || meta.mime);
+    const what = isImg ? '照片' : `文件「${meta.name}」`;
+    this.log(`收到${what} ${kb(blob.size)}，用时 ${it.ms} 毫秒`);
+    if (isImg) await putFile(it.id, blob);
+    this.addItem({ id: it.id, from: 'phone', kind: isImg ? 'image' : 'file', time: Date.now(), size: blob.size,
+      w: meta.w, h: meta.h, mime: blob.type || meta.mime, name: meta.name });
+    // 自动存进电脑：「下载\Tapaste」
     const url = URL.createObjectURL(blob);
     const saved: SavedInfo = await this.bg({ to: 'bg', type: 'save-file', url,
-      filename: photoName(blob.type), fallbackName: photoName(blob.type, true) })
+      filename: isImg ? photoName(blob.type) : safeFileName(meta.name),
+      fallbackName: isImg ? photoName(blob.type, true) : asciiFileName(meta.name, 'phone-file') })
       .catch((e: Error) => ({ ok: false, detail: e.message }));
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    this.log(saved.ok ? '照片已存到：' + saved.path : '照片没存上：' + saved.detail);
+    this.log(saved.ok ? `${what}已存到：` + saved.path : `${what}没存上：` + saved.detail);
     this.patch(it.id, { saved });
-    this.bg({ to: 'bg', type: 'notify', kind: 'image', itemId: it.id,
-      title: saved.ok ? '收到一张照片，已存进「下载\\互传」' : '收到一张照片',
-      message: '点这里复制，然后就能 Ctrl+V', imageUrl: await thumbnail(blob) });
-    void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    if (isImg) {
+      this.bg({ to: 'bg', type: 'notify', kind: 'image', itemId: it.id,
+        title: saved.ok ? '收到一张照片，已存进「下载\\Tapaste」' : '收到一张照片',
+        message: '点这里复制，然后就能 Ctrl+V', imageUrl: await thumbnail(blob) });
+      void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    } else {
+      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: saved.ok ? '收到一个文件，已存进「下载\\Tapaste」' : '收到一个文件',
+        message: `${meta.name}（${sizeText(blob.size)}）` });
+    }
   }
 
   // ---------- 插件图标上的角标：新收到几条（蓝色数字）；发到手机送到了闪一下绿色 ✓ ----------
@@ -314,6 +338,19 @@ export class Engine {
       const t = trimForHistory(it.text);
       return t.cut ? { ...it, text: t.text, cut: true } : it;
     })));
+  }
+
+  /** 删掉一条（侧边栏每条右上角的小垃圾桶）。还没送到手机的顺便不发了；存进「下载\Tapaste」的照片文件不动 */
+  private deleteItem(id: string) {
+    const it = this.state.items.find((x) => x.id === id);
+    if (!it) return;
+    if (it.from === 'pc' && !it.delivered && !it.dropped) this.session?.transfer.cancel(id);
+    this.state.items = this.state.items.filter((x) => x.id !== id);
+    this.early.delete(id);
+    this.saveItems();
+    if (it.kind === 'image') void deleteFile(id);
+    this.log('删了一条记录');
+    this.push();
   }
 
   /** 清空记录：还没送到手机的留着（它们还在待发） */

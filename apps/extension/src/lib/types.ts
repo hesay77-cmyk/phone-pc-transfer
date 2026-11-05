@@ -10,7 +10,7 @@ export interface SavedInfo { ok: boolean; path?: string; downloadId?: number; de
 export interface Item {
   id: string;
   from: 'phone' | 'pc';
-  kind: 'text' | 'image';
+  kind: 'text' | 'image' | 'file';
   time: number;
   text?: string;
   size?: number;
@@ -70,6 +70,8 @@ export type ToEngine =
   | { to: 'engine'; type: 'cancel'; id: string }
   /** 清空侧边栏里的记录（还没送到的留着） */
   | { to: 'engine'; type: 'clear-items' }
+  /** 删掉一条记录（还没送到的顺便不发了） */
+  | { to: 'engine'; type: 'delete-item'; id: string }
   /** 关掉「新手机连上了」「跳过了像密码的」这类提醒 */
   | { to: 'engine'; type: 'dismiss'; what: 'newPhone' | 'skippedSecret' }
   /** 网页上右键「把这张图发到手机」：引擎自己去下载这张图 */
@@ -77,7 +79,7 @@ export type ToEngine =
   /** 把剪贴板里的东西（刚复制的文字，或刚截的图）发到手机：快捷键和侧边栏按钮都用它 */
   | { to: 'engine'; type: 'send-clipboard' }
   | { to: 'engine'; type: 'set-auto-send'; on: boolean }
-  /** 侧边栏里选的/粘贴的/拖进来的图：先放进小数据库，再告诉引擎 id */
+  /** 侧边栏里选的/粘贴的/拖进来的图或文件：先放进小数据库，再告诉引擎 id */
   | { to: 'engine'; type: 'send-file'; fileId: string; name: string }
   | { to: 'engine'; type: 'reset-pairing' }
   /** 侧边栏开着、看过了：清掉图标上的数字 */

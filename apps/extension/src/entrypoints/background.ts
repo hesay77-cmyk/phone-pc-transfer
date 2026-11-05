@@ -80,12 +80,12 @@ export default defineBackground(() => {
       r = await toEngine({ type: 'send-image-url', url: info.srcUrl ?? '' });
       if (!r.ok && !allowed) {
         void browser.storage.local.set({ needImagePermission: true });
-        r.error = '第一次发网页上的图，要先允许一下：打开Tapaste 侧边栏，点「允许」，再右键发一次';
+        r.error = '第一次发网页上的图，要先允许一下：打开 Tapaste 侧边栏，点「允许」，再右键发一次';
       }
     } else {
       r = await toEngine({ type: 'send-text', text: info.pageUrl || tab?.url || '' });
     }
-    const text = r.ok ? (r.connected ? '已发到手机' : '手机没打开Tapaste 网页，先存着，打开后自动送到') : (r.error || '没发出去');
+    const text = r.ok ? (r.connected ? '已发到手机' : '手机没打开 Tapaste 网页，先存着，打开后自动送到') : (r.error || '没发出去');
     if (!(await toast(tab?.id, text, r.ok)) && !r.ok) notify({ to: 'bg', type: 'notify', kind: 'text', title: '没发到手机', message: text });
   }
   // ---------- 快捷键：把刚复制的内容发到手机（在任何软件里复制完按一下） ----------
@@ -95,7 +95,7 @@ export default defineBackground(() => {
     await ensureEngine();
     const r: SendResult = await browser.runtime.sendMessage({ to: 'engine', type: 'send-clipboard' } satisfies ToEngine)
       .catch(() => ({ ok: false, error: '插件后台没响应，请再试一次' }));
-    const text = r.ok ? (r.connected ? `${r.what ?? ''}已发到手机` : `${r.what ?? ''}先存着，手机打开Tapaste 网页后自动送到`) : (r.error || '没发出去');
+    const text = r.ok ? (r.connected ? `${r.what ?? ''}已发到手机` : `${r.what ?? ''}先存着，手机打开 Tapaste 网页后自动送到`) : (r.error || '没发出去');
     // Chrome 在前台：网页右下角闪提示；在别的软件里：用系统通知（被关了也没关系，手机上会收到）
     const w = await browser.windows.getLastFocused().catch(() => null);
     if (!(w?.focused && (await toast(tab?.id, text, r.ok)))) {
@@ -177,14 +177,14 @@ export default defineBackground(() => {
     } catch { /* 打不开就算了 */ }
   });
 
-  /** 存进 Chrome 的下载文件夹里的「Tapaste」；个别系统不认中文文件名，就退回英文名 */
+  /** 存进 Chrome 的下载文件夹里的「Tapaste」；个别系统不认中文文件名，就退回英文文件名 */
   async function saveFile(url: string, filename: string, fallbackName: string): Promise<SavedInfo> {
     const opt = { url, conflictAction: 'uniquify' as const, saveAs: false };
     try {
-      return await waitDownload(await browser.downloads.download({ ...opt, filename: '互传/' + filename }));
+      return await waitDownload(await browser.downloads.download({ ...opt, filename: 'Tapaste/' + filename }));
     } catch (e) {
       try {
-        return await waitDownload(await browser.downloads.download({ ...opt, filename: 'hutong/' + fallbackName }));
+        return await waitDownload(await browser.downloads.download({ ...opt, filename: 'Tapaste/' + fallbackName }));
       } catch (e2) {
         return { ok: false, detail: `存不进去：${(e as Error).message} / ${(e2 as Error).message}` };
       }

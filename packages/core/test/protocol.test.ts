@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decode, encode, PROTOCOL_VERSION, randomId } from '../src/protocol';
+import { decode, encode, MAX_FILE_BYTES, PROTOCOL_VERSION, randomId } from '../src/protocol';
 
 describe('消息格式', () => {
   it('编码后带版本号，能原样解出来', () => {
@@ -19,11 +19,31 @@ describe('消息格式', () => {
     expect(decode('null').ok).toBe(false);
     expect(decode(JSON.stringify({ v: 1, t: 'text' })).ok).toBe(false);
     expect(decode(JSON.stringify({ v: 1, t: 'file-start', id: 'a', createdAt: 1, meta: { size: -1, mime: 'x' } })).ok).toBe(false);
+    expect(decode(JSON.stringify({ v: 1, t: 'file-start', id: 'a', createdAt: 1, meta: { size: MAX_FILE_BYTES + 1, mime: 'x' } })).ok).toBe(false);
   });
 
   it('随机编号长度对、不重复', () => {
     const ids = new Set(Array.from({ length: 1000 }, () => randomId()));
     expect(ids.size).toBe(1000);
     expect([...ids][0]).toHaveLength(12);
+  });
+});
+import { asciiFileName, isShowableImage, safeFileName } from '../src/files';
+
+describe('文件名和类型', () => {
+  it('能显示的图片 / 普通文件', () => {
+    expect(isShowableImage('image/jpeg')).toBe(true);
+    expect(isShowableImage('image/heic')).toBe(false);
+    expect(isShowableImage('application/pdf')).toBe(false);
+  });
+  it('Windows 不允许的字符换掉，保留扩展名', () => {
+    expect(safeFileName('报告:2026/11?.docx')).toBe('报告_2026_11_.docx');
+    expect(safeFileName('  ')).toBe('文件');
+    const long = safeFileName('长'.repeat(200) + '.pdf');
+    expect(long.length).toBe(120);
+    expect(long.endsWith('.pdf')).toBe(true);
+  });
+  it('备用英文名', () => {
+    expect(asciiFileName('报告.docx')).toMatch(/^file-\d{8}-\d{6}\.docx$/);
   });
 });

@@ -42,6 +42,8 @@ export interface TransferEvents {
 interface Pending { item: OutItem; inflight: boolean; tries: number; fails: number; waited: boolean; timer?: ReturnType<typeof setTimeout> }
 
 const ACK_TIMEOUT_MS = 8000;
+/** 发文件时一次从文件里读多少 */
+const READ_WINDOW = 1024 * 1024;
 /** 超过一天还没送到的，不再自动补发（免得很久以后突然冒出来） */
 export const OUTBOX_EXPIRE_MS = 24 * 3600 * 1000;
 /** 文字超过这么多字节就按文件分块送（直连一条消息最多 256KB，留足余量） */
@@ -143,6 +145,8 @@ export class Transfer {
   /** 交给它处理通道上收到的二进制块 */
   handleBinary(b: ArrayBuffer) {
     if (!this.rx || this.rx.skip) return;
+    // 比说好的大小还多：不对劲，整个丢掉（不回确认，对方会重发，发不成就算失败）
+    if (this.rx.got + b.byteLength > this.rx.meta.size) { this.rx = null; this.log('收到的数据比说好的多，丢掉这个文件'); return; }
     this.rx.parts.push(b);
     this.rx.got += b.byteLength;
   }
@@ -244,11 +248,15 @@ export class Transfer {
 
   private async sendFileNow(item: Extract<OutItem, { kind: 'file' }>): Promise<boolean> {
     if (!this.pipe.send({ t: 'file-start', id: item.id, createdAt: item.createdAt, meta: item.meta })) return false;
-    const buf = await item.blob.arrayBuffer();
-    for (let off = 0; off < buf.byteLength; off += this.chunkSize) {
-      await this.pipe.waitDrain();
-      if (!this.pipe.sendBinary(buf.slice(off, off + this.chunkSize))) return false;
-      this.ev.progress?.(item, Math.min(1, (off + this.chunkSize) / buf.byteLength));
+    // 一次读 1MB 再切块发：大文件不用整个读进内存
+    const size = item.blob.size;
+    for (let base = 0; base < size; base += READ_WINDOW) {
+      const buf = await item.blob.slice(base, base + READ_WINDOW).arrayBuffer();
+      for (let off = 0; off < buf.byteLength; off += this.chunkSize) {
+        await this.pipe.waitDrain();
+        if (!this.pipe.sendBinary(buf.slice(off, off + this.chunkSize))) return false;
+      }
+      this.ev.progress?.(item, Math.min(1, (base + buf.byteLength) / size));
     }
     return this.pipe.send({ t: 'file-end', id: item.id });
   }

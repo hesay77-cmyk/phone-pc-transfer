@@ -15,7 +15,7 @@
 
   // 拖进网页 / 拖进 Chrome：见 lib/pagedrop.ts
   function dragStart(e: DragEvent) {
-    // 文件名和「下载\互传」里存的那张一样
+    // 文件名和「下载\Tapaste」里存的那张一样
     const saved = item.saved?.path?.split(/[\\/]/).pop();
     const name = saved && /\.\w{3,4}$/.test(saved) ? saved : photoName(item.mime || 'image/jpeg', false, new Date(item.time));
     startPhotoDrag(e, { id: item.id, name }, onNeedPermission);

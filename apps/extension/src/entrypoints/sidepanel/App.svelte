@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { flip } from 'svelte/animate';
+  import { fade } from 'svelte/transition';
   import { browser } from 'wxt/browser';
   import { putFile } from '../../lib/files';
   import { servePageDrop } from '../../lib/pagedrop';
   import type { EngineState, Item, SendResult, ToBg, ToEngine, ToPanel } from '../../lib/types';
+  import FileItem from './FileItem.svelte';
   import ImageItem from './ImageItem.svelte';
   import Qr from './Qr.svelte';
 
@@ -101,13 +104,13 @@
     if (s.link === 'connecting') return { cls: 'wait', text: '手机正在连过来…' };
     if (s.link === 'blocked') return { cls: 'bad', text: '手机找到了，但这个网络不让手机和电脑直接连' };
     if (s.signal !== 'online') return { cls: 'wait', text: '正在连接网络…' };
-    return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开Tapaste 网页就会自动连上' : '还没配对手机' };
+    return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开 Tapaste 网页就会自动连上' : '还没配对手机' };
   });
 
   function showResult(r: SendResult | undefined, what = '') {
     sendOk = !!r?.ok;
     sendTip = !r?.ok ? (r?.error ?? '没发出去')
-      : r.connected ? `✓ ${what}已发到手机` : `${what}先存着，手机打开Tapaste 网页后自动送到`;
+      : r.connected ? `✓ ${what}已发到手机` : `${what}先存着，手机打开 Tapaste 网页后自动送到`;
   }
 
   async function send() {
@@ -118,29 +121,28 @@
     showResult(r);
   }
 
-  /** 发图片：选的、粘贴的、拖进来的都走这里（先放进小数据库，再让引擎发） */
-  async function sendImages(files: File[]) {
-    const imgs = files.filter((f) => f.type.startsWith('image/'));
-    if (!imgs.length) { if (files.length) { sendOk = false; sendTip = '现在只能发图片'; } return; }
-    for (const f of imgs) {
+  /** 发图片或文件：选的、粘贴的、拖进来的都走这里（先放进小数据库，再让引擎发） */
+  async function sendFiles(files: File[]) {
+    if (!files.length) return;
+    for (const f of files) {
       const fileId = 'up:' + Math.random().toString(36).slice(2);
       await putFile(fileId, f);
       const r: SendResult = await engine({ to: 'engine', type: 'send-file', fileId, name: f.name || shotName() });
-      showResult(r, imgs.length > 1 ? '' : '图片');
+      showResult(r, files.length > 1 ? '' : (r.what ?? ''));
     }
   }
 
   const shotName = () => `截图 ${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`;
 
-  /** 侧边栏里任何地方按 Ctrl+V：剪贴板里是图片（比如刚截的图）就直接发到手机 */
+  /** 侧边栏里任何地方按 Ctrl+V：剪贴板里是图片（比如刚截的图）或文件（在文件夹里复制的）就直接发到手机 */
   function onPaste(e: ClipboardEvent) {
     // 往输入框里粘文字时（剪贴板里同时有字和图，比如从 Word 复制的）照常粘文字
     if (e.target instanceof HTMLTextAreaElement && e.clipboardData?.types.includes('text/plain')) return;
     const files = Array.from(e.clipboardData?.items ?? [])
-      .filter((i) => i.kind === 'file' && i.type.startsWith('image/'))
+      .filter((i) => i.kind === 'file')
       .map((i) => i.getAsFile())
       .filter((f): f is File => !!f);
-    if (files.length) { e.preventDefault(); void sendImages(files); }
+    if (files.length) { e.preventDefault(); void sendFiles(files); }
   }
 
   /** 按钮：把刚复制的内容（文字或截图）发到手机。先让引擎读；读不到再用侧边栏自己读 */
@@ -155,7 +157,7 @@
         if (t) files.push(new File([await it.getType(t)], shotName(), { type: t }));
         else if (it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
       }
-      if (files.length) { await sendImages(files); return; }
+      if (files.length) { await sendFiles(files); return; }
       if (!text.trim()) { sendOk = false; sendTip = '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再点这个按钮'; return; }
       showResult(await engine({ to: 'engine', type: 'send-text', text }));
     } catch {
@@ -165,8 +167,9 @@
   }
 
   async function cancel(it: Item) { s = await engine({ to: 'engine', type: 'cancel', id: it.id }); }
+  async function deleteItem(it: Item) { s = await engine({ to: 'engine', type: 'delete-item', id: it.id }); }
   async function clearItems() {
-    if (!confirm('清空这里的记录？（已经存进「下载\\互传」的照片不受影响，还没送到手机的会留着）')) return;
+    if (!confirm('清空这里的记录？（已经存进「下载\\Tapaste」的照片和文件不受影响，还没送到手机的会留着）')) return;
     s = await engine({ to: 'engine', type: 'clear-items' });
   }
   async function dismiss(what: 'newPhone' | 'skippedSecret') { s = await engine({ to: 'engine', type: 'dismiss', what }); }
@@ -180,14 +183,14 @@
   function onDrop(e: DragEvent) {
     e.preventDefault();
     dragging = false;
-    void sendImages(Array.from(e.dataTransfer?.files ?? []));
+    void sendFiles(Array.from(e.dataTransfer?.files ?? []));
   }
 
   function onPick() {
     if (!fileInput) return;
     const files = Array.from(fileInput.files ?? []);
     fileInput.value = '';
-    void sendImages(files);
+    void sendFiles(files);
   }
 
   async function reset() {
@@ -208,13 +211,14 @@
 
 <svelte:document onpaste={onPaste} />
 
-{#snippet icon(name: 'send' | 'clip' | 'image' | 'phone' | 'pc' | 'qr' | 'info')}
+{#snippet icon(name: 'send' | 'clip' | 'image' | 'phone' | 'pc' | 'qr' | 'info' | 'trash')}
   <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
     {#if name === 'send'}<path d="M4 12 20 4l-6 16-3-7-7-1Z" />
     {:else if name === 'clip'}<rect x="7" y="4" width="10" height="4" rx="1.5" /><path d="M7 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1" />
     {:else if name === 'image'}<rect x="3.5" y="4.5" width="17" height="15" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 3.5" />
     {:else if name === 'phone'}<rect x="7" y="2.5" width="10" height="19" rx="2.5" /><path d="M11 18.5h2" />
     {:else if name === 'pc'}<rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" />
+    {:else if name === 'trash'}<path d="M4.5 7h15M9.5 7V5.2c0-.7.5-1.2 1.2-1.2h2.6c.7 0 1.2.5 1.2 1.2V7M6.5 7l.8 11.6c.1 1 .9 1.9 2 1.9h5.4c1 0 1.9-.8 2-1.9L17.5 7M10.2 11v5.5M13.8 11v5.5" />
     {:else if name === 'qr'}<rect x="4" y="4" width="6" height="6" rx="1" /><rect x="14" y="4" width="6" height="6" rx="1" /><rect x="4" y="14" width="6" height="6" rx="1" /><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2" />
     {:else}<circle cx="12" cy="12" r="8.5" /><path d="M12 11v5M12 8h.01" />{/if}
   </svg>
@@ -243,7 +247,7 @@
     {#if !s.everPaired || showQr}
       <section class="card pair">
         <h2>{@render icon('qr')}{s.everPaired ? '换一台手机' : '第一步：用 iPhone 扫码'}</h2>
-        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开Tapaste 网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
+        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开 Tapaste 网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
         <div class="qrbox"><Qr text={s.pairingUrl} /></div>
         <p class="small center">
           {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>收起</button> · {/if}
@@ -255,18 +259,18 @@
     <section class="card send" class:dragging aria-label="发到手机"
       ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
       <label class="auto" class:on={s.autoSend}>
-        <span class="auto-text"><b>复制就发</b><span>在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上的Tapaste 网页要开着）</span></span>
+        <span class="auto-text"><b>复制就发</b><span>在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上的 Tapaste 网页要开着）</span></span>
         <input type="checkbox" role="switch" checked={s.autoSend} onchange={(e) => setAuto((e.target as HTMLInputElement).checked)} />
       </label>
       <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder="输入或粘贴文字、代码、网址，按 Ctrl+Enter 发送"></textarea>
       <div class="row">
         <button class="primary" onclick={send}>{@render icon('send')}发到手机</button>
         <button onclick={sendClipboard}>{@render icon('clip')}发刚复制的</button>
-        <button onclick={() => fileInput?.click()}>{@render icon('image')}选图片…</button>
+        <button onclick={() => fileInput?.click()}>{@render icon('image')}选图片或文件…</button>
       </div>
-      <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
+      <input bind:this={fileInput} type="file" multiple hidden onchange={onPick} />
       {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
-      <p class="hint">复制了文字或截了图，点「发刚复制的」就行。网页上选中文字、在链接或图片上右键，也能发到手机。</p>
+      <p class="hint">复制了文字或截了图，点「发刚复制的」就行。文件可以直接拖到这里。网页上选中文字、在链接或图片上右键，也能发到手机。</p>
     </section>
 
     {#if needImagePermission || permTip}
@@ -312,22 +316,27 @@
       </div>
       {#if shown.length === 0}
         <p class="empty">
-          {#if tab === 'phone'}手机发来的文字会自动复制好，直接 Ctrl+V；照片会自动存进「下载\互传」文件夹。
+          {#if tab === 'phone'}手机发来的文字会自动复制好，直接 Ctrl+V；照片和文件会自动存进「下载\Tapaste」文件夹。
           {:else}在上面打字、点「发刚复制的」、或在网页上右键「发到手机」，发出去的东西都在这里，能看到手机收到没有。{/if}
         </p>
       {/if}
+      <!-- 换栏时整块换掉（不播淡出），只有点垃圾桶删的那一条才淡出 -->
+      {#key tab}
       <div class="items">
         {#each shown as it (it.id)}
           {@const st = it.from === 'pc' ? pcStatus(it) : null}
-          <div class="item" data-kind={it.kind} data-from={it.from}>
+          <div class="item" data-kind={it.kind} data-from={it.from} animate:flip={{ duration: 250 }} out:fade={{ duration: 150 }}>
             <div class="meta">
               {#if st}<span class="who">发到手机</span><span class="st {st.cls}">{st.text}</span>
               {:else}<span class="who">手机发来</span>{#if it.kind === 'text' && it.copied}<span class="st ok">已复制</span>{/if}{/if}
-              <span class="when">{time(it.time) + (it.kind === 'image' ? ' · ' + kb(it.size) : '')}</span>
+              <span class="when">{time(it.time) + (it.kind !== 'text' ? ' · ' + kb(it.size) : '')}</span>
+              <button class="del" onclick={() => deleteItem(it)} aria-label="删除这一条" title="删除这一条">{@render icon('trash')}</button>
             </div>
             {#if it.kind === 'text'}
               <div class="text">{it.text}</div>
               {#if it.cut}<div class="small">太长了，记录里只留了开头（手机发来时整段已经复制好了）</div>{/if}
+            {:else if it.kind === 'file'}
+              <FileItem item={it} onShow={showFile} />
             {:else}
               <ImageItem item={it} onShow={showFile} onNeedPermission={needPermission} />
             {/if}
@@ -340,6 +349,7 @@
           </div>
         {/each}
       </div>
+      {/key}
       {#if s.items.length}<p class="small center"><button class="link" onclick={clearItems}>清空记录</button></p>{/if}
     </section>
 
@@ -426,6 +436,10 @@
   .st.wait { background: var(--wait-soft); color: var(--wait); }
   .st.bad { background: var(--bad-soft); color: var(--bad); }
   .when { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .del { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; margin: -4px -6px -4px 0; border-radius: 7px; background: transparent; color: var(--muted); opacity: .55; transition: opacity .15s, color .15s, background .15s; }
+  .del .ic { width: 15px; height: 15px; }
+  .item:hover .del { opacity: 1; }
+  .del:hover { color: var(--bad); background: var(--bad-soft); opacity: 1; }
   .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; max-height: 220px; overflow: auto; }
   .acts { display: flex; gap: 6px; margin-top: 8px; }
   .sm { padding: 3px 12px; font-size: 12px; border-radius: 8px; }

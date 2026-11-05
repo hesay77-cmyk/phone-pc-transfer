@@ -41,7 +41,7 @@
         if (code?.data) {
           const secret = parse(code.data);
           if (secret) { stopped = true; stream?.getTracks().forEach((t) => t.stop()); onSecret(secret); return; }
-          err = '这不是 Tapaste 的二维码。请扫电脑上Tapaste 侧边栏里的码。';
+          err = '这不是 Tapaste 的二维码。请扫电脑上 Tapaste 侧边栏里的码。';
         }
       }
       setTimeout(tick, 120);

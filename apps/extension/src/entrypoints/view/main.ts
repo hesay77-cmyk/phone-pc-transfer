@@ -12,7 +12,7 @@ if (window.top === window) {
   document.title = name;
   servePageDrop();
   void getFile(id).then((blob) => {
-    if (!blob) { msg.textContent = '这张照片已经不在了（插件里只保留最近 30 张，可以去「下载\\互传」文件夹里找）'; return; }
+    if (!blob) { msg.textContent = '这张照片已经不在了（插件里只保留最近 30 张，可以去「下载\\Tapaste」文件夹里找）'; return; }
     const img = document.createElement('img');
     img.src = URL.createObjectURL(blob);
     img.alt = name;
