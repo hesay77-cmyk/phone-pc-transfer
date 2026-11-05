@@ -259,7 +259,7 @@ const badgeOff = await bgw().evaluate(() => chrome.action.getBadgeText({}));
 check('插件图标上出现新消息数字，看过后清掉', /^\d+$/.test(badgeOn) && badgeOff === '', `「${badgeOn}」→「${badgeOff}」`);
 await web.close();
 
-// 侧边栏的照片拖进网页（测试脚本做不了真的跨页面拖拽：在侧边栏发「开始拖」，在网页上模拟照片拖进来）
+// 侧边栏的照片拖进网页（测试脚本做不了真的跨页面拖拽：在侧边栏发「开始拖」，再让 Chrome 把照片当作从外面拖进网页）
 const drop = await ctx.newPage();
 await drop.goto('http://localhost:8080/e2e/drop.html');
 await drop.bringToFront();
@@ -269,26 +269,35 @@ const want = await panel.evaluate(async () => {
   return { size: b.length, sum: b.reduce((a, x) => (a * 31 + x) >>> 0, 7) };
 });
 let viewLink = '';
+const photoImg = '.item[data-kind="image"][data-from="phone"] img';
+/** 在侧边栏开始拖照片，返回拖着的数据（照片编号、地址） */
+const startDrag = () => panel.evaluate((sel) => {
+  const dt = new DataTransfer();
+  document.querySelector(sel).dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+  return { id: dt.getData('application/x-hutong-photo'), uri: dt.getData('text/uri-list') };
+}, photoImg);
+const endDrag = () => panel.evaluate((sel) => document.querySelector(sel).dispatchEvent(new DragEvent('dragend', { bubbles: true })), photoImg);
+/** 让 Chrome 自己把一次「从外面拖进来」的拖拽送进网页（和真拖进来一样：浏览器发的事件，没人接就打开拖着的地址） */
+async function browserDrop(pg, sel, items) {
+  const box = sel ? await pg.locator(sel).boundingBox() : { x: 300, y: 300, width: 10, height: 10 };
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  const cdp = await pg.context().newCDPSession(pg);
+  const data = { items, dragOperationsMask: 19 };
+  await cdp.send('Input.dispatchDragEvent', { type: 'dragEnter', x, y, data });
+  await cdp.send('Input.dispatchDragEvent', { type: 'dragOver', x, y, data });
+  await sleep(700);
+  await cdp.send('Input.dispatchDragEvent', { type: 'dragOver', x, y, data });
+  await cdp.send('Input.dispatchDragEvent', { type: 'drop', x, y, data });
+  await cdp.detach().catch(() => {});
+}
 async function dragTo(sel) {
-  const id = await panel.evaluate(() => {
-    const dt = new DataTransfer();
-    document.querySelector('.item[data-kind="image"][data-from="phone"] img').dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
-    return [dt.getData('application/x-hutong-photo'), dt.getData('text/uri-list')];
-  }).then(([id, uri]) => { viewLink = uri; return id; });
+  const { id, uri } = await startDrag();
+  viewLink = uri;
   await sleep(600);
   const before = await drop.evaluate(() => log.length);
-  await drop.evaluate(async ([sel, id]) => {
-    const el = document.querySelector(sel);
-    const dt = new DataTransfer();
-    dt.setData('application/x-hutong-photo', id);
-    dt.setData('text/uri-list', 'blob:chrome-extension://x/y');
-    const fire = (t) => el.dispatchEvent(new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt, clientX: 20, clientY: 20 }));
-    fire('dragenter'); fire('dragover');
-    await new Promise((r) => setTimeout(r, 700));
-    fire('dragover'); fire('drop');
-  }, [sel, id]);
+  await browserDrop(drop, sel, [{ mimeType: 'application/x-hutong-photo', data: id }, { mimeType: 'text/uri-list', data: uri }]);
   await sleep(800);
-  await panel.evaluate(() => document.querySelector('.item[data-kind="image"][data-from="phone"] img').dispatchEvent(new DragEvent('dragend', { bubbles: true })));
+  await endDrag();
   return drop.evaluate((n) => log.slice(n), before);
 }
 const same = (f) => f && f.size === want.size && f.sum === want.sum && f.type.startsWith('image/') && /\.(png|jpe?g)$/.test(f.name);
@@ -311,12 +320,26 @@ const viewSize = async (pg) => {
 check('拖到网页上放不了图的地方：在旁边新标签页打开这张照片', !!viewPage && viewPage.url().includes('/view.html?') && (await viewSize(viewPage)) === want.size && got.length === 0,
   `${viewPage?.url().slice(0, 70)} ${JSON.stringify(got)}`);
 await viewPage?.close();
-// 拖到接收员管不到的地方（新标签页、Chrome 自己的页面）：Chrome 会打开拖着的地址，现在打开的是这张照片
-check('拖着的地址是「看照片」页面', /^chrome-extension:\/\/[a-z]+\/view\.html\?id=/.test(viewLink), viewLink.slice(0, 60));
-await drop.evaluate((u) => { location.href = u; }, viewLink);
-await drop.waitForURL(/view\.html/, { timeout: 5000 }).catch(() => {});
-check('网页被换成这个地址时：显示照片（不是空白页）', drop.url().includes('/view.html') && (await viewSize(drop).catch(() => -1)) === want.size, drop.url().slice(0, 70));
 await drop.close();
+
+// 拖到接收员管不到的网页上（没给权限、Chrome 自己的页面、新标签页）：Chrome 会打开拖着的地址，
+// 而且打开时说不出是谁打开的（来源不明）。用一个「来源不明」的页面去打开地址，和真拖进去时 Chrome 的判断一样。
+check('拖着的地址是转到「看照片」的网页', /^http:\/\/localhost:8080\/open\.html#chrome-extension/.test(viewLink), viewLink.slice(0, 60));
+const bare = await ctx.newPage();
+const openFromNowhere = async (u) => {
+  await bare.goto('data:text/html,<title>nowhere</title>');
+  await bare.evaluate((u) => { location.href = u; }, u);
+  await sleep(1500);
+};
+await openFromNowhere(decodeURIComponent(viewLink.split('#')[1]));
+const directOk = await bare.evaluate(() => !!document.querySelector('img[alt]')).catch(() => false);
+check('（对照）以前的做法：直接打开插件页面会被 Chrome 拦（曦截图里的「已被屏蔽」）', !directOk, bare.url().slice(0, 60));
+const { uri: dropUri } = await startDrag();
+await endDrag();
+await openFromNowhere(dropUri);
+await bare.waitForURL(/view\.html/, { timeout: 8000 }).catch(() => {});
+check('拖到没有接收员的地方：打开这张照片（不是空白页、不被拦）', bare.url().includes('/view.html') && (await viewSize(bare).catch(() => -1)) === want.size, bare.url().slice(0, 70));
+await bare.close();
 
 // 切到别的 App 再回来，电脑那头其实早断了（模拟 iPhone 暂停网页）：要自动重连，并把这时发的照片送到
 const before = await panel.locator('.item[data-kind="image"]').count();

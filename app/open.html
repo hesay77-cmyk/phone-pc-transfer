@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<title>正在打开照片…</title>
+<style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#0e0e0e;color:#aaa;font:14px/1.5 system-ui,"Microsoft YaHei",sans-serif}</style>
+</head>
+<body>
+<p id="m">正在打开照片…</p>
+<script>
+  // 电脑上把互传侧边栏里的照片拖进 Chrome 时，Chrome 不让直接打开插件里的页面，先到这里转一下。
+  // 只转到互传插件的「看照片」页面，照片本身一直在电脑上，不经过这个网站。
+  var u = decodeURIComponent(location.hash.slice(1));
+  if (/^chrome-extension:\/\/[a-p]{32}\/view\.html\?[^#]*$/.test(u)) location.replace(u);
+  else document.getElementById('m').textContent = '这个链接打不开';
+</script>
+</body>
+</html>

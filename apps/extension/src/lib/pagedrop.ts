@@ -4,10 +4,13 @@
 // 办法：开始拖的那一下，往当前网页里放一小段「接收员」代码。照片拖到网页上时它接住，
 // 向侧边栏要来照片，做成真正的文件，再交给网页（就像从文件夹里拖进去一样）。
 // 需要「在网页上读取和更改数据」的权限（和右键发网页上的图是同一个），没给就提示用户在侧边栏点「允许」。
-// 拖到接收员管不到的地方（新标签页、Chrome 自己的页面、标签栏、地址栏），Chrome 会打开拖着的地址：
-// 所以把地址换成插件的「看照片」页面（view.html），打开就是这张照片，跟从 QQ 拖图进 Chrome 一样。
+// 拖到接收员管不到的地方（新标签页、Chrome 自己的页面、标签栏、地址栏），Chrome 会打开拖着的地址，
+// 打开的应该是这张照片（跟从 QQ 拖图进 Chrome 一样）。但 Chrome 打开拖进来的地址时不说是谁打开的，
+// 插件自己的页面（view.html）这样打开会被拦（ERR_BLOCKED_BY_CLIENT）：所以拖着的地址是手机网页同一网站上的
+// open.html，它马上转到 view.html（从正常网站转过去 Chrome 就放行）。照片本身不经过那个网站。
 
 import { browser } from 'wxt/browser';
+import { CONFIG } from '@hutong/core';
 import { getFile } from './files';
 import type { ToPanel } from './types';
 
@@ -23,10 +26,14 @@ let seq = 0;
 export const viewUrl = (id: string, name: string) =>
   browser.runtime.getURL('/view.html') + '?id=' + encodeURIComponent(id) + '&name=' + encodeURIComponent(name);
 
+/** 拖着的地址：先到网站上的 open.html，再转到 view.html */
+export const dropUrl = (id: string, name: string) =>
+  CONFIG.phoneUrl.replace(/#.*$/, '').replace(/[^/]*$/, '') + 'open.html#' + encodeURIComponent(viewUrl(id, name));
+
 /** 照片开始被拖（dragstart 里调用） */
 export function startPhotoDrag(e: DragEvent, arm: DropArm, onNeedPermission?: () => void) {
   e.dataTransfer?.setData(DRAG_TYPE, arm.id);
-  e.dataTransfer?.setData('text/uri-list', viewUrl(arm.id, arm.name));
+  e.dataTransfer?.setData('text/uri-list', dropUrl(arm.id, arm.name));
   void armPageDrop(arm).then((r) => { if (r === 'no-permission') onNeedPermission?.(); });
 }
 
