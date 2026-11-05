@@ -41,7 +41,7 @@
         if (code?.data) {
           const secret = parse(code.data);
           if (secret) { stopped = true; stream?.getTracks().forEach((t) => t.stop()); onSecret(secret); return; }
-          err = '这不是互传的二维码。请扫电脑上互传侧边栏里的码。';
+          err = '这不是 Tapaste 的二维码。请扫电脑上Tapaste 侧边栏里的码。';
         }
       }
       setTimeout(tick, 120);
@@ -52,8 +52,8 @@
 
 <div class="scan">
   <div class="frame"><video bind:this={video} playsinline muted autoplay></video></div>
-  <p>把电脑上互传侧边栏里的二维码对准上面的框。</p>
-  <p class="hint">电脑上没看到二维码？点开互传侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
+  <p>把电脑上Tapaste 侧边栏里的二维码对准上面的框。</p>
+  <p class="hint">电脑上没看到二维码？点开Tapaste 侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
   {#if err}<p class="err">{err}</p>{/if}
   <button class="btn" onclick={onClose}>取消</button>
 </div>

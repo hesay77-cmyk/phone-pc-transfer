@@ -46,7 +46,7 @@
     if (manifestLink) {
       const abs = (p: string) => new URL(p, location.href).href;
       const man = {
-        name: '互传', short_name: '互传', display: 'standalone', background_color: '#f4f5f9', theme_color: '#f4f5f9',
+        name: 'Tapaste', short_name: 'Tapaste', display: 'standalone', background_color: '#f4f5f9', theme_color: '#f4f5f9',
         start_url: location.href, scope: abs('./'),
         icons: [{ src: abs('icon-192.png'), sizes: '192x192', type: 'image/png' }, { src: abs('icon-512.png'), sizes: '512x512', type: 'image/png' }]
       };
@@ -136,7 +136,7 @@
           if (n > 0 && !session?.link.ready) note = `还没连上电脑，连上后会自动发出（${n} 个）`;
           if (n === 0) note = '';
         },
-        log: (s) => console.log('[互传]', s)
+        log: (s) => console.log('[Tapaste]', s)
       }
     });
   }
@@ -238,7 +238,7 @@
         <rect x="15" y="6" width="11" height="19" rx="3" fill="#818cf8" />
         <rect x="4.5" y="9" width="17" height="12" rx="3" fill="#4f46e5" clip-path="url(#lc)" />
       </svg>
-      <h1>互传</h1>
+      <h1>Tapaste</h1>
       <div class="status {status.cls}" data-link={link}><span class="dot"></span><span>{status.text}</span></div>
     </div>
     {#if link === 'blocked'}
@@ -257,16 +257,16 @@
       {#if standalone}
         <p class="big-hint">第一次用，扫一下电脑上的二维码配对（只用扫这一次）。</p>
       {:else}
-        <p class="big-hint">请用 iPhone 自带的相机，扫一下电脑上「互传」插件里的二维码。或者点下面的按钮在这里扫。</p>
+        <p class="big-hint">请用 iPhone 自带的相机，扫一下电脑上「Tapaste」插件里的二维码。或者点下面的按钮在这里扫。</p>
       {/if}
       <button class="big" onclick={() => (scanning = true)}>扫码配对</button>
-      <p class="hint">电脑上没看到二维码？点开互传侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
+      <p class="hint">电脑上没看到二维码？点开Tapaste 侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
     </section>
   {:else}
     {#if !standalone && !homeHidden}
       <section class="home-tip">
         {#if !homeOpen}
-          <p><b>把互传放到手机桌面</b>，下次点图标就能用，不用再找网页。</p>
+          <p><b>把 Tapaste 放到手机桌面</b>，下次点图标就能用，不用再找网页。</p>
           <button class="btn" onclick={openHomeTip}>怎么放？</button>
           <button class="btn plain" onclick={() => closeHomeTip(true)}>不用了</button>
         {:else}
@@ -279,7 +279,7 @@
             {/if}
             <li>往下滑，点「添加到主屏幕」。</li>
             <li>右上角点「添加」。</li>
-            <li>从桌面打开「互传」，如果提示配对，点「扫码配对」扫一下电脑上的码（只用扫这一次）。</li>
+            <li>从桌面打开「Tapaste」，如果提示配对，点「扫码配对」扫一下电脑上的码（只用扫这一次）。</li>
           </ol>
           <button class="btn" onclick={() => closeHomeTip(true)}>放好了</button>
           <button class="btn plain" onclick={() => closeHomeTip(false)}>先收起</button>
@@ -315,7 +315,7 @@
 
     <section class="got">
       <h2>电脑发来的{#if got.length}<span class="n">{got.length}</span>{/if}</h2>
-      {#if got.length === 0}<p class="empty">还没有。电脑上可以在网页里右键「发到手机」，或者在互传侧边栏里发文字、网址、图片过来。</p>{/if}
+      {#if got.length === 0}<p class="empty">还没有。电脑上可以在网页里右键「发到手机」，或者在Tapaste 侧边栏里发文字、网址、图片过来。</p>{/if}
       {#each got as g (g.id)}
         <div class="item" data-kind={g.kind ?? 'text'}>
           <div class="meta">{time(g.time)}{#if g.size} · {kb(g.size)}{/if}</div>
@@ -338,7 +338,7 @@
 
   <footer>
     {#if secret && !scanning}<button class="link" onclick={() => (scanning = true)}>重新扫码配对</button> · {/if}
-    互传 · 版本 {version}
+    Tapaste · 版本 {version}
   </footer>
 </main>
 

@@ -101,13 +101,13 @@
     if (s.link === 'connecting') return { cls: 'wait', text: '手机正在连过来…' };
     if (s.link === 'blocked') return { cls: 'bad', text: '手机找到了，但这个网络不让手机和电脑直接连' };
     if (s.signal !== 'online') return { cls: 'wait', text: '正在连接网络…' };
-    return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开互传网页就会自动连上' : '还没配对手机' };
+    return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开Tapaste 网页就会自动连上' : '还没配对手机' };
   });
 
   function showResult(r: SendResult | undefined, what = '') {
     sendOk = !!r?.ok;
     sendTip = !r?.ok ? (r?.error ?? '没发出去')
-      : r.connected ? `✓ ${what}已发到手机` : `${what}先存着，手机打开互传网页后自动送到`;
+      : r.connected ? `✓ ${what}已发到手机` : `${what}先存着，手机打开Tapaste 网页后自动送到`;
   }
 
   async function send() {
@@ -230,7 +230,7 @@
         <rect x="15" y="6" width="11" height="19" rx="3" fill="#818cf8" />
         <rect x="4.5" y="9" width="17" height="12" rx="3" fill="#4f46e5" clip-path="url(#lc)" />
       </svg>
-      <h1>互传</h1>
+      <h1>Tapaste</h1>
     </div>
     <div class="status {status.cls}" data-link={s?.link ?? ''}><span class="dot"></span><span>{status.text}</span></div>
     {#if s?.link === 'blocked'}<p class="small">有些公司或公共场所的 Wi-Fi 会这样。手机和电脑换成同一个家里的 Wi-Fi 就能用；这边会一直自动重试。</p>{/if}
@@ -238,12 +238,12 @@
   </header>
 
   {#if failed}
-    <p class="tip bad">插件后台没启动起来。请到 chrome://extensions 里把「互传」关掉再打开。</p>
+    <p class="tip bad">插件后台没启动起来。请到 chrome://extensions 里把「Tapaste」关掉再打开。</p>
   {:else if s}
     {#if !s.everPaired || showQr}
       <section class="card pair">
         <h2>{@render icon('qr')}{s.everPaired ? '换一台手机' : '第一步：用 iPhone 扫码'}</h2>
-        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开互传网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
+        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开Tapaste 网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
         <div class="qrbox"><Qr text={s.pairingUrl} /></div>
         <p class="small center">
           {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>收起</button> · {/if}
@@ -255,7 +255,7 @@
     <section class="card send" class:dragging aria-label="发到手机"
       ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
       <label class="auto" class:on={s.autoSend}>
-        <span class="auto-text"><b>复制就发</b><span>在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上的互传网页要开着）</span></span>
+        <span class="auto-text"><b>复制就发</b><span>在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上的Tapaste 网页要开着）</span></span>
         <input type="checkbox" role="switch" checked={s.autoSend} onchange={(e) => setAuto((e.target as HTMLInputElement).checked)} />
       </label>
       <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder="输入或粘贴文字、代码、网址，按 Ctrl+Enter 发送"></textarea>
@@ -296,7 +296,7 @@
 
     {#if s.everPaired && notPinned}
       <section class="tip">
-        <b>把互传固定到右上角</b>：点 Chrome 右上角的拼图图标，再点「互传」旁边的图钉。这样手机发来东西时，图标上会出现数字提醒你。
+        <b>把 Tapaste 固定到右上角</b>：点 Chrome 右上角的拼图图标，再点「Tapaste」旁边的图钉。这样手机发来东西时，图标上会出现数字提醒你。
         <button class="link" onclick={() => { localStorage.setItem('pinTipClosed', '1'); notPinned = false; }}>知道了</button>
       </section>
     {/if}
