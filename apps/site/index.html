@@ -5,124 +5,188 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tapaste · 手机电脑互传</title>
 <meta name="description" content="手机上点一下，电脑上直接用。文字、照片在手机和电脑之间秒传，不用装 App，不经过服务器。">
+<meta name="theme-color" content="#05070f">
 <link rel="icon" href="icon.png">
 <style>
 :root{
-  --bg:#ffffff; --bg2:#f5f7fb; --text:#111827; --muted:#5b6474; --line:#e5e7eb;
-  --blue:#2563eb; --blue2:#1d4ed8; --soft:#eff6ff; --card:#ffffff; --shadow:0 10px 30px rgba(17,24,39,.08);
-}
-@media (prefers-color-scheme: dark){
-  :root{ --bg:#0b0f17; --bg2:#111725; --text:#e8ecf3; --muted:#9aa4b5; --line:#232b3b;
-    --blue:#4f86f7; --blue2:#3b6fe0; --soft:#16213a; --card:#121a29; --shadow:0 10px 30px rgba(0,0,0,.35); }
+  --bg:#05070f; --bg2:#0a0f1e; --text:#e9eef8; --muted:#8f9bb3; --line:rgba(120,150,255,.16);
+  --blue:#3b82f6; --cyan:#22d3ee; --violet:#a78bfa; --green:#34d399;
+  --glass:rgba(16,24,48,.55);
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);
+html{scroll-behavior:smooth;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text);overflow-x:hidden;
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
   line-height:1.65;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);
-  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;letter-spacing:.3px}
-.brand img{width:30px;height:30px;border-radius:8px}
-nav .links{display:flex;gap:22px;font-size:15px;color:var(--muted)}
-nav .links a:hover{color:var(--text)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 24px;
-  border-radius:12px;font-size:16px;font-weight:600;border:1px solid transparent;cursor:pointer;transition:.15s}
-.btn.primary{background:var(--blue);color:#fff}
-.btn.primary:hover{background:var(--blue2)}
-.btn.ghost{border-color:var(--line);color:var(--text);background:var(--card)}
-.btn.ghost:hover{border-color:var(--blue)}
-.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;
-  background:var(--soft);color:var(--blue);vertical-align:middle}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px;position:relative;z-index:2}
+#net{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.glow{position:fixed;width:720px;height:720px;border-radius:50%;filter:blur(120px);opacity:.35;z-index:0;pointer-events:none}
+.glow.a{background:#1d4ed8;top:-260px;left:-200px;animation:drift 18s ease-in-out infinite alternate}
+.glow.b{background:#0e7490;bottom:-300px;right:-220px;animation:drift 22s ease-in-out infinite alternate-reverse}
+@keyframes drift{to{transform:translate(120px,80px) scale(1.15)}}
 
-/* hero */
-.hero{padding:72px 0 56px;display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center}
-.hero h1{font-size:46px;line-height:1.2;margin:0 0 18px;letter-spacing:-.5px}
-.hero h1 em{font-style:normal;color:var(--blue)}
-.hero p.lead{font-size:18px;color:var(--muted);margin:0 0 30px;max-width:30em}
-.hero .cta{display:flex;gap:12px;flex-wrap:wrap}
-.hero .note{margin-top:14px;font-size:13px;color:var(--muted)}
+nav{position:sticky;top:0;z-index:20;background:rgba(5,7,15,.6);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:.5px}
+.brand img{width:30px;height:30px;border-radius:8px;box-shadow:0 0 18px rgba(59,130,246,.7)}
+nav .links{display:flex;gap:26px;font-size:15px;color:var(--muted)}
+nav .links a{transition:.2s}
+nav .links a:hover{color:#fff;text-shadow:0 0 12px var(--cyan)}
 
-/* demo */
-.demo{position:relative;height:340px}
-.laptop{position:absolute;right:0;top:20px;width:82%;}
-.screen{background:var(--card);border:10px solid #1f2937;border-bottom-width:14px;border-radius:14px 14px 4px 4px;
-  aspect-ratio:16/10;box-shadow:var(--shadow);overflow:hidden;display:flex}
-.screen .page{flex:1;padding:14px;display:flex;flex-direction:column;gap:8px}
-.screen .bar{height:8px;border-radius:4px;background:var(--line)}
-.screen .bar.s{width:60%}
-.screen .side{width:38%;border-left:1px solid var(--line);background:var(--bg2);padding:10px;display:flex;flex-direction:column;gap:8px}
-.side .h{font-size:11px;font-weight:700;color:var(--muted)}
-.msg{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:11px;line-height:1.4}
-.msg.new{border-color:var(--blue);animation:pop 4s infinite}
-.msg .ok{color:#16a34a;font-weight:700;font-size:10px}
-.photo{height:42px;border-radius:6px;background:linear-gradient(135deg,#fbbf24,#f472b6 55%,#60a5fa)}
-.base{height:12px;background:#374151;border-radius:0 0 12px 12px;margin:0 -4%}
-.demo{overflow:hidden}
-.phone{position:absolute;left:0;bottom:0;width:132px;height:250px;background:#111827;border-radius:26px;padding:8px;box-shadow:var(--shadow)}
-.phone .in{background:var(--card);height:100%;border-radius:19px;padding:22px 10px 10px;display:flex;flex-direction:column;gap:8px}
-.phone .box{flex:1;border:1px solid var(--line);border-radius:10px;padding:6px;font-size:10px;color:var(--muted)}
-.phone .send{height:34px;border-radius:10px;background:var(--blue);color:#fff;font-size:12px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;animation:press 4s infinite}
-.fly{position:absolute;left:120px;bottom:120px;width:46px;height:46px;border-radius:50%;background:var(--blue);
-  color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:var(--shadow);
-  animation:fly 4s infinite}
-@keyframes press{0%,18%{transform:scale(1)}22%{transform:scale(.92)}26%,100%{transform:scale(1)}}
-@keyframes fly{0%,22%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}55%{opacity:1;transform:translate(150px,-90px) scale(1)}62%,100%{opacity:0;transform:translate(170px,-100px) scale(.6)}}
-@keyframes pop{0%,58%{opacity:.25;transform:translateY(-4px)}64%,100%{opacity:1;transform:none}}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:50px;padding:0 26px;
+  border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s;border:1px solid transparent;overflow:hidden}
+.btn.primary{background:linear-gradient(135deg,#2563eb,#06b6d4);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 8px 30px rgba(37,99,235,.45)}
+.btn.primary::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);
+  transform:translateX(-120%);animation:shine 3.2s ease-in-out infinite}
+@keyframes shine{60%,100%{transform:translateX(120%)}}
+.btn.primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(34,211,238,.5)}
+.btn.ghost{border-color:var(--line);background:var(--glass);color:var(--text);backdrop-filter:blur(8px)}
+.btn.ghost:hover{border-color:var(--cyan);box-shadow:0 0 24px rgba(34,211,238,.25)}
+.btn[aria-disabled="true"]{opacity:.5;cursor:not-allowed;pointer-events:none}
+.btn[aria-disabled="true"]::after{display:none}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(34,211,238,.15);color:var(--cyan)}
 
-/* sections */
-section{padding:72px 0}
-section.alt{background:var(--bg2)}
-h2{font-size:32px;margin:0 0 10px;text-align:center;letter-spacing:-.3px}
-.sub{text-align:center;color:var(--muted);margin:0 auto 44px;max-width:36em}
+.hero{min-height:calc(100vh - 62px);display:grid;grid-template-columns:1fr 1.05fr;gap:40px;align-items:center;padding:40px 20px 80px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--cyan);border:1px solid rgba(34,211,238,.3);
+  padding:5px 12px;border-radius:999px;background:rgba(34,211,238,.06);margin-bottom:22px;letter-spacing:.5px}
+.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+.hero h1{font-size:56px;line-height:1.15;margin:0 0 20px;letter-spacing:-1px;font-weight:800}
+.grad{background:linear-gradient(90deg,#60a5fa,#22d3ee,#a78bfa,#60a5fa);background-size:300% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite;
+  filter:drop-shadow(0 0 24px rgba(34,211,238,.35))}
+@keyframes flow{to{background-position:300% 0}}
+.hero p.lead{font-size:18px;color:var(--muted);margin:0 0 32px;max-width:30em}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero .note{margin-top:16px;font-size:13px;color:var(--muted)}
+
+.stage{position:relative;aspect-ratio:1.25/1;width:100%}
+.stage svg.beam{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.beam .track{fill:none;stroke:rgba(96,165,250,.18);stroke-width:2}
+.beam .dash{fill:none;stroke:url(#bg);stroke-width:2.5;stroke-dasharray:6 14;animation:dash 1.2s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-40}}
+.beam .ring{fill:none;stroke:var(--cyan);stroke-width:1.5;opacity:0}
+.packet{position:absolute;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;z-index:5;
+  background:radial-gradient(circle,#fff 0 25%,var(--cyan) 45%,rgba(34,211,238,0) 72%);box-shadow:0 0 30px 8px rgba(34,211,238,.6);opacity:0}
+.packet.trail{width:10px;height:10px;margin:-5px 0 0 -5px;box-shadow:0 0 16px 4px rgba(96,165,250,.5)}
+
+.device{position:absolute;border-radius:22px;background:linear-gradient(160deg,rgba(30,41,80,.9),rgba(10,15,30,.95));
+  border:1px solid rgba(120,160,255,.35);box-shadow:0 0 0 1px rgba(255,255,255,.03) inset,0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(59,130,246,.18)}
+.phone{left:2%;bottom:4%;width:30%;aspect-ratio:9/18.5;padding:9px;border-radius:30px;z-index:3}
+.phone .scr{height:100%;border-radius:22px;background:#070b18;border:1px solid rgba(120,160,255,.15);padding:30px 10px 10px;display:flex;flex-direction:column;gap:9px;position:relative;overflow:hidden}
+.phone .scr::before{content:"";position:absolute;top:8px;left:50%;width:34%;height:12px;transform:translateX(-50%);border-radius:999px;background:#000}
+.ph-label{font-size:10px;color:var(--muted);letter-spacing:.5px}
+.ph-box{flex:1;border:1px solid rgba(120,160,255,.25);border-radius:12px;padding:8px;font-size:12px;line-height:1.5;color:#dbe6ff;background:rgba(59,130,246,.05);word-break:break-all}
+.caret{display:inline-block;width:2px;height:1em;background:var(--cyan);vertical-align:-2px;animation:blink 1s step-end infinite}
+.ph-send{height:38px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#06b6d4);color:#fff;font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;transition:transform .15s, box-shadow .3s}
+.ph-send.press{transform:scale(.9);box-shadow:0 0 30px rgba(34,211,238,.9)}
+
+.laptop{right:0;top:6%;width:66%;background:none;border:none;box-shadow:none}
+.laptop .lid{border-radius:16px 16px 6px 6px;padding:10px;background:linear-gradient(160deg,rgba(30,41,80,.9),rgba(10,15,30,.95));border:1px solid rgba(120,160,255,.35);box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(59,130,246,.18)}
+.laptop .scr{aspect-ratio:16/10;border-radius:8px;background:#070b18;border:1px solid rgba(120,160,255,.15);display:flex;overflow:hidden;position:relative}
+.laptop .scr::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 50%,rgba(34,211,238,.04) 50%);background-size:100% 4px;pointer-events:none}
+.lp-main{flex:1;padding:14px;display:flex;flex-direction:column;gap:9px;min-width:0}
+.lp-main .bar{height:7px;border-radius:4px;background:rgba(120,160,255,.14)}
+.lp-main .bar.s{width:55%}
+.lp-main .paste{margin-top:6px;font-size:11px;color:#dbe6ff;border:1px dashed rgba(120,160,255,.3);border-radius:6px;padding:6px 8px;min-height:44px;line-height:1.5;word-break:break-all}
+.lp-main .paste .k{display:inline-block;font-size:10px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--cyan);margin-right:4px}
+.lp-side{width:42%;border-left:1px solid rgba(120,160,255,.15);background:rgba(15,23,48,.6);padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lp-side .h{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px}
+.msg{border:1px solid rgba(120,160,255,.2);border-radius:8px;padding:6px 8px;font-size:10.5px;line-height:1.45;background:rgba(7,11,24,.8);color:#dbe6ff;transition:.4s;word-break:break-all}
+.msg.in{border-color:var(--cyan);box-shadow:0 0 18px rgba(34,211,238,.35)}
+.msg.hide{opacity:0;transform:translateY(-8px)}
+.msg .ok{display:block;margin-top:2px;color:var(--green);font-weight:700;font-size:9.5px}
+.thumb{height:36px;border-radius:5px;background:linear-gradient(135deg,#f59e0b,#ec4899 55%,#6366f1)}
+.laptop .base{height:12px;margin:0 -5%;border-radius:0 0 14px 14px;background:linear-gradient(#26324f,#141b30);border:1px solid rgba(120,160,255,.25);border-top:none}
+.badge{position:absolute;right:-6px;top:-10px;min-width:22px;height:22px;border-radius:11px;background:var(--blue);color:#fff;font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px var(--blue);transform:scale(0);transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.badge.on{transform:scale(1)}
+.hud{position:absolute;font:600 11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--cyan);opacity:.75;letter-spacing:.5px}
+.hud b{color:#fff}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:20px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
+.stat{padding:28px 20px;text-align:center;border-right:1px solid var(--line)}
+.stat:last-child{border-right:none}
+.stat .n{font-size:44px;font-weight:800;line-height:1.1}
+.stat .l{color:var(--muted);font-size:14px;margin-top:6px}
+
+section{padding:100px 0;position:relative}
+h2{font-size:38px;margin:0 0 12px;text-align:center;letter-spacing:-.5px}
+.sub{text-align:center;color:var(--muted);margin:0 auto 54px;max-width:36em}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
-.card .ic{width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--blue);
-  display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.card{position:relative;background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:26px;backdrop-filter:blur(10px);
+  transition:transform .3s, border-color .3s, box-shadow .3s, opacity .8s}
+.card::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;opacity:0;transition:.3s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),rgba(34,211,238,.9),transparent 60%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.card:hover::before{opacity:1}
+.card:hover{box-shadow:0 20px 50px rgba(0,0,0,.4),0 0 40px rgba(34,211,238,.12)}
+.card .ic{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,rgba(37,99,235,.35),rgba(6,182,212,.25));color:#a5f3fc;
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 0 20px rgba(34,211,238,.2)}
 .card h3{margin:0 0 6px;font-size:18px}
 .card p{margin:0;color:var(--muted);font-size:15px}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
-.step{position:relative;padding:28px 24px 24px}
-.step::before{counter-increment:s;content:counter(s);position:absolute;top:-16px;left:24px;width:32px;height:32px;border-radius:50%;
-  background:var(--blue);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
-.step .where{font-size:12px;font-weight:700;color:var(--blue);margin-bottom:4px}
+
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;position:relative;padding-top:20px}
+.steps::before{content:"";position:absolute;left:8%;right:8%;top:20px;height:2px;background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),var(--violet),transparent);
+  background-size:200% 100%;animation:flow 4s linear infinite;opacity:.7}
+.step{padding-top:40px}
+.step .num{position:absolute;top:-19px;left:26px;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#06b6d4);
+  color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 24px rgba(34,211,238,.6)}
+.step .where{font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:4px;letter-spacing:.5px}
+
 .dl{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .dl .card{display:flex;flex-direction:column}
-.dl .card p{flex:1;margin-bottom:18px}
+.dl .card p{flex:1;margin-bottom:20px}
 .dl .btn{width:100%}
-.btn[aria-disabled="true"]{opacity:.55;cursor:not-allowed;pointer-events:none}
-.phone-note{margin-top:22px;text-align:center;color:var(--muted);font-size:15px}
-.faq{max-width:760px;margin:0 auto}
-details{border-bottom:1px solid var(--line);padding:18px 4px}
-summary{cursor:pointer;font-weight:600;font-size:17px;list-style:none;display:flex;justify-content:space-between;gap:16px}
-summary::after{content:"+";color:var(--muted);font-weight:400;font-size:22px;line-height:1}
-details[open] summary::after{content:"−"}
-details p{margin:10px 0 0;color:var(--muted)}
-footer{border-top:1px solid var(--line);padding:30px 0;color:var(--muted);font-size:14px;text-align:center}
+.phone-note{margin-top:26px;text-align:center;color:var(--muted);font-size:15px}
 
-@media (max-width:900px){
-  .hero{grid-template-columns:1fr;padding:44px 0 32px;gap:28px}
-  .hero h1{font-size:34px}
-  .demo{height:280px;max-width:460px;width:100%;margin:0 auto}
+.faq{max-width:780px;margin:0 auto}
+details{border:1px solid var(--line);background:var(--glass);border-radius:14px;padding:16px 20px;margin-bottom:12px}
+details[open]{border-color:rgba(34,211,238,.45)}
+summary{cursor:pointer;font-weight:600;font-size:17px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--cyan);font-weight:400;font-size:22px;line-height:1;transition:transform .3s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{margin:10px 0 0;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:34px 0;color:var(--muted);font-size:14px;text-align:center;position:relative;z-index:2}
+footer b{color:var(--text)}
+
+.rv{opacity:0;translate:0 30px;transition:opacity .8s ease, translate .8s cubic-bezier(.2,.8,.2,1), transform .3s, box-shadow .3s, border-color .3s}
+.rv.on{opacity:1;translate:0 0}
+
+@media (max-width:920px){
+  .hero{grid-template-columns:1fr;min-height:0;padding:36px 20px 60px;gap:24px}
+  .hero h1{font-size:40px}
+  .stage{max-width:520px;margin:0 auto}
   .grid{grid-template-columns:repeat(2,1fr)}
-  .steps,.dl{grid-template-columns:1fr;gap:28px}
+  .steps,.dl{grid-template-columns:1fr;gap:34px}
+  .steps::before{display:none}
   nav .links{display:none}
+  section{padding:70px 0}
 }
 @media (max-width:520px){
+  .hero h1{font-size:34px}
   .grid{grid-template-columns:1fr}
-  .hero .cta .btn{flex:1}
-  section{padding:52px 0}
-  h2{font-size:26px}
-  .phone{width:108px;height:206px}
-  .fly{left:96px;bottom:100px}
+  .cta .btn{flex:1 1 100%;padding:0 16px}
+  h2{font-size:28px}
+  .stats{grid-template-columns:1fr}
+  .stat{border-right:none;border-bottom:1px solid var(--line)}
+  .stat:last-child{border-bottom:none}
+  .ph-box{font-size:10px}
+  .lp-main{padding:8px}
+  .hud{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv{opacity:1;translate:none}
 }
 </style>
 </head>
 <body>
+<canvas id="net"></canvas>
+<div class="glow a"></div><div class="glow b"></div>
 
 <nav><div class="wrap">
   <a class="brand" href="#"><img src="icon.png" alt="">Tapaste</a>
@@ -131,7 +195,8 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--muted);font-s
 
 <header class="wrap hero">
   <div>
-    <h1>手机上点一下，<br><em>电脑上直接用。</em></h1>
+    <div class="eyebrow"><i></i>手机 ⇄ 电脑 · 同一 Wi-Fi 直连</div>
+    <h1>手机上点一下，<br><span class="grad">电脑上直接用。</span></h1>
     <p class="lead">文字、照片在 iPhone 和电脑之间一秒送到。复制的字自动进电脑剪贴板，照片自动存进电脑文件夹。不用装 App，不用登录。</p>
     <div class="cta">
       <a class="btn primary" href="#download">下载电脑插件</a>
@@ -139,77 +204,163 @@ footer{border-top:1px solid var(--line);padding:30px 0;color:var(--muted);font-s
     </div>
     <div class="note">支持 Chrome、Edge · 手机用浏览器扫码就能用</div>
   </div>
-  <div class="demo" aria-hidden="true">
-    <div class="laptop">
-      <div class="screen">
-        <div class="page"><div class="bar"></div><div class="bar s"></div><div class="bar"></div><div class="bar s"></div></div>
-        <div class="side">
-          <div class="h">手机发来的</div>
-          <div class="msg new">会议改到下午 3 点，地址发你了 <span class="ok">✓ 已复制</span></div>
-          <div class="msg"><div class="photo"></div></div>
+
+  <div class="stage" id="stage" aria-hidden="true">
+    <svg class="beam" viewBox="0 0 1000 800" preserveAspectRatio="none">
+      <defs><linearGradient id="bg" x1="0" x2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+      <path id="path" class="track" d="M170 470 C 230 200, 480 120, 650 260"/>
+      <path class="dash" d="M170 470 C 230 200, 480 120, 650 260"/>
+      <circle class="ring" id="ring" cx="650" cy="260" r="10"/>
+    </svg>
+    <div class="hud" style="left:4%;top:4%">P2P LINK <b id="lat">0.4s</b><br>ENCRYPTED · LAN</div>
+    <div class="device laptop">
+      <div class="lid"><div class="scr">
+        <div class="lp-main">
+          <div class="bar"></div><div class="bar s"></div><div class="bar"></div>
+          <div class="paste"><span class="k">Ctrl+V</span><span id="pasteTxt"></span></div>
         </div>
-      </div>
+        <div class="lp-side">
+          <div class="h">手机发来的</div>
+          <div class="msg hide" id="msgNew"><span id="msgTxt"></span><span class="ok">✓ 已复制</span></div>
+          <div class="msg"><div class="thumb"></div><span class="ok">✓ 已存进电脑</span></div>
+        </div>
+      </div></div>
       <div class="base"></div>
+      <div class="badge" id="badge">1</div>
     </div>
-    <div class="phone"><div class="in">
-      <div class="box">会议改到下午 3 点，地址发你了</div>
-      <div class="send">发到电脑</div>
-    </div></div>
-    <div class="fly">➜</div>
+    <div class="device phone">
+      <div class="scr">
+        <div class="ph-label">Tapaste</div>
+        <div class="ph-box"><span id="typed"></span><span class="caret"></span></div>
+        <div class="ph-send" id="send">发到电脑</div>
+      </div>
+    </div>
+    <div class="packet trail" id="pk2"></div>
+    <div class="packet" id="pk"></div>
   </div>
 </header>
 
-<section id="features" class="alt"><div class="wrap">
-  <h2>不打断你手上的事</h2>
-  <p class="sub">不用找数据线，不用给自己发邮件，也不用在电脑上登聊天软件。</p>
+<div class="wrap rv">
+  <div class="stats">
+    <div class="stat"><div class="n grad" data-to="1" data-suffix=" 秒">0</div><div class="l">手机点一下，电脑就收到</div></div>
+    <div class="stat"><div class="n grad" data-to="0" data-suffix=" 台">0</div><div class="l">经手你内容的服务器</div></div>
+    <div class="stat"><div class="n grad" data-to="1" data-suffix=" 次">0</div><div class="l">只需配对一次，以后打开就连</div></div>
+  </div>
+</div>
+
+<section id="features"><div class="wrap">
+  <h2 class="rv">不打断你手上的事</h2>
+  <p class="sub rv">不用找数据线，不用给自己发邮件，也不用在电脑上登聊天软件。</p>
   <div class="grid">
-    <div class="card"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></div>
+    <div class="card rv tilt"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></div>
       <h3>复制就到</h3><p>手机上发过来的字，自动进电脑剪贴板。在任何软件里按 Ctrl+V 就粘出来。</p></div>
-    <div class="card"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></div>
+    <div class="card rv tilt"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></div>
       <h3>照片原图存好</h3><p>手机照片原图送到电脑，自动存进文件夹，还能直接拖进网页、聊天框。</p></div>
-    <div class="card"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
+    <div class="card rv tilt"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
       <h3>电脑也能发手机</h3><p>网页上选中文字或图片，右键「发到手机」。电脑上复制的长文字也能一键送到手机。</p></div>
-    <div class="card"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <div class="card rv tilt"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
       <h3>不经过服务器</h3><p>同一个 Wi-Fi 下，手机直接送到电脑。你传的内容不会上传到任何地方。</p></div>
   </div>
 </div></section>
 
 <section id="how"><div class="wrap">
-  <h2>三步用上</h2>
-  <p class="sub">只需要配对一次，以后打开就能用。</p>
+  <h2 class="rv">三步用上</h2>
+  <p class="sub rv">只需要配对一次，以后打开就能用。</p>
   <div class="steps">
-    <div class="card step"><div class="where">在电脑上</div><h3>装上插件</h3><p>Chrome 或 Edge 装好 Tapaste，点右上角图标，侧边栏里会出现一个二维码。</p></div>
-    <div class="card step"><div class="where">在手机上</div><h3>扫一下二维码</h3><p>用手机相机扫码打开网页，配对就完成了。可以「添加到主屏幕」，以后一点就开。</p></div>
-    <div class="card step"><div class="where">手机和电脑</div><h3>点一下就送到</h3><p>手机上粘贴文字或选照片，点「发到电脑」。电脑这边已经复制好、存好了。</p></div>
+    <div class="card step rv"><div class="num">1</div><div class="where">在电脑上</div><h3>装上插件</h3><p>Chrome 或 Edge 装好 Tapaste，点右上角图标，侧边栏里会出现一个二维码。</p></div>
+    <div class="card step rv"><div class="num">2</div><div class="where">在手机上</div><h3>扫一下二维码</h3><p>用手机相机扫码打开网页，配对就完成了。可以「添加到主屏幕」，以后一点就开。</p></div>
+    <div class="card step rv"><div class="num">3</div><div class="where">手机和电脑</div><h3>点一下就送到</h3><p>手机上粘贴文字或选照片，点「发到电脑」。电脑这边已经复制好、存好了。</p></div>
   </div>
 </div></section>
 
-<section id="download" class="alt"><div class="wrap">
-  <h2>下载电脑插件</h2>
-  <p class="sub">按你用的浏览器选一个。国内不用梯子也能装。</p>
+<section id="download"><div class="wrap">
+  <h2 class="rv">下载电脑插件</h2>
+  <p class="sub rv">按你用的浏览器选一个。国内不用梯子也能装。</p>
   <div class="dl">
-    <div class="card"><h3>Chrome（国内）</h3><p>下载安装包，照着图文步骤 2 分钟装好。不需要打开 Chrome 商店。</p>
-      <a class="btn primary" aria-disabled="true">下载安装包 <span class="tag" style="background:#ffffff33;color:#fff">快好了</span></a></div>
-    <div class="card"><h3>Microsoft Edge</h3><p>Windows 自带的浏览器。从微软商店一键安装，以后自动更新。</p>
+    <div class="card rv"><h3>Chrome（国内）</h3><p>下载安装包，照着图文步骤 2 分钟装好。不需要打开 Chrome 商店。</p>
+      <a class="btn primary" aria-disabled="true">下载安装包 <span class="tag" style="background:rgba(255,255,255,.2);color:#fff">快好了</span></a></div>
+    <div class="card rv"><h3>Microsoft Edge</h3><p>Windows 自带的浏览器。从微软商店一键安装，以后自动更新。</p>
       <a class="btn ghost" aria-disabled="true">去 Edge 商店 <span class="tag">快好了</span></a></div>
-    <div class="card"><h3>Chrome 商店</h3><p>能打开 Chrome 商店的话，从这里装最省事，以后自动更新。</p>
+    <div class="card rv"><h3>Chrome 商店</h3><p>能打开 Chrome 商店的话，从这里装最省事，以后自动更新。</p>
       <a class="btn ghost" aria-disabled="true">去 Chrome 商店 <span class="tag">快好了</span></a></div>
   </div>
-  <p class="phone-note">手机不用下载：装好插件后，用手机扫电脑上的二维码就行。</p>
+  <p class="phone-note rv">手机不用下载：装好插件后，用手机扫电脑上的二维码就行。</p>
 </div></section>
 
 <section id="faq"><div class="wrap">
-  <h2>常见问题</h2>
+  <h2 class="rv">常见问题</h2>
   <div class="faq">
-    <details><summary>手机要装 App 吗？</summary><p>不用。手机上就是一个网页，扫码打开就能用。想用得顺手，可以把它「添加到主屏幕」，像 App 一样一点就开。</p></details>
-    <details><summary>我传的东西安全吗？</summary><p>手机和电脑在同一个 Wi-Fi 下直接连，内容不经过任何服务器。配对用的暗号藏在二维码里，别人不扫你的码就连不上。</p></details>
-    <details><summary>手机和电脑不在同一个 Wi-Fi 能用吗？</summary><p>现在需要连同一个 Wi-Fi，比如家里或办公室。不同网络之间互传，后面会加上。</p></details>
-    <details><summary>支持哪些手机和电脑？</summary><p>手机：iPhone 和安卓都行，用浏览器打开。电脑：Windows 上的 Chrome 或 Edge 浏览器。</p></details>
-    <details><summary>电脑关掉插件或手机锁屏了，发的东西会丢吗？</summary><p>不会。没送到的会先留着，两边再连上时自动补发。</p></details>
+    <details class="rv"><summary>手机要装 App 吗？</summary><p>不用。手机上就是一个网页，扫码打开就能用。想用得顺手，可以把它「添加到主屏幕」，像 App 一样一点就开。</p></details>
+    <details class="rv"><summary>我传的东西安全吗？</summary><p>手机和电脑在同一个 Wi-Fi 下直接连，内容不经过任何服务器。配对用的暗号藏在二维码里，别人不扫你的码就连不上。</p></details>
+    <details class="rv"><summary>手机和电脑不在同一个 Wi-Fi 能用吗？</summary><p>现在需要连同一个 Wi-Fi，比如家里或办公室。不同网络之间互传，后面会加上。</p></details>
+    <details class="rv"><summary>支持哪些手机和电脑？</summary><p>手机：iPhone 和安卓都行，用浏览器打开。电脑：Windows 上的 Chrome 或 Edge 浏览器。</p></details>
+    <details class="rv"><summary>电脑关掉插件或手机锁屏了，发的东西会丢吗？</summary><p>不会。没送到的会先留着，两边再连上时自动补发。</p></details>
   </div>
 </div></section>
 
-<footer><div class="wrap">Tapaste = Tap + Paste：手机上点一下，电脑上直接粘贴。</div></footer>
+<footer><div class="wrap"><b>Tapaste</b> = Tap + Paste：手机上点一下，电脑上直接粘贴。</div></footer>
 
+<script>
+(function(){
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* 背景：流动的光点网络 */
+var cv=document.getElementById('net'), cx=cv.getContext('2d'), W, H, dpr, pts=[], mouse={x:-999,y:-999};
+function size(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0);
+  var n=Math.round(Math.min(90,W*H/16000));pts=[];for(var i=0;i<n;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.6+.6});}
+size();addEventListener('resize',size);
+addEventListener('mousemove',function(e){mouse.x=e.clientX;mouse.y=e.clientY});
+function draw(){cx.clearRect(0,0,W,H);
+  for(var i=0;i<pts.length;i++){var p=pts[i];p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+    var dm=Math.hypot(p.x-mouse.x,p.y-mouse.y);if(dm<140&&dm>0){p.x+=(p.x-mouse.x)/dm*.8;p.y+=(p.y-mouse.y)/dm*.8}
+    for(var j=i+1;j<pts.length;j++){var q=pts[j],d=Math.hypot(p.x-q.x,p.y-q.y);if(d<130){cx.strokeStyle='rgba(96,165,250,'+(1-d/130)*.22+')';cx.lineWidth=1;cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(q.x,q.y);cx.stroke()}}
+    cx.fillStyle='rgba(165,243,252,.75)';cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fill();}
+  if(!reduce)requestAnimationFrame(draw);}
+draw();
+
+/* 出场动画 */
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);
+  e.target.querySelectorAll('[data-to]').forEach(count)}})},{threshold:.15});
+document.querySelectorAll('.rv').forEach(function(el,i){el.style.transitionDelay=(i%4)*90+'ms';io.observe(el)});
+function count(el){var to=+el.dataset.to,s=el.dataset.suffix||'',t0=null;
+  if(to===0){var k=0,iv=setInterval(function(){el.textContent=(9-k)+s;if(++k>9){clearInterval(iv);el.textContent='0'+s}},70);return}
+  (function f(t){t0=t0||t;var k=Math.min(1,(t-t0)/900);el.textContent=Math.round(k*to)+s;if(k<1)requestAnimationFrame(f)})(performance.now())}
+
+/* 卡片：跟着鼠标发光、轻微倾斜 */
+document.querySelectorAll('.card').forEach(function(c){
+  c.addEventListener('mousemove',function(e){var r=c.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    c.style.setProperty('--mx',x+'px');c.style.setProperty('--my',y+'px');
+    if(c.classList.contains('tilt')&&!reduce){c.style.transitionDelay='0ms';c.style.transform='perspective(700px) rotateX('+((y/r.height-.5)*-8)+'deg) rotateY('+((x/r.width-.5)*8)+'deg) translateY(-4px)'}});
+  c.addEventListener('mouseleave',function(){c.style.transform=''})});
+
+/* 演示：手机打字 → 点发送 → 光点飞到电脑 → 电脑收到、Ctrl+V 粘出 */
+var texts=['会议改到下午 3 点，地址发你了','取件码 8-2-4017','明天 9:30 高铁 G1234'];
+var $=function(id){return document.getElementById(id)};
+var typed=$('typed'),send=$('send'),pk=$('pk'),pk2=$('pk2'),ring=$('ring'),msg=$('msgNew'),msgTxt=$('msgTxt'),badge=$('badge'),paste=$('pasteTxt'),lat=$('lat'),stage=$('stage'),path=$('path');
+var round=0;
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function pt(t){var L=path.getTotalLength(),p=path.getPointAtLength(L*t),r=stage.getBoundingClientRect();return{x:p.x/1000*r.width,y:p.y/800*r.height}}
+function fly(el,dur,delay){return new Promise(function(res){setTimeout(function(){var t0=null;el.style.opacity=1;
+  (function f(t){t0=t0||t;var k=Math.min(1,(t-t0)/dur),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,p=pt(e);
+    el.style.transform='translate('+p.x+'px,'+p.y+'px) scale('+(1+Math.sin(k*Math.PI)*.5)+')';
+    if(k<1)requestAnimationFrame(f);else{el.style.opacity=0;res()}})(performance.now())},delay||0)})}
+function burst(){var r=0,o=1;(function f(){r+=2.2;o-=.04;ring.setAttribute('r',10+r);ring.style.opacity=Math.max(0,o);if(o>0)requestAnimationFrame(f)})()}
+async function loop(){
+  var s=texts[round++%texts.length];
+  msg.classList.add('hide');msg.classList.remove('in');badge.classList.remove('on');paste.textContent='';typed.textContent='';
+  await sleep(500);
+  for(var i=1;i<=s.length;i++){typed.textContent=s.slice(0,i);await sleep(70)}
+  await sleep(350);send.classList.add('press');await sleep(180);send.classList.remove('press');
+  lat.textContent=(0.2+Math.random()*0.5).toFixed(1)+'s';
+  fly(pk2,900,90);await fly(pk,900);burst();
+  msgTxt.textContent=s;msg.classList.remove('hide');msg.classList.add('in');badge.classList.add('on');
+  await sleep(900);
+  for(var j=1;j<=s.length;j++){paste.textContent=s.slice(0,j);await sleep(20)}
+  await sleep(2400);loop();
+}
+if(reduce){typed.textContent=texts[0];msgTxt.textContent=texts[0];msg.classList.remove('hide');paste.textContent=texts[0]}
+else loop();
+})();
+</script>
 </body>
 </html>
