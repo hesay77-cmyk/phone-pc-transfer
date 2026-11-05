@@ -46,6 +46,9 @@ nav .w{height:72px;display:flex;align-items:center;justify-content:space-between
 nav .links{display:flex;align-items:center;gap:6px;padding:5px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);backdrop-filter:blur(14px)}
 nav .links a{font-size:13.5px;padding:8px 14px;border-radius:999px;color:var(--muted);transition:color .2s,background .2s}
 nav .links a:hover{color:var(--fg);background:rgba(255,255,255,.06)}
+nav .links .lang{appearance:none;font:inherit;font-size:12.5px;letter-spacing:.3px;padding:8px 12px;border-radius:999px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+nav .links .lang:hover{color:var(--fg)}
+html[lang=en] h1{letter-spacing:-.035em;font-size:clamp(40px,4.8vw,68px)}
 nav .links a.cta{background:var(--fg);color:var(--bg);font-weight:500}
 
 /* 首屏 */
@@ -222,7 +225,7 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
 <nav><div class="w">
   <a class="logo" href="#"><img src="icon.png" alt="">Tapaste</a>
-  <div class="links"><a href="#story">怎么回事</a><a href="#features">能做什么</a><a href="#faq">常见问题</a><a class="cta" href="#download">下载</a></div>
+  <div class="links"><a href="#story">怎么回事</a><a href="#features">能做什么</a><a href="#faq">常见问题</a><button class="lang" id="langBtn" type="button">EN</button><a class="cta" href="#download">下载</a></div>
 </div></nav>
 
 <main>
@@ -285,11 +288,11 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 </div></section>
 
 <section id="download"><div class="w">
-  <div class="head rv"><div class="eyebrow">下载</div><h2 class="big">装到你的浏览器。</h2><p>只有电脑要装。手机什么都不用下载，扫码就行。</p></div>
+  <div class="head rv"><div class="eyebrow">下载</div><h2 class="big">装到你的浏览器。</h2><p>只有电脑要装，手机什么都不用下载。</p></div>
   <div class="dl">
-    <div class="d rv"><span class="tag">国内推荐</span><h3>Chrome 安装包</h3><p>下载后照着图文步骤装好，大约两分钟，不用打开 Chrome 商店。</p><a class="btn light" aria-disabled="true">下载安装包 <span class="soon">快好了</span></a></div>
-    <div class="d rv"><span class="tag">Windows 自带</span><h3>Microsoft Edge</h3><p>从微软商店一键安装，以后自动更新。</p><a class="btn glass" aria-disabled="true">去 Edge 商店 <span class="soon">快好了</span></a></div>
-    <div class="d rv"><span class="tag">能上 Google 的话</span><h3>Chrome 商店</h3><p>从这里装最省事，以后自动更新。</p><a class="btn glass" aria-disabled="true">去 Chrome 商店 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">能打开 Chrome 商店</span><h3>Chrome 商店</h3><p>从商店装最省事，以后自动更新。</p><a class="btn light" aria-disabled="true">去 Chrome 商店 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">打不开商店？</span><h3>下载安装包</h3><p>下载插件，照着图文步骤装进 Chrome，大约两分钟。</p><a class="btn glass" aria-disabled="true">下载安装包 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">用 Edge 的话</span><h3>Edge 商店</h3><p>从微软商店一键安装，以后自动更新。</p><a class="btn glass" aria-disabled="true">去 Edge 商店 <span class="soon">快好了</span></a></div>
   </div>
 </div></section>
 
@@ -312,6 +315,93 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <footer><div class="w"><span>Tapaste · 手机和电脑之间，最近的那条路。</span><span>© 2026 Tapaste</span></div></footer>
 </div>
 </main>
+<script>
+/* 中英文：中文写在页面里；英文按系统语言自动切换，也可以点右上角手动换（记在本机） */
+(function(){
+var EN={
+'怎么回事':'How it works','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
+'点一下，':'Tap once.','就到另一边。':'It’s already there.',
+'手机和电脑之间互传文字和照片。':'Send text and photos between your phone and computer.',
+'不用数据线，不用登录，手机不用装 App。':'No cables. No sign-in. No app on your phone.',
+'下载电脑插件':'Get the extension','看看怎么用':'See how it works',
+'电脑：Chrome 或 Edge　·　手机：自带浏览器，扫码就行':'Computer: Chrome or Edge　·　Phone: any browser, just scan',
+'点一下「发到电脑」试试':'Tap “Send to computer” to try it',
+'已连上电脑':'Connected','字':'T','取件码 8-2-4017':'Code 8-2-4017','刚拍的照片':'Photo just taken',
+'文三路 90 号':'12 Elm Street','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','发到电脑':'Send to computer',
+'下载 / 互传':'Downloads / Tapaste','明早 9 点开会':'9am meeting','右键 · 发到手机':'Send to phone',
+'手机':'Phone','电脑':'Computer',
+'01 / 在手机上':'01 / On your phone','选好，点一下':'Pick it. Tap once.',
+'一个取件码、一个地址、一张刚拍的照片。点「发到电脑」。':'A pickup code, an address, a photo you just took. Tap “Send to computer”.',
+'02 / 路上':'02 / On the way','直接过去':'Straight across',
+'同一个 Wi-Fi 下，手机把它亲手交给电脑。不绕路，也不留在别处。':'On the same Wi‑Fi, your phone hands it straight to your computer. No detours, no copies left anywhere.',
+'03 / 在电脑上':'03 / On your computer','已经在那了':'Already there',
+'文字已经复制好，照片已经存进「下载」文件夹。电脑上不用再点什么。':'Text is already copied. Photos are already in your Downloads folder. Nothing to click.',
+'04 / 以后':'04 / From then on','一直连着':'Always connected',
+'只扫一次码。以后打开就连上，电脑上的东西也能一点发回手机。':'Scan once. After that it connects on its own, and your computer can send things back too.',
+'那些每天都有的小事。':'The little things, every day.',
+'以前要发给自己、插数据线、登网盘的，现在点一下。':'Things you used to email yourself, plug in a cable for, or upload to a drive. Now it’s one tap.',
+'原图，直接存好':'Full-size photos, saved',
+'刚拍的照片、截图，原图送到电脑，自己进「下载」文件夹。也能从侧边栏直接拖进网页。':'Photos and screenshots arrive at full size and land in your Downloads folder. Drag them from the side panel straight into a web page.',
+'到了就能用':'Ready to use',
+'取件码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。':'Pickup codes, addresses, a bit of chat. Already copied on your computer, ready wherever you need it.',
+'电脑也能发手机':'Computer to phone, too',
+'网页上的字和图，右键「发到手机」。别的软件里的一大段字，复制一下就到手机。':'Right-click text or images on a web page and choose “Send to phone”. Copy a long passage in any app, and it’s on your phone.',
+'只在你家里走':'It stays at home',
+'东西只在你的手机和电脑之间直接传，不上传，也不存在任何服务器上。不用注册，不用登录。':'Everything goes directly between your phone and computer. Nothing is uploaded or stored on any server. No account, no sign-in.',
+'怎么开始':'Getting started','第一次，一分钟。':'One minute, the first time.',
+'装插件不到一分钟，扫码连上只要几秒。以后打开就自己连上。':'Installing takes under a minute. Scanning to connect takes seconds. After that, it connects on its own.',
+'在电脑上':'On your computer','装上插件':'Add the extension',
+'装好后点浏览器右上角的 Tapaste 图标，旁边出现一个二维码。':'Click the Tapaste icon at the top right of your browser. A QR code appears.',
+'在手机上':'On your phone','扫一下':'Scan it',
+'用手机相机扫码，打开的网页就是你的 Tapaste。放到桌面，以后一点就开。':'Scan with your phone’s camera. The page that opens is your Tapaste. Add it to your home screen to open it in one tap.',
+'两边':'Both','点一下就到':'Tap and it’s there',
+'手机和电脑连同一个 Wi-Fi，选好文字或照片，点一下。':'Phone and computer on the same Wi‑Fi. Pick text or a photo and tap once.',
+'装到你的浏览器。':'Add it to your browser.','只有电脑要装，手机什么都不用下载。':'Only your computer needs it. Nothing to download on your phone.',
+'能打开 Chrome 商店':'If you can open the Chrome Web Store','Chrome 商店':'Chrome Web Store','从商店装最省事，以后自动更新。':'The easiest way. Updates automatically.','去 Chrome 商店':'Open Chrome Web Store',
+'打不开商店？':'Can’t open the store?','下载安装包':'Download the installer',
+'下载插件，照着图文步骤装进 Chrome，大约两分钟。':'Download the extension and follow the illustrated steps to add it to Chrome. About two minutes.',
+'用 Edge 的话':'Using Edge','Edge 商店':'Edge Add-ons','从微软商店一键安装，以后自动更新。':'Install in one click from Microsoft. Updates automatically.','去 Edge 商店':'Open Edge Add-ons',
+'快好了':'Coming soon',
+'可能你会问':'You might ask',
+'手机要装 App 吗？':'Do I need an app on my phone?',
+'不用。手机扫码打开的是一个网页，iPhone 自带的 Safari 就行。放到桌面以后，用起来和 App 一样。':'No. Scanning opens a web page, and Safari on iPhone works fine. Add it to your home screen and it works just like an app.',
+'我传的东西，别人看得到吗？':'Can anyone else see what I send?',
+'看不到。内容只在你的手机和电脑之间直接传。我们的服务器只帮两边「打个招呼」，看不到你传了什么。':'No. It goes directly between your phone and computer. Our server only introduces the two; it never sees what you send.',
+'一定要同一个 Wi-Fi 吗？':'Do they need to be on the same Wi‑Fi?',
+'现在是。有些公司和公共 Wi-Fi 不让设备之间直接连，遇到这种情况，两边都会告诉你。':'For now, yes. Some office and public Wi‑Fi networks block devices from reaching each other. If that happens, both sides will tell you.',
+'照片会被压缩吗？':'Are photos compressed?','不会，送到电脑上的是原图。':'No. Your computer gets the original.',
+'手机锁屏或切到别的 App，会断吗？':'What if my phone locks or I switch apps?',
+'会暂时断开。回到网页就自己连上，没发出去的会自动补发。':'It disconnects for a moment. Go back to the page and it reconnects; anything unsent goes out automatically.',
+'可以连几台手机？':'How many phones can I connect?',
+'一台电脑同一时间连一台手机。换手机的话，用新手机再扫一次码。':'One phone per computer at a time. To switch, scan the code with the new phone.',
+'点一下，就到。':'Tap once. It’s there.',
+'Tapaste · 手机和电脑之间，最近的那条路。':'Tapaste · The shortest way between your phone and computer.',
+'✓ 已复制':'✓ Copied','收':'In',
+'到了。再点一个试试':'Arrived. Try another one','照片会自己进「下载」文件夹':'Photos go straight to Downloads',
+'也可以反过来：点电脑上的「发到手机」':'It works both ways: click “Send to phone”','手机上收到了。两边都能发':'Your phone got it. Both ways work.',
+'Tapaste · 点一下，就到另一边':'Tapaste · Tap once. It’s already there.',
+'点一下，就到另一边。手机和电脑之间互传文字和照片，不用数据线，不用登录，手机不用装 App。':'Tap once and it’s on the other side. Send text and photos between your phone and computer. No cables, no sign-in, no app on your phone.'
+};
+var nodes=[],attrs=[];
+var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;
+while(n=w.nextNode()){if(n.parentNode.closest('script,style'))continue;var s=n.nodeValue.trim();if(EN[s])nodes.push([n,n.nodeValue,s])}
+Array.prototype.forEach.call(document.querySelectorAll('[data-v]'),function(e){attrs.push([e,e.dataset.v])});
+var desc=document.querySelector('meta[name=description]'),zhTitle=document.title,zhDesc=desc.content;
+window.LANG='zh';
+window.T=function(s){return window.LANG==='en'&&EN[s]||s};
+function apply(l){
+  window.LANG=l;document.documentElement.lang=l==='en'?'en':'zh-CN';
+  nodes.forEach(function(x){x[0].nodeValue=l==='en'?x[1].replace(x[2],EN[x[2]]):x[1]});
+  attrs.forEach(function(x){x[0].dataset.v=l==='en'&&EN[x[1]]||x[1]});
+  document.title=l==='en'?EN[zhTitle]||zhTitle:zhTitle;desc.content=l==='en'?EN[zhDesc]||zhDesc:zhDesc;
+  var b=document.getElementById('langBtn');if(b)b.textContent=l==='en'?'中文':'EN';
+}
+var saved=null;try{saved=localStorage.getItem('tapaste-lang')}catch(e){}
+var sys=(navigator.languages&&navigator.languages[0]||navigator.language||'zh').toLowerCase();
+apply(saved||(sys.indexOf('zh')===0?'zh':'en'));
+document.getElementById('langBtn').addEventListener('click',function(){var l=window.LANG==='en'?'zh':'en';apply(l);try{localStorage.setItem('tapaste-lang',l)}catch(e){}});
+})();
+</script>
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/gsap.min.js"></script>
@@ -338,7 +428,7 @@ var navEl=$('nav');
     return {x:(r.left-d.left+r.width*(fx_==null?.5:fx_))/s,y:(r.top-d.top+r.height*(fy_==null?.5:fy_))/s}}
   function spark(x,y){var e=document.createElement('i');e.className='spark';e.style.left=x+'px';e.style.top=y+'px';fx.appendChild(e);setTimeout(function(){e.remove()},720)}
   function ring(x,y){var e=document.createElement('i');e.className='land';e.style.left=x+'px';e.style.top=y+'px';fx.appendChild(e);setTimeout(function(){e.remove()},720)}
-  function toast(text){var t=document.createElement('div');t.className='toast';t.innerHTML='<b>✓ 已复制</b><span></span>';t.lastChild.textContent=text;
+  function toast(text){var t=document.createElement('div');t.className='toast';t.innerHTML='<b>'+T('✓ 已复制')+'</b><span></span>';t.lastChild.textContent=text;
     toasts.appendChild(t);while(toasts.children.length>2)toasts.firstChild.remove();
     if(window.gsap)gsap.from(t,{y:14,opacity:0,filter:'blur(6px)',duration:.6,ease:'expo.out'});return t}
   var hints=['到了。再点一个试试','照片会自己进「下载」文件夹','也可以反过来：点电脑上的「发到手机」'];
@@ -354,10 +444,10 @@ var navEl=$('nav');
       fly.style.transform='translate('+x+'px,'+y+'px)';fly.style.opacity=t>.92?(1-t)/.08:1;
       if(t-last>.025){spark(x+(Math.random()-.5)*10,y+(Math.random()-.5)*10);last=t}}
     var done=function(){fx.removeChild(fly);ring(to.x,to.y+20);
-      if(!got){got=document.createElement('div');got.className='it got';got.innerHTML='<span class="ic">收</span><span></span>';ph.insertBefore(got,items[0]);}
+      if(!got){got=document.createElement('div');got.className='it got';got.innerHTML='<span class="ic">'+T('收')+'</span><span></span>';ph.insertBefore(got,items[0]);}
       got.lastChild.textContent=selt.textContent;
       if(window.gsap)gsap.from(got,{y:-10,opacity:0,filter:'blur(6px)',duration:.6,ease:'expo.out'});
-      hintT.textContent='手机上收到了。两边都能发';busy=false};
+      hintT.textContent=T('手机上收到了。两边都能发');busy=false};
     if(window.gsap&&!reduce)gsap.to(o,{t:1,duration:.95,ease:'power2.inOut',onUpdate:step,onComplete:done});else{o.t=1;step();done()}
   });
   send.addEventListener('click',function(){
@@ -381,7 +471,7 @@ var navEl=$('nav');
       if(photo){var d=document.createElement('div');d.style.background=bg;if(fg.children.length>=6)fg.firstChild.remove();fg.appendChild(d);
         if(window.gsap)gsap.from(d,{scale:.3,opacity:0,duration:.6,ease:'back.out(2.2)'});}
       else toast(it.dataset.v);
-      hintT.textContent=hints[Math.min(sent,hints.length-1)];sent++;
+      hintT.textContent=T(hints[Math.min(sent,hints.length-1)]);sent++;
       pick((sel+1)%items.length);busy=false};
     if(window.gsap&&!reduce)gsap.to(o,{t:1,duration:.95,ease:'power2.inOut',onUpdate:step,onComplete:done});
     else{o.t=1;step();done()}
