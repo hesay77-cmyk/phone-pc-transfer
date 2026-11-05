@@ -331,6 +331,29 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .flytag{position:fixed;z-index:71;pointer-events:none;display:inline-flex;align-items:center;gap:9px;padding:11px 18px;border-radius:999px;font-size:14px;color:#0b0c10;background:var(--lime);box-shadow:0 10px 30px rgba(227,255,107,.35)}
 .logo img{transition:transform .6s cubic-bezier(.2,.8,.2,1)}
 .logo:hover img{transform:rotate(-12deg) scale(1.12)}
+
+/* ---------- 同一个人做的其他小工具 ---------- */
+#family .head{margin-left:auto;margin-right:auto;text-align:center}
+.fam{display:grid;grid-template-columns:1.25fr 1fr .8fr;gap:14px;align-items:stretch}
+.fx{position:relative;border-radius:26px;padding:30px;border:1px solid rgba(255,255,255,.1);background:var(--glass);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:250px;transition:border-color .4s}
+.fx:hover{border-color:rgba(255,255,255,.22)}
+.fx .ic{width:64px;height:64px;border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.45);background:#1c1c22}
+.fx h3{margin:6px 0 0;font-size:21px;font-weight:500;letter-spacing:-.2px}
+.fx h3 small{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+.fx p{margin:0;color:var(--muted);font-size:14.5px;font-weight:300;line-height:1.8;flex:1}
+.fx .tag2{position:absolute;right:22px;top:22px;font-size:11.5px;padding:4px 10px;border-radius:999px;color:var(--lime);background:rgba(227,255,107,.12)}
+.fx.rux::before{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,92,92,.35),transparent 65%);filter:blur(10px);pointer-events:none}
+.fx.tap::before{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(124,110,255,.35),transparent 65%);filter:blur(10px);pointer-events:none}
+.fx.next{border-style:dashed;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;align-items:flex-start;justify-content:center}
+.fx.next .ic{display:grid;place-items:center;background:rgba(255,255,255,.04);box-shadow:none;border:1px dashed rgba(255,255,255,.2);font-size:26px;font-weight:200;color:var(--muted)}
+.fx.next .ic span{display:block;animation:spinp 6s linear infinite}
+@keyframes spinp{to{transform:rotate(360deg)}}
+.fx .go{align-self:flex-start;height:42px;padding:0 18px;font-size:13.5px}
+.famline{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:26px;font-size:12.5px;color:var(--muted)}
+.famline i{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
+footer a{color:var(--fg);opacity:.8}
+footer a:hover{opacity:1}
+
 /* ---------- 能传什么：两行慢慢滑过的小标签 ---------- */
 .uses{padding:30px 0 90px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .lane{display:flex;gap:12px;width:max-content;animation:lane 46s linear infinite;margin-bottom:12px}
@@ -349,6 +372,8 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .bento,.dl,.track{grid-template-columns:minmax(0,1fr)}
   .card.wide{grid-column:auto}
   .faq{grid-template-columns:minmax(0,1fr);gap:10px}
+  .fam{grid-template-columns:minmax(0,1fr)}
+  .fx{min-height:0}
   section{padding:90px 0}
 }
 @media (max-width:560px){
@@ -379,7 +404,7 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
 <nav><div class="w">
   <a class="logo" href="#"><img src="icon.png" alt="">Tapaste</a>
-  <div class="links"><a href="#story">怎么回事</a><a href="#features">能做什么</a><a href="#faq">常见问题</a><button class="lang" id="langBtn" type="button">EN</button><a class="cta" href="#download">下载</a></div>
+  <div class="links"><a href="#story">怎么回事</a><a href="#features">能做什么</a><a href="#faq">常见问题</a><a href="#family">更多作品</a><button class="lang" id="langBtn" type="button">EN</button><a class="cta" href="#download">下载</a></div>
 </div></nav>
 
 <main>
@@ -488,6 +513,15 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   </div>
 </div></section>
 
+<section id="family"><div class="w">
+  <div class="head rv"><div class="eyebrow">更多作品</div><h2 class="big">同一个人做的小工具。</h2><p>每一个都只做好一件事。</p></div>
+  <div class="fam">
+    <a class="fx rux rv" href="https://hidaydream.cloud/" target="_blank" rel="noopener"><img class="ic" src="fam-ruxget.png" alt=""><h3>Ruxget<small>拾影</small></h3><p>免费、开源、无广告的视频下载助手。B站、抖音、快手、小红书一键下载；Windows 版还能下 YouTube。</p><span class="btn glass go">去看看 ↗</span></a>
+    <div class="fx tap rv"><span class="tag2">你在这里</span><img class="ic" src="icon.png" alt=""><h3>Tapaste</h3><p>手机和电脑之间互传文字和照片。</p></div>
+    <div class="fx next rv"><div class="ic"><span>+</span></div><h3>下一个</h3><p>还在做，敬请期待。</p></div>
+  </div>
+</div></section>
+
 <section id="faq" style="padding-top:20px"><div class="w faq">
   <div class="rv"><div class="eyebrow">常见问题</div><h2 class="big">可能你会问</h2></div>
   <div>
@@ -504,14 +538,14 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   <h2 class="rv"><span class="shine">点一下，就到。</span></h2>
   <div class="ctas rv"><a class="btn light" href="#download">下载电脑插件</a></div>
 </div></div>
-<footer><div class="w"><span>Tapaste · 手机和电脑之间，最近的那条路。</span><span>© 2026 Tapaste</span></div></footer>
+<footer><div class="w"><span>Tapaste · 手机和电脑之间，最近的那条路。</span><span>更多作品：<a href="https://hidaydream.cloud/" target="_blank" rel="noopener">Ruxget 拾影</a></span><span>© 2026 Tapaste</span></div></footer>
 </div>
 </main>
 <script>
 /* 中英文：中文写在页面里；英文按系统语言自动切换，也可以点右上角手动换（记在本机） */
 (function(){
 var EN={
-'怎么回事':'How it works','张原图':'originals','这段话发到手机上看':'Read this on my phone','检查':'Inspect','手机上收到了':'Arrived on your phone','不经过任何服务器':'Never touches a server','明早 9 点开会，记得带电脑':'9am meeting, bring your laptop','真实的样子':'The real thing','电脑上一个侧边栏，手机上一个网页。':'A side panel on your computer. A web page on your phone.','不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。':'Nothing to learn. Open the side panel in your browser, scan the code on your phone. That’s it.','你正在看的网页':'any web page','周末去海边':'A weekend by the sea','已连上手机':'Phone connected','输入或粘贴文字、代码、网址':'Type or paste text, code, a link','发到手机':'Send to phone','发刚复制的':'Send clipboard','选图片…':'Pick image…','手机发来的':'From phone','发到手机的':'Sent to phone','08:51 · 已复制':'08:51 · Copied','明天上午 10 点在三楼会议室':'10am tomorrow, 3rd floor room','08:48 · 已复制':'08:48 · Copied','照片 · 2.4 MB':'Photo · 2.4 MB','08:40 · 存进 下载/互传':'08:40 · Saved to Downloads','复制':'Copy','已连上电脑':'Connected','粘贴并发送到电脑':'Paste & send to computer','发照片到电脑':'Send photo to computer','或者在这里打字':'Or type here','电脑发来的':'From computer','明早 9 点开会':'9am meeting','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','电脑':'Computer','Chrome / Edge 侧边栏':'Chrome / Edge side panel','手机':'Phone','扫码打开的网页，不用装 App':'A web page you scan to open. No app.','邮箱地址':'Email addresses','验证码':'Verification codes','快递地址':'Addresses','会议链接':'Meeting links','刚拍的照片':'Photos just taken','截图':'Screenshots','一段代码':'Code snippets','电话号码':'Phone numbers','网址':'Links','发票照片':'Receipts','聊天里的一段话':'A line from a chat','文章里的一段':'A paragraph from an article','表格里的数字':'Numbers from a sheet','备忘':'Notes','刚收到 · 已复制':'Just now · Copied','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
+'怎么回事':'How it works','更多作品':'More apps','同一个人做的小工具。':'Small tools from the same maker.','每一个都只做好一件事。':'Each one does one thing well.','免费、开源、无广告的视频下载助手。B站、抖音、快手、小红书一键下载；Windows 版还能下 YouTube。':'A free, open-source, ad-free video downloader. Bilibili, Douyin, Kuaishou and Xiaohongshu in one click; the Windows app also does YouTube.','去看看 ↗':'Visit ↗','你在这里':'You’re here','下一个':'Next','还在做，敬请期待。':'In the works.','更多作品：':'More apps: ','Ruxget 拾影':'Ruxget','张原图':'originals','这段话发到手机上看':'Read this on my phone','检查':'Inspect','手机上收到了':'Arrived on your phone','不经过任何服务器':'Never touches a server','明早 9 点开会，记得带电脑':'9am meeting, bring your laptop','真实的样子':'The real thing','电脑上一个侧边栏，手机上一个网页。':'A side panel on your computer. A web page on your phone.','不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。':'Nothing to learn. Open the side panel in your browser, scan the code on your phone. That’s it.','你正在看的网页':'any web page','周末去海边':'A weekend by the sea','已连上手机':'Phone connected','输入或粘贴文字、代码、网址':'Type or paste text, code, a link','发到手机':'Send to phone','发刚复制的':'Send clipboard','选图片…':'Pick image…','手机发来的':'From phone','发到手机的':'Sent to phone','08:51 · 已复制':'08:51 · Copied','明天上午 10 点在三楼会议室':'10am tomorrow, 3rd floor room','08:48 · 已复制':'08:48 · Copied','照片 · 2.4 MB':'Photo · 2.4 MB','08:40 · 存进 下载/互传':'08:40 · Saved to Downloads','复制':'Copy','已连上电脑':'Connected','粘贴并发送到电脑':'Paste & send to computer','发照片到电脑':'Send photo to computer','或者在这里打字':'Or type here','电脑发来的':'From computer','明早 9 点开会':'9am meeting','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','电脑':'Computer','Chrome / Edge 侧边栏':'Chrome / Edge side panel','手机':'Phone','扫码打开的网页，不用装 App':'A web page you scan to open. No app.','邮箱地址':'Email addresses','验证码':'Verification codes','快递地址':'Addresses','会议链接':'Meeting links','刚拍的照片':'Photos just taken','截图':'Screenshots','一段代码':'Code snippets','电话号码':'Phone numbers','网址':'Links','发票照片':'Receipts','聊天里的一段话':'A line from a chat','文章里的一段':'A paragraph from an article','表格里的数字':'Numbers from a sheet','备忘':'Notes','刚收到 · 已复制':'Just now · Copied','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
 '点一下，':'Tap once.','就到另一边。':'It’s already there.',
 '手机和电脑之间互传文字和照片。':'Send text and photos between your phone and computer.',
 '不用数据线，不用登录，手机不用装 App。':'No cables. No sign-in. No app on your phone.',

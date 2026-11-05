@@ -16,7 +16,7 @@ done
 
 echo "== 上传页面 =="
 ssh $OPTS $HOST 'rm -rf /tmp/tapaste-upload && mkdir -p /tmp/tapaste-upload'
-scp -r $OPTS apps/site/*.html apps/site/icon.png apps/site/vendor apps/site/fonts $( [ -d apps/site/downloads ] && echo apps/site/downloads ) $HOST:/tmp/tapaste-upload/
+scp -r $OPTS apps/site/*.html apps/site/*.png apps/site/vendor apps/site/fonts $( [ -d apps/site/downloads ] && echo apps/site/downloads ) $HOST:/tmp/tapaste-upload/
 
 echo "== 服务器上安装 =="
 ssh $OPTS $HOST 'sudo bash -s' <<'REMOTE'
