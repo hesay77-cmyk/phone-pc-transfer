@@ -163,7 +163,7 @@ async function describeLink(p) {
   } catch (e) { return { lan: null, text: '读连接方式出错：' + e.message }; }
 }
 
-let wasHidden = false, hiddenAt = 0;
+let wasHidden = false, hiddenAt = 0, lastFromPc = 0;
 function setupChannel(ch, myPc) {
   dc = ch;
   ch.binaryType = 'arraybuffer';
@@ -187,6 +187,7 @@ function setupChannel(ch, myPc) {
   };
   ch.onclose = () => { if (dc === ch) { peer = 'none'; renderStatus(); log('和电脑的直连断开了'); } };
   ch.onmessage = (ev) => {
+    lastFromPc = Date.now();
     if (typeof ev.data !== 'string') return;
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.t === 'ping') { sendJson({ t: 'ping' }); return; }
@@ -297,10 +298,29 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) { wasHidden = true; hiddenAt = Date.now(); return; }
   if (!client) return;
   setTimeout(() => {
-    if (!(dc && dc.readyState === 'open')) { log('切回来了，重新连接电脑'); peer = 'none'; startHello(); }
-    else if (wasHidden) { result('resume', true, '切回来时连接还在'); wasHidden = false; }
+    if (!(dc && dc.readyState === 'open')) { reconnect('切回来了，重新连接电脑'); return; }
+    // iPhone 暂停网页后，连接可能看着「还开着」其实电脑那头早断了。
+    // 电脑每 5 秒发一次心跳，等 6 秒：收到了才算真的还连着。
+    const back = Date.now();
+    sendJson({ t: 'probe' });
+    setTimeout(() => {
+      if (lastFromPc >= back) {
+        if (wasHidden) { result('resume', true, '切回来时连接还在（电脑有回应）'); wasHidden = false; }
+      } else {
+        reconnect('切回来后电脑没回应，重新连接');
+      }
+    }, 6000);
   }, 600);
 });
+
+function reconnect(why) {
+  log(why);
+  peer = 'none';
+  if (pc) { try { pc.close(); } catch {} }
+  pc = null; dc = null;
+  renderStatus();
+  startHello();
+}
 
 // ---------------- 复制测试结果 ----------------
 $('report').onclick = async () => {

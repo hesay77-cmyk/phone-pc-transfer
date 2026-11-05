@@ -219,6 +219,7 @@ function sendJson(o) {
 
 async function onData(m) {
   if (m.t === 'ping') return;
+  if (m.t === 'probe') { sendJson({ t: 'probe-ok' }); return; } // 手机切回来时问「你还在吗」
   if (m.t === 'ack') {
     const i = state.unacked.findIndex((x) => x.id === m.id);
     if (i >= 0) {
