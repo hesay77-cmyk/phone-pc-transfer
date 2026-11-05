@@ -1,0 +1,15 @@
+:root {
+  --bg: #ffffff; --fg: #1f1f1f; --muted: #6b6b6b; --line: #e6e6e6; --card: #f6f6f7;
+  --ok: #1a7f37; --bad: #cf222e; --wait: #9a6700; --accent: #2563eb;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1e1f22; --fg: #e8e8e8; --muted: #a0a0a0; --line: #36373a; --card: #2a2b2e; --ok: #4ac26b; --bad: #ff7b72; --wait: #d29922; --accent: #6ea8fe; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, "Microsoft YaHei", sans-serif; }
+button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 7px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+button.link { border: none; background: none; color: var(--accent); padding: 0; }
+textarea { width: 100%; font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); resize: vertical; }

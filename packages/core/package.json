@@ -1,0 +1,13 @@
+{
+  "name": "@hutong/core",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "check": "tsc -p ."
+  },
+  "dependencies": {
+    "mqtt": "5.10.1"
+  }
+}

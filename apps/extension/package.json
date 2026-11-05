@@ -1,0 +1,22 @@
+{
+  "name": "@hutong/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "check": "wxt prepare && svelte-check --tsconfig ./tsconfig.json",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "@hutong/core": "*",
+    "qrcode-generator": "1.4.4"
+  },
+  "devDependencies": {
+    "wxt": "0.21.5",
+    "@wxt-dev/module-svelte": "2.0.5",
+    "svelte": "5.57.3"
+  }
+}

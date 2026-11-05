@@ -1,0 +1,12 @@
+:root {
+  --bg: #fff; --fg: #1f1f1f; --muted: #6b6b6b; --line: #e6e6e6; --card: #f4f4f5;
+  --ok: #1a7f37; --bad: #cf222e; --wait: #9a6700; --accent: #2563eb;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #111214; --fg: #ececec; --muted: #9a9a9a; --line: #2f3033; --card: #1d1e21; --ok: #4ac26b; --bad: #ff7b72; --wait: #d29922; --accent: #6ea8fe; }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; }
+button { font: inherit; }
+textarea { width: 100%; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); }

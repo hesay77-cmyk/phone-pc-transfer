@@ -1,0 +1,25 @@
+{
+  "name": "hutong",
+  "private": true,
+  "description": "手机电脑互传：Chrome 插件 + 手机网页 + 介绍人服务器",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:ext": "npm -w @hutong/extension run dev",
+    "build": "npm -w @hutong/extension run build && npm -w @hutong/mobile run build",
+    "test": "vitest run",
+    "check": "npm -w @hutong/core run check && npm -w @hutong/extension run check && npm -w @hutong/mobile run check && npm -w @hutong/server run check",
+    "e2e": "node scripts/e2e.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "aedes": "^0.51.3",
+    "aedes-server-factory": "^0.2.1",
+    "svelte-check": "4.7.8",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}
