@@ -1,7 +1,7 @@
 // 引擎：在看不见的小页面里一直开着。连手机、收东西、写剪贴板、存照片、发通知。
 
 import {
-  BlobStore, CONFIG, localKV, persistentOutbox, newSecret, pairingUrl, randomId, startSession,
+  BlobStore, CONFIG, localKV, looksLikePassword, persistentOutbox, newSecret, pairingUrl, randomId, startSession, trimForHistory,
   type DeviceInfo, type Incoming, type Session
 } from '@hutong/core';
 import { browser } from 'wxt/browser';
@@ -45,6 +45,12 @@ export class Engine {
       if (msg?.to !== 'engine') return;
       if (msg.type === 'get-state') { reply(this.state); return; }
       if (msg.type === 'send-text') { reply(this.sendText(msg.text)); return; }
+      if (msg.type === 'cancel') { if (!this.session?.transfer.cancel(msg.id)) this.patch(msg.id, { dropped: 'cancelled' }); reply(this.state); return; }
+      if (msg.type === 'clear-items') { this.clearItems(); reply(this.state); return; }
+      if (msg.type === 'dismiss') {
+        if (msg.what === 'newPhone') this.state.newPhone = undefined; else this.state.skippedSecretAt = undefined;
+        this.push(); reply(this.state); return;
+      }
       if (msg.type === 'send-image-url') { void this.sendImageUrl(msg.url).then(reply); return true; }
       if (msg.type === 'send-clipboard') { void this.sendClipboard().then(reply); return true; }
       if (msg.type === 'set-auto-send') { this.setAutoSend(msg.on); reply(this.state); return; }
@@ -79,14 +85,27 @@ export class Engine {
         link: (s, info) => {
           this.state.link = s;
           if (info) { this.state.route = info.route; this.state.connectMs = info.connectMs; }
+          if (s === 'connected' && info) this.log(`连上手机：${info.route}，${info.connectMs} 毫秒`);
           if (s === 'connected' && !this.state.everPaired) { this.state.everPaired = true; kv.set('everPaired', '1'); }
           if (s === 'connected') this.sendPendingClip();
           this.push();
         },
-        peer: (d) => { this.state.phoneName = d.name; kv.set('phoneName', d.name); this.push(); },
+        peer: (d) => {
+          this.state.phoneName = d.name;
+          kv.set('phoneName', d.name);
+          // 以前没连过的手机：提醒一下（拿到过二维码的人在同一个 Wi-Fi 下也能连上来）
+          let known: string[] = [];
+          try { known = JSON.parse(kv.get('knownPhones') || '[]'); } catch { known = []; }
+          if (!known.includes(d.id)) {
+            if (known.length) { this.state.newPhone = d.name || '手机'; this.log('一台新手机连上了：' + (d.name || '手机')); }
+            kv.set('knownPhones', JSON.stringify([...known, d.id].slice(-10)));
+          }
+          this.push();
+        },
         newerPeer: () => { this.state.newerPeer = true; this.push(); },
         received: (it) => void this.onReceived(it),
         delivered: (it) => { this.patch(it.id, { delivered: true }); },
+        dropped: (it, why) => { this.patch(it.id, { dropped: why }); },
         queue: (n) => {
           if (!n && this.state.pendingToPhone) this.flashOk(); // 攒着的全送到手机了
           this.state.pendingToPhone = n;
@@ -97,7 +116,11 @@ export class Engine {
   }
 
   private async resetPairing() {
+    // 旧的没送到的不该送到新配对的手机上
+    this.session?.transfer.clear();
     this.session?.close();
+    kv.remove('knownPhones');
+    this.state.newPhone = undefined;
     const secret = newSecret();
     kv.set('secret', secret);
     kv.remove('everPaired');
@@ -137,6 +160,8 @@ export class Engine {
     if (!c.ok || c.text === this.lastClip) return;
     this.lastClip = c.text;
     if (!c.text.trim()) return;
+    // 从密码管理器里复制的密码不自动发（要发可以点「发刚复制的」）
+    if (looksLikePassword(c.text)) { this.state.skippedSecretAt = Date.now(); this.log('复制的内容像密码，没有自动发'); this.push(); return; }
     // 手机没连着（锁屏、网页没开）：只记住最后一条，连上后送这一条，不攒一堆
     if (!this.session?.link.ready) { this.pendingClip = { text: c.text, at: Date.now() }; return; }
     this.pendingClip = null;
@@ -258,7 +283,12 @@ export class Engine {
       : { to: 'bg', type: 'badge', text: n ? String(Math.min(n, 99)) : '', color: '#2563eb' });
   }
 
+  /** 记录还没加进列表、手机那边就已经确认收到了（小图在本机存好之前就送到了）：先记着，加进列表时补上 */
+  private early = new Map<string, Partial<Item>>();
+
   private addItem(item: Item) {
+    const e = this.early.get(item.id);
+    if (e) { Object.assign(item, e); this.early.delete(item.id); }
     if (item.from === 'phone') this.setUnseen(this.state.unseen + 1);
     this.state.items = [item, ...this.state.items.filter((x) => x.id !== item.id)].slice(0, MAX_ITEMS);
     this.saveItems();
@@ -267,13 +297,35 @@ export class Engine {
 
   private patch(id: string, p: Partial<Item>) {
     const it = this.state.items.find((x) => x.id === id);
-    if (!it) return;
+    if (!it) {
+      this.early.set(id, { ...this.early.get(id), ...p });
+      if (this.early.size > 50) this.early.delete(this.early.keys().next().value!);
+      return;
+    }
     Object.assign(it, p);
     this.saveItems();
     this.push();
   }
 
-  private saveItems() { kv.set('items', JSON.stringify(this.state.items)); }
+  /** 存记录：太长的文字只存开头，免得本机存储满了整个记录都存不上 */
+  private saveItems() {
+    kv.set('items', JSON.stringify(this.state.items.map((it) => {
+      if (it.kind !== 'text' || !it.text) return it;
+      const t = trimForHistory(it.text);
+      return t.cut ? { ...it, text: t.text, cut: true } : it;
+    })));
+  }
+
+  /** 清空记录：还没送到手机的留着（它们还在待发） */
+  private clearItems() {
+    const pending = new Set(this.session?.transfer.pending.map((p) => p.id) ?? []);
+    this.state.items = this.state.items.filter((it) => pending.has(it.id));
+    this.saveItems();
+    this.setUnseen(0);
+    void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    this.log('清空了记录');
+    this.push();
+  }
 
   private log(s: string) {
     this.state.log = [new Date().toLocaleTimeString() + '  ' + s, ...this.state.log].slice(0, 100);

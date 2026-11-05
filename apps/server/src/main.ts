@@ -3,7 +3,7 @@
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 import { createRelay } from './relay.ts';
 
 const PORT = Number(process.env.PORT || 8080);
@@ -20,7 +20,8 @@ const server = createServer((req, res) => {
   let p = normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
   if (p.endsWith('/')) p += 'index.html';
   const f = join(MOBILE_DIR, p);
-  if (!f.startsWith(MOBILE_DIR) || !existsSync(f) || !statSync(f).isFile()) { res.writeHead(404); res.end('not found'); return; }
+  const rel = relative(MOBILE_DIR, f);
+  if (rel.startsWith('..') || isAbsolute(rel) || !existsSync(f) || !statSync(f).isFile()) { res.writeHead(404); res.end('not found'); return; }
   res.writeHead(200, { 'content-type': TYPES[extname(f)] || 'application/octet-stream', 'cache-control': p.endsWith('index.html') ? 'no-cache' : 'max-age=31536000, immutable' });
   res.end(readFileSync(f));
 });

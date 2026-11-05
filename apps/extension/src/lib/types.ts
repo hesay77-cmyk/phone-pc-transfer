@@ -23,6 +23,10 @@ export interface Item {
   copied?: boolean;
   /** 电脑发出去的：手机已收到 */
   delivered?: boolean;
+  /** 电脑发出去的：不发了（自己取消 / 放了一天还没送到 / 怎么都发不出去） */
+  dropped?: 'cancelled' | 'expired' | 'failed';
+  /** 文字太长，记录里只存了开头 */
+  cut?: boolean;
 }
 
 export interface EngineState {
@@ -41,6 +45,10 @@ export interface EngineState {
   /** 新收到、还没打开侧边栏看过的条数 */
   unseen: number;
   newerPeer: boolean;
+  /** 刚连上的是一台以前没连过的手机（名字），提醒用户确认是自己的 */
+  newPhone?: string;
+  /** 「复制就发」跳过了一条像密码的内容（时间），提醒用户 */
+  skippedSecretAt?: number;
   log: string[];
 }
 
@@ -58,6 +66,12 @@ export interface SendResult { ok: boolean; connected?: boolean; error?: string; 
 export type ToEngine =
   | { to: 'engine'; type: 'get-state' }
   | { to: 'engine'; type: 'send-text'; text: string }
+  /** 还没送到手机的，不发了 */
+  | { to: 'engine'; type: 'cancel'; id: string }
+  /** 清空侧边栏里的记录（还没送到的留着） */
+  | { to: 'engine'; type: 'clear-items' }
+  /** 关掉「新手机连上了」「跳过了像密码的」这类提醒 */
+  | { to: 'engine'; type: 'dismiss'; what: 'newPhone' | 'skippedSecret' }
   /** 网页上右键「把这张图发到手机」：引擎自己去下载这张图 */
   | { to: 'engine'; type: 'send-image-url'; url: string }
   /** 把剪贴板里的东西（刚复制的文字，或刚截的图）发到手机：快捷键和侧边栏按钮都用它 */

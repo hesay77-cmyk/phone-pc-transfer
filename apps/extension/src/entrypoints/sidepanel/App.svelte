@@ -164,9 +164,17 @@
     }
   }
 
-  // 快捷键（在 chrome://extensions/shortcuts 里可以改）
-  let shortcut = $state('');
-  void browser.commands.getAll().then((cs) => (shortcut = cs.find((c) => c.name === 'send-clipboard')?.shortcut ?? ''));
+  async function cancel(it: Item) { s = await engine({ to: 'engine', type: 'cancel', id: it.id }); }
+  async function clearItems() {
+    if (!confirm('清空这里的记录？（已经存进「下载\\互传」的照片不受影响，还没送到手机的会留着）')) return;
+    s = await engine({ to: 'engine', type: 'clear-items' });
+  }
+  async function dismiss(what: 'newPhone' | 'skippedSecret') { s = await engine({ to: 'engine', type: 'dismiss', what }); }
+  const pcStatus = (it: Item) => it.delivered ? '发到手机 · 手机已收到 ✓'
+    : it.dropped === 'cancelled' ? '发到手机 · 已取消，不发了'
+    : it.dropped === 'expired' ? '发到手机 · 放了一天也没送到，不发了'
+    : it.dropped === 'failed' ? '发到手机 · 没发出去'
+    : '发到手机 · 等手机打开网页';
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -203,7 +211,6 @@
   <header>
     <h1>互传</h1>
     <div class="status {status.cls}" data-link={s?.link ?? ''}><span class="dot"></span>{status.text}</div>
-    {#if s?.link === 'connected' && s.route}<div class="small">{s.route}，{s.connectMs} 毫秒连上</div>{/if}
     {#if s?.link === 'blocked'}<div class="small">有些公司或公共场所的 Wi-Fi 会这样。手机和电脑换成同一个家里的 Wi-Fi 就能用；这边会一直自动重试。</div>{/if}
     {#if s?.newerPeer}<div class="small bad">手机那边的版本比插件新，请更新插件</div>{/if}
   </header>
@@ -213,8 +220,8 @@
   {:else if s}
     {#if !s.everPaired || showQr}
       <section class="pair">
-        <h2>{s.everPaired ? '加一台手机' : '第一步：用 iPhone 扫码'}</h2>
-        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开互传网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。</p>
+        <h2>{s.everPaired ? '换一台手机' : '第一步：用 iPhone 扫码'}</h2>
+        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开互传网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
         <Qr text={s.pairingUrl} />
         <p class="small">
           {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>收起</button> · {/if}
@@ -239,7 +246,7 @@
       <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
       {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
       <p class="hint">
-        在任何软件里复制了文字或截了图，点「发刚复制的」就行{#if shortcut}；更快：复制完直接按 <b>{shortcut}</b>，不用打开这里{/if}。
+        在任何软件里复制了文字或截了图，点「发刚复制的」就行；常用的话打开上面的「复制就发」，复制完自动发。
         网页上选中文字、或在链接和图片上右键，也能「发到手机」。
       </p>
     </section>
@@ -252,6 +259,20 @@
         {:else}
           {permTip} <button class="link" onclick={() => (permTip = '')}>知道了</button>
         {/if}
+      </section>
+    {/if}
+
+    {#if s.newPhone}
+      <section class="tip">
+        <b>有一台新手机连上了（{s.newPhone}）</b>。如果是你的，就不用管；如果不是你的，点
+        <button class="link" onclick={reset}>换一个新码</button>，它就连不上了。
+        <button class="link" onclick={() => dismiss('newPhone')}>是我的</button>
+      </section>
+    {/if}
+    {#if s.skippedSecretAt && s.autoSend}
+      <section class="tip">
+        刚复制的内容像密码，为了安全<b>没有自动发</b>到手机。真要发，点上面的「发刚复制的」。
+        <button class="link" onclick={() => dismiss('skippedSecret')}>知道了</button>
       </section>
     {/if}
 
@@ -281,24 +302,29 @@
         {#each shown as it (it.id)}
           <div class="item" data-kind={it.kind} data-from={it.from}>
             <div class="meta">
-              {it.from === 'phone' ? '手机发来' : it.delivered ? '发到手机 · 手机已收到 ✓' : '发到手机 · 等手机打开网页'}
+              {it.from === 'phone' ? '手机发来' : pcStatus(it)}
               · {time(it.time)}{#if it.kind === 'image'} · {kb(it.size)}{/if}
               {#if it.kind === 'text' && it.from === 'phone' && it.copied} · 已复制{/if}
             </div>
             {#if it.kind === 'text'}
               <div class="text">{it.text}</div>
+              {#if it.cut}<div class="small">太长了，记录里只留了开头（手机发来时整段已经复制好了）</div>{/if}
               <button onclick={(e) => copyText(it, e)}>复制</button>
             {:else}
               <ImageItem item={it} onShow={showFile} onNeedPermission={needPermission} />
             {/if}
+            {#if it.from === 'pc' && !it.delivered && !it.dropped}
+              <button class="cancel" onclick={() => cancel(it)}>不发了</button>
+            {/if}
           </div>
         {/each}
       </div>
+      {#if s.items.length}<p class="small"><button class="link" onclick={clearItems}>清空记录</button></p>{/if}
     </section>
 
 
     <footer>
-      {#if s.everPaired && !showQr}<button class="link" onclick={() => (showQr = true)}>加一台手机 / 显示二维码</button> · {/if}
+      {#if s.everPaired && !showQr}<button class="link" onclick={() => (showQr = true)}>换一台手机 / 显示二维码</button> · {/if}
       <span>版本 {s.version}</span>
       <details><summary>运行记录</summary><pre>{s.log.join('\n')}</pre></details>
     </footer>
@@ -330,7 +356,8 @@
   .tabs .n { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 11.5px; line-height: 18px; background: rgba(127,127,127,.18); }
   .tabs .on .n { background: rgba(255,255,255,.25); }
   .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-  .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; }
+  .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; max-height: 220px; overflow: auto; }
+  .cancel { margin-top: 6px; }
   textarea { margin-bottom: 6px; }
   .auto { display: flex; gap: 8px; align-items: flex-start; background: var(--card); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; font-size: 13px; cursor: pointer; }
   .auto.on { background: #dcfce7; color: #166534; }

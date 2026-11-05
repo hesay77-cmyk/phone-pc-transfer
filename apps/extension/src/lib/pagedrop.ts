@@ -100,7 +100,8 @@ export function pageDropHelper(arm: DropArm | null) {
   w.__hutongDrop.set(arm);
 
   const ours = (e: DragEvent) => {
-    if (firing || localDrag || !e.dataTransfer) return false;
+    // 只认浏览器发的真拖拽：别的网页自己造的假拖拽事件拿不到照片
+    if (firing || localDrag || !e.isTrusted || !e.dataTransfer) return false;
     const types = Array.from(e.dataTransfer.types);
     if (types.includes(TYPE)) return true;
     return !!cur && Date.now() - cur.at < ARM_MS && !types.includes('Files');

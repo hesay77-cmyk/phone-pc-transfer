@@ -9,12 +9,16 @@ class FakePipe implements Pipe {
   target!: Transfer;
   open = true;
   drop = (_m: MsgBody | ArrayBuffer) => false;
+  /** 通道好好的，但这条发不出去（比如超过直连一条消息的上限 256KB） */
+  reject = (_m: MsgBody) => false;
   reconnects: string[] = [];
   get ready() { return this.open; }
   send(m: MsgBody) {
     if (!this.open) return false;
+    const raw = encode(m);
+    if (new TextEncoder().encode(raw).byteLength > 262144 || this.reject(m)) return false;
     if (this.drop(m)) return true;
-    const d = decode(encode(m));
+    const d = decode(raw);
     queueMicrotask(() => { if (d.ok) this.target.handle(d.msg); });
     return true;
   }
@@ -30,11 +34,11 @@ class FakePipe implements Pipe {
 
 function pair() {
   const pa = new FakePipe(), pb = new FakePipe();
-  const delivered: Array<{ item: OutItem; info: any }> = [], received: Incoming[] = [];
-  const a = new Transfer(pa, memoryKV(), { delivered: (item, info) => delivered.push({ item, info }) }, 1000);
+  const delivered: Array<{ item: OutItem; info: any }> = [], received: Incoming[] = [], dropped: string[] = [];
+  const a = new Transfer(pa, memoryKV(), { delivered: (item, info) => delivered.push({ item, info }), dropped: (item, why) => dropped.push(why + ':' + item.id) }, 1000);
   const b = new Transfer(pb, memoryKV(), { received: (i) => received.push(i) }, 1000);
   pa.other = pb; pb.other = pa; pa.target = b; pb.target = a;
-  return { a, b, pa, pb, delivered, received };
+  return { a, b, pa, pb, delivered, received, dropped };
 }
 const flush = () => new Promise((r) => setImmediate(r));
 
@@ -147,5 +151,65 @@ describe('新通道刚开的竞态', () => {
     expect(received.length).toBe(1);
     expect(delivered.length).toBe(1);
     expect(pa.reconnects).toEqual([]);
+  });
+});
+
+describe('评审发现的问题', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+  afterEach(() => vi.useRealTimers());
+
+  it('很长的文字（超过一条消息的上限）也能送到，还是文字，后面的不被挡住', async () => {
+    const { a, delivered, received } = pair();
+    const long = '一段很长的代码或文档\n'.repeat(30000); // 约 90 万字节
+    a.sendText(long);
+    a.sendText('后面这条');
+    for (let i = 0; i < 2000 && received.length < 2; i++) await flush();
+    expect(received.map((r) => r.kind)).toEqual(['text', 'text']);
+    const texts = received.map((r) => (r.kind === 'text' ? r.text : ''));
+    expect(texts[0] === long).toBe(true);
+    expect(texts[1]).toBe('后面这条');
+    expect(delivered).toHaveLength(2);
+    expect(a.pending).toHaveLength(0);
+  });
+
+  it('一条怎么都发不出去：不挡住后面的，试 3 次后放弃并告诉上层', async () => {
+    const { a, pa, received, dropped } = pair();
+    pa.reject = (m) => m.t === 'text' && m.text === '坏的';
+    const bad = a.sendText('坏的');
+    a.sendText('好的');
+    await flush(); await flush();
+    expect(received.map((r) => r.kind === 'text' && r.text)).toEqual(['好的']);
+    await a.flush(); await a.flush();
+    expect(dropped).toEqual(['failed:' + bad.id]);
+    expect(a.pending).toHaveLength(0);
+  });
+
+  it('可以取消还没送到的；超过一天的不再自动补发', async () => {
+    const { a, pa, received, dropped } = pair();
+    pa.open = false;
+    const x = a.sendText('不想发了');
+    expect(a.cancel(x.id)).toBe(true);
+    expect(dropped).toEqual(['cancelled:' + x.id]);
+    const kv = memoryKV();
+    kv.set('outbox', JSON.stringify([{ id: 'old1', kind: 'text', createdAt: Date.now() - 25 * 3600e3, text: '昨天的' }, { id: 'new1', kind: 'text', createdAt: Date.now(), text: '刚才的' }]));
+    const pc = new FakePipe(), pd = new FakePipe();
+    const got: Incoming[] = [], gone: string[] = [];
+    const c = new Transfer(pc, memoryKV(), { dropped: (it, why) => gone.push(why + ':' + it.id) }, 1000, persistentOutbox(kv));
+    const d = new Transfer(pd, memoryKV(), { received: (i) => got.push(i) }, 1000);
+    pc.target = d; pd.target = c; pc.other = pd; pd.other = pc;
+    await c.restore();
+    await flush(); await flush();
+    expect(gone).toEqual(['expired:old1']);
+    expect(got.map((r) => r.kind === 'text' && r.text)).toEqual(['刚才的']);
+    expect(received).toHaveLength(0);
+  });
+
+  it('好几条同时没等到确认，只重连一次', async () => {
+    const { a, pa } = pair();
+    pa.drop = () => true; // 发出去了但对方没收到
+    a.sendText('1'); a.sendText('2'); a.sendText('3');
+    await flush();
+    vi.advanceTimersByTime(8100);
+    expect(pa.reconnects).toHaveLength(1);
   });
 });

@@ -20,6 +20,8 @@ export interface FileMeta {
   mime: string;
   w?: number;
   h?: number;
+  /** 其实是一段很长的文字（一条消息装不下，按文件分块送）：收到后当文字处理。老版本会当成 .txt 文件，不会出错 */
+  asText?: boolean;
 }
 
 export type Msg =

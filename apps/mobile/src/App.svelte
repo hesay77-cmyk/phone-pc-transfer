@@ -1,28 +1,32 @@
 <script lang="ts">
   import {
-    BlobStore, localKV, persistentOutbox, randomId, secretFromHash, startSession,
+    BlobStore, localKV, persistentOutbox, randomId, secretFromHash, startSession, trimForHistory,
     type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Session
   } from '@hutong/core';
   import PhoneImage from './PhoneImage.svelte';
   import Scanner from './Scanner.svelte';
 
   /** 电脑发来的一条。老版本存的没有 kind，都是文字 */
-  interface Got { id: string; kind?: 'text' | 'image'; text?: string; name?: string; size?: number; time: number }
+  interface Got { id: string; kind?: 'text' | 'image'; text?: string; name?: string; size?: number; time: number; cut?: boolean }
   const MAX_GOT = 20;
   const photos = new BlobStore('hutong', 'files', MAX_GOT);
-  interface Sent { id: string; label: string; state: 'sending' | 'waiting' | 'done'; pct?: number }
+  interface Sent { id: string; label: string; state: 'sending' | 'waiting' | 'done' | 'cancelled' | 'expired' | 'failed'; pct?: number }
 
   const kv = localKV('hutong:phone:');
   const version = __APP_VERSION__;
 
   // 配对暗号：扫码进来的在网址 # 后面；存到手机上，再从地址栏里抹掉
+  // 已经和一台电脑配好了，又打开一个不一样的配对链接：先问一句（别人发来的链接不能悄悄把手机改连到别的电脑）
   let secret = $state<string | null>(null);
   const fromHash = secretFromHash(location.hash);
   if (fromHash) {
-    kv.set('secret', fromHash);
+    const old = kv.get('secret');
+    if (!old || old === fromHash || confirm('要换成新的配对吗？\n电脑上刚换了新码、或者要连另一台电脑，点「好」；不知道这个链接是哪来的，点「取消」。')) {
+      kv.set('secret', fromHash);
+    }
     history.replaceState(null, '', location.pathname + location.search);
   }
-  secret = fromHash || kv.get('secret');
+  secret = kv.get('secret');
 
   // 放到手机桌面（主屏幕）：苹果的桌面图标和浏览器各存各的，配对暗号要跟着网址走。
   // 所以看「怎么放」步骤时，把暗号临时放回网址里；手机桌面图标存下的就是带暗号的网址，从桌面打开也能直接连。
@@ -68,6 +72,21 @@
   let fileInput = $state<HTMLInputElement>();
 
   function loadGot(): Got[] { try { return JSON.parse(kv.get('got') || '[]'); } catch { return []; } }
+  /** 存记录：太长的文字只存开头，免得手机上的存储满了整个记录都存不上 */
+  function saveGot() {
+    kv.set('got', JSON.stringify(got.map((g) => {
+      if (g.kind === 'image' || !g.text) return g;
+      const t = trimForHistory(g.text);
+      return t.cut ? { ...g, text: t.text, cut: true } : g;
+    })));
+  }
+  function clearGot() {
+    if (!confirm('清空「电脑发来的」记录？')) return;
+    got = [];
+    saveGot();
+    void photos.prune([]);
+  }
+  function cancelSent(id: string) { session?.transfer.cancel(id); }
 
   function device(): DeviceInfo {
     let id = kv.get('deviceId');
@@ -107,11 +126,12 @@
             g = { id: it.id, kind: 'image', name: it.meta.name, size: it.blob.size, time: Date.now() };
           }
           got = [g, ...got.filter((x) => x.id !== g.id)].slice(0, MAX_GOT);
-          kv.set('got', JSON.stringify(got));
+          saveGot();
           void photos.prune(got.filter((x) => x.kind === 'image').map((x) => x.id));
         },
         progress: (it, r) => setSent(it.id, { state: 'sending', pct: Math.round(r * 100) }),
         delivered: (it) => { setSent(it.id, { state: 'done' }); note = ''; },
+        dropped: (it, why) => setSent(it.id, { state: why }),
         queue: (n) => {
           if (n > 0 && !session?.link.ready) note = `还没连上电脑，连上后会自动发出（${n} 个）`;
           if (n === 0) note = '';
@@ -223,7 +243,7 @@
         <p class="big-hint">请用 iPhone 自带的相机，扫一下电脑上「互传」插件里的二维码。或者点下面的按钮在这里扫。</p>
       {/if}
       <button class="big" onclick={() => (scanning = true)}>扫码配对</button>
-      <p class="hint">电脑上没看到二维码？点开互传侧边栏，在最下面点「加一台手机 / 显示二维码」。</p>
+      <p class="hint">电脑上没看到二维码？点开互传侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
     </section>
   {:else}
     {#if !standalone && !homeHidden}
@@ -258,8 +278,12 @@
         <div class="sent" data-state={s.state}>
           {s.label} ·
           {#if s.state === 'done'}<span class="ok">电脑已收到</span>
+          {:else if s.state === 'cancelled'}已取消，不发了
+          {:else if s.state === 'expired'}放了一天也没送到，不发了
+          {:else if s.state === 'failed'}<span class="bad">没发出去</span>
           {:else if s.state === 'sending'}发送中{s.pct !== undefined ? ` ${s.pct}%` : '…'}
           {:else}等连上电脑后自动发{/if}
+          {#if s.state === 'waiting' || s.state === 'sending'}<button class="link" onclick={() => cancelSent(s.id)}>不发了</button>{/if}
         </div>
       {/each}
       <textarea rows="2" bind:value={txt} placeholder="也可以在这里打字，再点发送"></textarea>
@@ -277,11 +301,13 @@
           {:else}
             {@const t = g.text ?? ''}
             <div class="text" class:code={isCode(t)}>{isCode(t) ? t.trim() : t}</div>
+            {#if g.cut}<p class="hint">太长了，记录里只留了开头</p>{/if}
             {#if isUrl(t)}<a class="btn" href={t.trim()} target="_blank" rel="noopener">打开网址</a>{/if}
             <button class="btn" onclick={(e) => copy(t.trim(), e)}>复制</button>
           {/if}
         </div>
       {/each}
+      {#if got.length}<button class="link" onclick={clearGot}>清空记录</button>{/if}
     </section>
   {/if}
 
@@ -316,7 +342,7 @@
   .btn.plain { border-color: transparent; background: transparent; color: var(--muted); }
   .item { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
   .meta { font-size: 12px; color: var(--muted); }
-  .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 4px; font-size: 17px; }
+  .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 4px; font-size: 17px; max-height: 50vh; overflow: auto; }
   .text.code { font-size: 40px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; margin: 6px 0; }
   .link { border: none; background: none; color: var(--muted); text-decoration: underline; font-size: 12px; padding: 0; }
   footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 10px; }

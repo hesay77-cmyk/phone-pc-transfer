@@ -15,15 +15,17 @@
 - Chrome 不允许后台页面往剪贴板放图片：照片自动存进「下载\互传」，复制靠点通知弹出的小窗口（`copyimg`）或侧边栏按钮。
 - 网页右键「发到手机」在后台（`background.ts` 的 `menuClicked`）：选中文字用 scripting 重新取（保留换行），网页上的图要可选权限 `<all_urls>`，只能在点菜单那一下 `permissions.request`；被拒或报错就让用户去侧边栏点「允许发网页上的图」。结果用网页右下角小提示（toast）告诉用户，不依赖 Windows 通知（很多人关了 Chrome 通知）。
 - 「发刚复制的」（侧边栏按钮）和全局快捷键 Ctrl+Shift+1（`send-clipboard`，Chrome 不在前台也能用）都走引擎的 `sendClipboard`：offscreen 里用 `execCommand('paste')` 读剪贴板（要 clipboardRead 权限），有图发图、没图发文字。
-- 「复制就发」开关（默认关）：引擎每 700ms 读一次剪贴板文字，变了且手机连着就发；手机发来的字写进剪贴板时记为 lastClip，防止弹回手机。
+- 「复制就发」开关（默认关）：引擎每 700ms 读一次剪贴板文字，变了且手机连着就发；手机发来的字写进剪贴板时记为 lastClip，防止弹回手机。看着像密码的（`core/text.ts` 的 `looksLikePassword`：8–64 个可见英文字符、无空格、字母+数字+第三类）不发，侧边栏提示一次（`skippedSecretAt`）。
 - 插件图标角标由引擎管：蓝色数字 = 新收到没看的条数（侧边栏可见时清零），绿色 ✓ = 发到手机的都送到了。
 - 手机「放到桌面」：苹果桌面图标和浏览器存储分开，曦实测桌面版打开没带上配对。所以手机网页有「扫码配对」（`Scanner.svelte`，摄像头 + jsQR，用到时才加载）；桌面版第一次打开扫一下。（`manifest.webmanifest` 不写 start_url、看步骤时把 `#k=暗号` 放回网址这招留着，但不可靠。）
-- 侧边栏照片拖进网页：Chrome 从侧边栏拖图，网页只拿到 `blob:chrome-extension://…` 地址（上传框不认，拖到空白处会打开空白页）。现在的做法（0.3.6，`lib/pagedrop.ts`）：照片 dragstart 时往每个窗口当前网页（所有框架）注入「接收员」，它在 window 捕获阶段挡住这次拖拽，向侧边栏要照片（`drag-file` 消息，base64），做成真 File 再发给网页：先发合成的 drop，网页不接就塞进附近的 `input[type=file]`，再不行当作粘贴进输入框，都不行就在旁边新标签页打开这张照片（`view.html`）。拖着的网址（text/uri-list）换成手机网页同站的 `open.html#<view.html 地址>`：拖到接收员管不到的地方（新标签页、没权限的网页、标签栏）Chrome 会打开它，它马上转到 `view.html`（web_accessible）显示照片。不能直接拖 `view.html`：Chrome 打开拖进来的地址时发起方是「来源不明」（没有前身的 opaque origin），打开插件页面会被拦（ERR_BLOCKED_BY_CLIENT，0.3.7 曦实测，e2e 用 data: 页面复现）。接收员要 `<all_urls>` 权限（没给就在侧边栏提示「允许」）。`chrome.downloads.drag` 在侧边栏里试过，照片完全拖不动（0.3.4，已撤回），别再用。
-- 电脑同一时间只连一台手机：新手机（新 sid）来打招呼就断开旧的。两个手机页面同时开着会互相抢。
+- 侧边栏照片拖进网页：Chrome 从侧边栏拖图，网页只拿到 `blob:chrome-extension://…` 地址（上传框不认，拖到空白处会打开空白页）。现在的做法（0.3.6，`lib/pagedrop.ts`）：照片 dragstart 时往每个窗口当前网页（所有框架）注入「接收员」，它在 window 捕获阶段挡住这次拖拽，向侧边栏要照片（`drag-file` 消息，base64），做成真 File 再发给网页：先发合成的 drop，网页不接就塞进附近的 `input[type=file]`，再不行当作粘贴进输入框，都不行就在旁边新标签页打开这张照片（`view.html`）。拖着的网址（text/uri-list）换成手机网页同站的 `open.html#<view.html 地址>`：拖到接收员管不到的地方（新标签页、没权限的网页、标签栏）Chrome 会打开它，它马上转到 `view.html`（web_accessible）显示照片。不能直接拖 `view.html`：Chrome 打开拖进来的地址时发起方是「来源不明」（没有前身的 opaque origin），打开插件页面会被拦（ERR_BLOCKED_BY_CLIENT，0.3.7 曦实测，e2e 用 data: 页面复现）。接收员要 `<all_urls>` 权限（没给就在侧边栏提示「允许」）。`chrome.downloads.drag` 在侧边栏里试过，照片完全拖不动（0.3.4，已撤回），别再用。接收员只理 `isTrusted` 的拖拽事件（武装期间别的网页伪造 drop 拿不到照片）。
+- 电脑同一时间只连一台手机：新手机（新 sid）来打招呼就断开旧的。两个手机页面同时开着会互相抢。界面写的是「换一台手机」，不要写「加一台」。引擎记着连过的手机（KV `knownPhones`），没见过的手机连上时侧边栏提醒「有一台新手机连上了」（`newPhone`），给「换一个新码」入口；换码会清掉待发队列和 knownPhones。手机网页已经配过对、又打开带别的 `#k=` 的链接，要先 confirm 才换。
 - 连接状态 `blocked`：通过介绍人找到对方、双方都回应了，6 秒还没直连上 = 这个网络不让设备之间直接通信（公司/公共 Wi-Fi）。两边界面要说清楚，不要一直转圈。
 - 发文件（文档等）曦说暂时不需要，做了一半的插件端在分支 `feature/files-later`。
 - iPhone 网页切到别的 App、锁屏，连接就断：手机回到前台要调用 `session.resume(在后台待了多少毫秒)`。待久了（>4 秒）介绍人的连接会「看着连着其实死了」，`SignalBus.wake` 直接重连（否则要等心跳超时几十秒，就是「解锁后连半天」）；>15 秒直连不探直接重连。
-- 发出去的东西没确认就留在待发队列（`persistentOutbox` 存在本机：文字在 KV，图片在 IndexedDB `hutong-out`），关掉网页/重启 Chrome 也不丢，连上后自动补发，接收方按 id 去重。
+- 发出去的东西没确认就留在待发队列（`persistentOutbox` 存在本机：文字在 KV，图片在 IndexedDB `hutong-out`），关掉网页/重启 Chrome 也不丢，连上后自动补发，接收方按 id 去重。待发项可以取消（`Transfer.cancel`，两端都有「不发了」），放了 24 小时（`OUTBOX_EXPIRE_MS`）没送到就不发了，同一条连发 3 次通道都好着却发不出去就算失败——都通过 `dropped` 事件告诉界面，不能让一条卡住后面所有的。多条同时等确认时只重连一次。超过 2 万字的文字在待发队列里存 IndexedDB（localStorage 只有约 5MB）。
+- 长文字：WebRTC 单条消息上限 256KB。超过 48KB（`LONG_TEXT_BYTES`）的文字按文件分块发（`file-start` 的 `meta.asText: true`），收的一方拼回文字；旧版本收到的是一个 .txt 文件，不会崩。记录里只存前 2 万字（`trimForHistory`，标 `cut`），两端都有「清空记录」。
+- 引擎里「先送到、后入列表」：小图的确认可能比 `addItem`（要先 `await putFile`）先到，`patch` 找不到这条就先存进 `early`，`addItem` 时补上（否则会一直显示「等手机打开网页」）。
 - 新通道刚开时对方可能已经在发了：`Transfer.linkUp` 不能清掉正在收的文件（以前这样做导致偶尔白等 8 秒）。
 
 ## 改完必须

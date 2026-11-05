@@ -202,6 +202,10 @@ await (ctx.serviceWorkers()[0] ?? sw).evaluate(() => globalThis.__sendClipboard(
 await phone.waitForFunction((t) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent === t), code2, { timeout: 5000 })
   .then(() => check('复制后按快捷键：手机收到', true), () => check('复制后按快捷键：手机收到', false));
 
+await sleep(1500);
+const stuck = await panel.evaluate(() => [...document.querySelectorAll('.item[data-from="pc"] .meta')].map((e) => e.textContent.trim().replace(/\s+/g, ' ')).filter((t) => t.includes('等手机')));
+check('发到手机的都显示「手机已收到」（没有卡在「等手机打开网页」的）', stuck.length === 0, stuck.join(' | '));
+
 // 「复制就发」：只按 Ctrl+C 就到手机；手机发来的字（自动进了剪贴板）不会又被发回手机
 await panel.check('.auto input');
 await sleep(1000);
@@ -215,7 +219,30 @@ await panel.waitForFunction(() => document.body.innerText.includes('手机发的
 await sleep(2000);
 const bounced = await phone.evaluate(() => [...document.querySelectorAll('.item .text')].filter((e) => e.textContent === '手机发的不该弹回来').length);
 check('手机发来的字不会被自动发回手机', bounced === 0, `弹回 ${bounced} 次`);
+// 从密码管理器里复制的密码：不自动发，侧边栏说一声
+await panel.evaluate((t) => navigator.clipboard.writeText(t), 'Xk9#mP2$vL7q');
+await sleep(2000);
+const pwSent = await phone.evaluate(() => document.body.innerText.includes('Xk9#mP2$vL7q'));
+const pwTip = await panel.evaluate(() => document.body.innerText.includes('像密码'));
+check('「复制就发」：复制的像密码就不自动发，侧边栏说一声', !pwSent && pwTip, `手机收到 ${pwSent}，提示 ${pwTip}`);
 await panel.uncheck('.auto input');
+
+// 很长的文字（整篇文档、长代码，超过直连一条消息的上限 256KB）：两个方向都能送到，后面的不被卡住
+const longPc = ('电脑上复制的一大段文档，第一行\n' + 'const x = "很长的代码";\n'.repeat(20)).repeat(400);
+// （测试工具往输入框里打十几万字会卡住，直接放进去，效果和粘贴一样）
+const putText = (pg, t) => pg.evaluate((t) => { const a = document.querySelector('textarea'); a.value = t; a.dispatchEvent(new Event('input', { bubbles: true })); }, t);
+await putText(panel, longPc);
+await panel.click('button:has-text("发到手机")');
+await panel.fill('textarea', '长文后面的一条');
+await panel.click('button:has-text("发到手机")');
+const longOk = await phone.waitForFunction((n) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent.length === n), longPc.length, { timeout: 15000 }).then(() => true, () => false);
+const afterLong = await phone.waitForFunction(() => document.body.innerText.includes('长文后面的一条'), null, { timeout: 5000 }).then(() => true, () => false);
+check('电脑发很长的文字到手机：整段送到，后面的也到了', longOk && afterLong, `${(new TextEncoder().encode(longPc).length / 1024).toFixed(0)} KB`);
+const longPhone = '手机上复制的长文章。'.repeat(30000);
+await putText(phone, longPhone);
+await phone.getByRole('button', { name: '发送', exact: true }).click();
+const longBack = await panel.waitForFunction((n) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent.length === n), longPhone.length, { timeout: 15000 }).then(() => true, () => false);
+check('手机发很长的文字到电脑：整段送到', longBack, `${(new TextEncoder().encode(longPhone).length / 1024).toFixed(0)} KB`);
 
 // 验证码大字显示
 await panel.fill('textarea', '384920');
@@ -444,7 +471,7 @@ check('手机网页关掉重开、电脑后来才开：照样收到手机攒着�
 
 // 放到桌面的互传（和浏览器各存各的，没有配对暗号）：点「扫码配对」用摄像头扫电脑上的码
 // 测试里用一张画着电脑二维码的画布假装摄像头
-await panel.click('button:has-text("加一台手机")').catch(() => {});
+await panel.click('button:has-text("换一台手机")').catch(() => {});
 await panel.waitForSelector('.qr svg', { timeout: 5000 });
 const qrSvg = await panel.evaluate(() => document.querySelector('.qr svg').outerHTML);
 const homeCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
@@ -461,11 +488,23 @@ await homeCtx.addInitScript((svg) => {
   };
 }, qrSvg);
 await phone.close(); // 现在电脑同一时间只连一台手机：浏览器里那个先关掉（iPhone 上两个也不会同时在前台）
+// 手机没开时发的，点「不发了」：从待发里拿掉，之后连上的手机收不到
+await panel.click('.tabs .t-pc').catch(() => {});
+await panel.fill('textarea', '发错了不想发');
+await panel.click('button:has-text("发到手机")');
+const wrong = panel.locator('.item[data-from="pc"]', { hasText: '发错了不想发' });
+await wrong.locator('button.cancel').click({ timeout: 5000 }).catch(() => {});
+await sleep(500);
+const cancelMeta = await wrong.locator('.meta').textContent().catch(() => '');
+check('还没送到的点「不发了」：显示已取消', cancelMeta.includes('已取消'), cancelMeta.trim().replace(/\s+/g, ' '));
 const home = await homeCtx.newPage();
 await home.goto('http://localhost:8080/');
 await home.click('button:has-text("扫码配对")');
 const scanOk = await home.waitForSelector('.status[data-link="connected"]', { timeout: 20000 }).then(() => true, () => false);
 check('桌面版：点「扫码配对」扫电脑上的码，连上电脑', scanOk, scanOk ? '' : (await home.textContent('main')).slice(0, 120));
+await sleep(1500);
+check('取消了的不会送到后来连上的手机', !(await home.evaluate(() => document.body.innerText.includes('发错了不想发'))));
+check('电脑上提醒「有一台新手机连上了」', await panel.evaluate(() => document.body.innerText.includes('有一台新手机连上了')));
 await homeCtx.close();
 
 // 公司网络不让设备直接通信：两边都要说清楚，而不是一直转圈
