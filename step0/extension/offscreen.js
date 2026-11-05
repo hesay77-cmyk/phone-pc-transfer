@@ -83,11 +83,16 @@ function publish(obj) {
 let pc = null, dc = null, curSid = null, t0 = 0;
 
 function waitIce(p, ms) {
+  // 同一个 Wi-Fi 只需要本机地址（host 候选），拿到后再等 300 毫秒就发出去，
+  // 不用干等外网 STUN（原来两边各等 2.5 秒，连一次要 6 秒）
   return new Promise((res) => {
     if (p.iceGatheringState === 'complete') return res();
-    const tm = setTimeout(res, ms);
-    p.addEventListener('icegatheringstatechange', () => {
-      if (p.iceGatheringState === 'complete') { clearTimeout(tm); res(); }
+    let early = null;
+    const done = () => { clearTimeout(tm); clearTimeout(early); res(); };
+    const tm = setTimeout(done, ms);
+    p.addEventListener('icegatheringstatechange', () => { if (p.iceGatheringState === 'complete') done(); });
+    p.addEventListener('icecandidate', (e) => {
+      if (!early && e.candidate && / typ host/.test(e.candidate.candidate)) early = setTimeout(done, 300);
     });
   });
 }
@@ -163,6 +168,11 @@ async function describeLink(p) {
 
 // 收图片用
 let incoming = null;
+const gotIds = new Set(JSON.parse(localStorage.getItem('gotIds') || '[]'));
+function rememberId(id) {
+  gotIds.add(id);
+  localStorage.setItem('gotIds', JSON.stringify([...gotIds].slice(-300)));
+}
 
 let resent = 0, lastSeen = 0;
 // 心跳：手机锁屏后连接不会马上断，靠心跳发现「其实已经断了」
@@ -205,7 +215,7 @@ function setupChannel(ch, myPc) {
       let m;
       try { m = JSON.parse(ev.data); } catch { return; }
       onData(m);
-    } else if (incoming) {
+    } else if (incoming && !incoming.skip) {
       incoming.parts.push(ev.data);
       incoming.got += ev.data.byteLength;
     }
@@ -233,6 +243,11 @@ async function onData(m) {
     return;
   }
   if (m.t === 'text' || m.t === 'img-end') sendJson({ t: 'ack', id: m.id });
+  // 手机没等到「收到」会重发，同一个编号只处理一次
+  if (m.t === 'text' && gotIds.has(m.id)) { log('手机重发了一条已经收到的文字，忽略'); return; }
+  if (m.t === 'img-start' && gotIds.has(m.id)) { incoming = { skip: true, parts: [] }; return; }
+  if (m.t === 'img-end' && incoming && incoming.skip) { incoming = null; log('手机重发了一张已经收到的图，忽略'); return; }
+  if (m.t === 'text' || m.t === 'img-end') rememberId(m.id);
   if (m.t === 'text') {
     const item = { id: m.id, from: 'phone', kind: 'text', text: m.text, time: Date.now() };
     addItem(item);

@@ -174,7 +174,7 @@ $('reset').onclick = async () => {
 };
 
 $('report').onclick = async () => {
-  const lines = ['【互传第 0 步 · 电脑插件测试结果】', '浏览器：' + navigator.userAgent, ''];
+  const lines = ['【互传第 0 步 · 电脑插件测试结果】', '插件版本：' + chrome.runtime.getManifest().version, '浏览器：' + navigator.userAgent, ''];
   CHECKS.forEach((c, i) => {
     const auto = S.results[c.key];
     const user = c.ask ? userChoice[c.ask[0][0]] : undefined;
@@ -190,4 +190,5 @@ $('report').onclick = async () => {
 };
 
 setInterval(render, 30000);
+document.querySelector('h1 small').textContent = '第 0 步 · 版本 ' + chrome.runtime.getManifest().version;
 load();

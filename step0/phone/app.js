@@ -1,4 +1,5 @@
 // 手机测试网页：扫码配对、和电脑直连、粘贴发送、选图发送、记录测试结果。
+const VERSION = '第 3 版';
 const $ = (id) => document.getElementById(id);
 const rand = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -33,7 +34,8 @@ const CHECKS = [
     ask: [['imageUser', true, '大小差不多'], ['imageUser', false, '明显变小了']] },
   { key: 'recv', name: '能收到电脑发来的文字', how: '在电脑侧边栏「发到手机」里发一句话。' },
   { key: 'resume', name: '切到别的 App 再回来，能自动重新连上', how: '切到微信待一会儿，再切回这个网页。' },
-  { key: 'home', name: '加到主屏幕后还能直接用', how: '点 Safari 底部的分享按钮 →「添加到主屏幕」，然后从桌面上的「互传测试」图标打开，看最上面是不是显示「电脑已直连」。' }
+  { key: 'resend', name: '断线时发的东西，连上后自动补发', how: '切到别的 App 待半分钟，切回来马上发一张图，不用管上面的状态，看电脑最后有没有收到、收到几张。' },
+  { key: 'home', name: '加到主屏幕后还能直接用', how: '点地址栏旁边的分享按钮 →「添加到主屏幕」，然后从桌面上的「互传测试」图标打开，看最上面是不是显示「电脑已直连」。' }
 ];
 
 function renderChecks() {
@@ -112,10 +114,17 @@ function startHello() {
 // ---------------- 直连（WebRTC） ----------------
 let pc = null, dc = null;
 function waitIce(p, ms) {
+  // 同一个 Wi-Fi 只需要本机地址（host 候选），拿到后再等 300 毫秒就发出去，
+  // 不用干等外网 STUN（原来两边各等 2.5 秒，连一次要 6 秒）
   return new Promise((res) => {
     if (p.iceGatheringState === 'complete') return res();
-    const tm = setTimeout(res, ms);
-    p.addEventListener('icegatheringstatechange', () => { if (p.iceGatheringState === 'complete') { clearTimeout(tm); res(); } });
+    let early = null;
+    const done = () => { clearTimeout(tm); clearTimeout(early); res(); };
+    const tm = setTimeout(done, ms);
+    p.addEventListener('icegatheringstatechange', () => { if (p.iceGatheringState === 'complete') done(); });
+    p.addEventListener('icecandidate', (e) => {
+      if (!early && e.candidate && / typ host/.test(e.candidate.candidate)) early = setTimeout(done, 300);
+    });
   });
 }
 let gotOfferFor = null, connectGuard = null;
@@ -184,10 +193,15 @@ function setupChannel(ch, myPc) {
       wasHidden = false;
     }
     ch.send(JSON.stringify({ t: 'hello-info', ua: navigator.userAgent + (standalone ? '（主屏幕）' : '') }));
+    lastFromPc = Date.now();
+    outbox.forEach((x) => { x.inflight = false; clearTimeout(x.timer); });
+    if (outbox.length) log('连上了，补发 ' + outbox.length + ' 个还没送到的');
+    flush();
   };
   ch.onclose = () => { if (dc === ch) { peer = 'none'; renderStatus(); log('和电脑的直连断开了'); } };
   ch.onmessage = (ev) => {
     lastFromPc = Date.now();
+    if (outbox.some((x) => !x.inflight)) flush();
     if (typeof ev.data !== 'string') return;
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     if (m.t === 'ping') { sendJson({ t: 'ping' }); return; }
@@ -198,18 +212,65 @@ function setupChannel(ch, myPc) {
 
 // 电脑可能补发同一条，按编号去重
 const seen = new Set(JSON.parse(localStorage.getItem('seen') || '[]'));
-const waiting = new Map(); // 发给电脑、还没确认的
+// ---------------- 待发队列：没等到电脑说「收到」就一直留着，连上后自动补发 ----------------
+const outbox = []; // { id, kind: 'text'|'img', text, file, meta, what, inflight, timer }
+let flushing = false, resumedAt = 0;
 function onAck(id) {
-  const w = waiting.get(id);
-  if (!w) return;
-  clearTimeout(w.timer);
-  waiting.delete(id);
-  $('progress').innerHTML = '<span class="ok">电脑已收到' + (w.what ? '（' + w.what + '）' : '') + '</span>';
+  const i = outbox.findIndex((x) => x.id === id);
+  if (i < 0) return;
+  const it = outbox.splice(i, 1)[0];
+  clearTimeout(it.timer);
+  if (it.resent || it.queued) result('resend', true, '断线时发的' + (it.kind === 'img' ? '图' : '字') + '，重新连上后自动发出去了，电脑已收到');
+  $('progress').innerHTML = '<span class="ok">电脑已收到（' + esc(it.what) + '）</span>' + (outbox.length ? '，还有 ' + outbox.length + ' 个在发' : '');
 }
-function track(id, what) {
-  waiting.set(id, { what, timer: setTimeout(() => {
-    if (waiting.has(id)) { waiting.delete(id); $('progress').innerHTML = '<span class="bad">电脑没回应，可能没收到，请再发一次</span>'; }
-  }, 8000) });
+function enqueue(it) {
+  outbox.push(it);
+  flush();
+}
+// 连接真的可用：通道开着，而且切回网页之后听到过电脑的声音
+const linkReady = () => dc && dc.readyState === 'open' && lastFromPc >= resumedAt;
+async function flush() {
+  if (flushing || !outbox.length) return;
+  if (!linkReady()) {
+    outbox.forEach((x) => { if (!x.inflight) x.queued = true; });
+    if (dc && dc.readyState === 'open') { $('progress').textContent = '正在确认和电脑的连接…'; return; }
+    $('progress').textContent = '还没连上电脑，连上后会自动发出（' + outbox.length + ' 个）';
+    if (peer !== 'connecting') reconnect('有东西要发，先连电脑');
+    return;
+  }
+  flushing = true;
+  try {
+    for (const it of outbox.slice()) {
+      if (it.inflight || !outbox.includes(it)) continue;
+      if (!linkReady()) break;
+      it.inflight = true;
+      const ok = it.kind === 'text' ? sendJson({ t: 'text', id: it.id, text: it.text }) : await sendImage(it);
+      if (!ok) { it.inflight = false; break; }
+      if (it.tries++) it.resent = true;
+      it.timer = setTimeout(() => {
+        if (!outbox.includes(it)) return;
+        it.inflight = false;
+        reconnect('电脑 8 秒没说收到，重新连接后自动再发');
+      }, 8000);
+      $('progress').textContent = '已发出，等电脑确认…';
+    }
+  } finally { flushing = false; }
+}
+async function sendImage(it) {
+  const ch = dc;
+  if (!sendJson({ t: 'img-start', id: it.id, ...it.meta })) return false;
+  const buf = await it.file.arrayBuffer();
+  const t0 = performance.now();
+  for (let off = 0; off < buf.byteLength; off += CONFIG.CHUNK) {
+    if (ch.readyState !== 'open') return false;
+    if (ch.bufferedAmount > 1024 * 1024) await new Promise((r) => { ch.onbufferedamountlow = () => { ch.onbufferedamountlow = null; r(); }; setTimeout(r, 3000); });
+    try { ch.send(buf.slice(off, off + CONFIG.CHUNK)); } catch { return false; }
+    $('progress').textContent = '发送中 ' + Math.round((off / buf.byteLength) * 100) + '%';
+  }
+  if (!sendJson({ t: 'img-end', id: it.id })) return false;
+  it.what = kb(it.file.size) + '，用时 ' + Math.round(performance.now() - t0) + ' 毫秒';
+  log('发送图片 ' + kb(it.file.size));
+  return true;
 }
 function onText(m) {
   if (seen.has(m.id)) return;
@@ -232,12 +293,7 @@ function onText(m) {
 
 // ---------------- 发送 ----------------
 function sendJson(o) {
-  if (dc && dc.readyState === 'open') { dc.send(JSON.stringify(o)); return true; }
-  return false;
-}
-function needConn() {
-  if (dc && dc.readyState === 'open') return true;
-  $('progress').innerHTML = '<span class="bad">还没连上电脑，等上面显示「电脑已直连」再发</span>';
+  if (dc && dc.readyState === 'open') { try { dc.send(JSON.stringify(o)); return true; } catch { return false; } }
   return false;
 }
 
@@ -252,21 +308,14 @@ $('paste').onclick = async () => {
   }
   if (!text) { result('paste', false, '剪贴板是空的'); return; }
   result('paste', true, '读到了 ' + text.length + ' 个字');
-  if (!needConn()) return;
-  const id = rand(8);
-  sendJson({ t: 'text', id, text });
-  track(id, text.length + ' 个字');
-  $('progress').textContent = '已发出 ' + text.length + ' 个字…';
+  enqueue({ id: rand(8), kind: 'text', text, what: text.length + ' 个字', tries: 0 });
 };
 
 $('sendTxt').onclick = () => {
   const text = $('txt').value;
-  if (!text.trim() || !needConn()) return;
-  const id = rand(8);
-  sendJson({ t: 'text', id, text });
-  track(id, text.length + ' 个字');
+  if (!text.trim()) return;
   $('txt').value = '';
-  $('progress').textContent = '已发出…';
+  enqueue({ id: rand(8), kind: 'text', text, what: text.length + ' 个字', tries: 0 });
 };
 
 $('pick').onclick = () => $('file').click();
@@ -277,43 +326,32 @@ $('file').onchange = async () => {
   let w = null, h = null;
   try { const bmp = await createImageBitmap(f); w = bmp.width; h = bmp.height; } catch {}
   result('image', true, `网页拿到：${kb(f.size)}，${w || '?'}×${h || '?'}，格式 ${f.type || '未知'}`);
-  if (!needConn()) return;
-  const id = rand(8);
-  sendJson({ t: 'img-start', id, name: f.name, size: f.size, mime: f.type, w, h });
-  const buf = await f.arrayBuffer();
-  const t0 = performance.now();
-  for (let off = 0; off < buf.byteLength; off += CONFIG.CHUNK) {
-    if (dc.bufferedAmount > 1024 * 1024) await new Promise((r) => { dc.onbufferedamountlow = () => { dc.onbufferedamountlow = null; r(); }; });
-    dc.send(buf.slice(off, off + CONFIG.CHUNK));
-    $('progress').textContent = '发送中 ' + Math.round((off / buf.byteLength) * 100) + '%';
-  }
-  sendJson({ t: 'img-end', id });
-  track(id, `${kb(f.size)}，用时 ${Math.round(performance.now() - t0)} 毫秒`);
-  $('progress').textContent = '已发出，等电脑确认…';
-  log('发送图片 ' + kb(f.size));
+  enqueue({ id: rand(8), kind: 'img', file: f, meta: { name: f.name, size: f.size, mime: f.type, w, h }, what: kb(f.size), tries: 0 });
 };
 
 // ---------------- 切到后台再回来 ----------------
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { wasHidden = true; hiddenAt = Date.now(); return; }
+  resumedAt = Date.now();
   if (!client) return;
   setTimeout(() => {
     if (!(dc && dc.readyState === 'open')) { reconnect('切回来了，重新连接电脑'); return; }
     // iPhone 暂停网页后，连接可能看着「还开着」其实电脑那头早断了。
-    // 电脑每 5 秒发一次心跳，等 6 秒：收到了才算真的还连着。
-    const back = Date.now();
+    // 问电脑一声「还在吗」，1.5 秒内有回应才算真的还连着，否则马上重连。
     sendJson({ t: 'probe' });
     setTimeout(() => {
-      if (lastFromPc >= back) {
+      if (lastFromPc >= resumedAt) {
         if (wasHidden) { result('resume', true, '切回来时连接还在（电脑有回应）'); wasHidden = false; }
+        flush();
       } else {
         reconnect('切回来后电脑没回应，重新连接');
       }
-    }, 6000);
-  }, 600);
+    }, 1500);
+  }, 300);
 });
 
 function reconnect(why) {
+  if (peer === 'connecting') return;
   log(why);
   peer = 'none';
   if (pc) { try { pc.close(); } catch {} }
@@ -324,7 +362,7 @@ function reconnect(why) {
 
 // ---------------- 复制测试结果 ----------------
 $('report').onclick = async () => {
-  const lines = ['【互传第 0 步 · 手机网页测试结果】', '手机：' + navigator.userAgent, '模式：' + (standalone ? '主屏幕' : '浏览器') + '，配对码来自' + (roomFrom || '无'), ''];
+  const lines = ['【互传第 0 步 · 手机网页测试结果】', '网页：' + VERSION, '手机：' + navigator.userAgent, '模式：' + (standalone ? '主屏幕' : '浏览器') + '，配对码来自' + (roomFrom || '无'), ''];
   CHECKS.forEach((c, i) => {
     const r = results[c.key];
     let s = r ? (r.ok ? '✓ ' : '✗ ') + r.detail : '还没测';
@@ -340,6 +378,7 @@ $('report').onclick = async () => {
   }
 };
 
+document.querySelector('h1 small').textContent = '第 0 步 · 手机端 · ' + VERSION;
 renderStatus();
 renderChecks();
 if (!room) { $('nopair').hidden = false; $('status').innerHTML = '<span class="bad">还没配对</span>'; }
