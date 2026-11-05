@@ -123,7 +123,12 @@ async function startOffer(sid) {
     log('连接状态：' + myPc.connectionState);
     if (myPc.connectionState === 'failed') {
       state.peer = 'none';
-      result('connect', false, '连不上：可能这个 Wi-Fi 不让设备互相连');
+      if (myPc.opened) {
+        // 连上过又断了：多半是手机切到别的 App 或锁屏，iPhone 会暂停网页。不算连不上。
+        log('直连断了：手机可能切到别的 App 或锁屏了，回到网页会自动重连');
+      } else {
+        result('connect', false, '连不上：可能这个 Wi-Fi 不让设备互相连');
+      }
     }
     if (['disconnected', 'closed'].includes(myPc.connectionState)) { state.peer = 'none'; push(); }
   };
@@ -176,6 +181,7 @@ setInterval(() => {
 function setupChannel(ch, myPc) {
   ch.binaryType = 'arraybuffer';
   ch.onopen = async () => {
+    myPc.opened = true;
     state.peer = 'connected';
     state.connectMs = Math.round(performance.now() - t0);
     state.connectCount++;

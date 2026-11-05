@@ -133,7 +133,12 @@ async function onOffer(sdp) {
   pc.onconnectionstatechange = () => {
     if (myPc !== pc) return;
     log('连接状态：' + myPc.connectionState);
-    if (myPc.connectionState === 'failed') { peer = 'none'; renderStatus(); result('connect', false, '连不上：可能这个 Wi-Fi 不让设备互相连'); }
+    if (myPc.connectionState === 'failed') {
+      peer = 'none'; renderStatus();
+      // 连上过又断了（比如切到别的 App 再回来）不算连不上
+      if (myPc.opened) log('直连断了，回到这个网页会自动重连');
+      else result('connect', false, '连不上：可能这个 Wi-Fi 不让设备互相连');
+    }
   };
   await pc.setRemoteDescription({ type: 'offer', sdp });
   const ans = await pc.createAnswer();
@@ -164,6 +169,7 @@ function setupChannel(ch, myPc) {
   ch.binaryType = 'arraybuffer';
   ch.bufferedAmountLowThreshold = 256 * 1024;
   ch.onopen = async () => {
+    myPc.opened = true;
     peer = 'connected';
     clearInterval(helloTimer);
     const ms = Math.round(performance.now() - connectT0);
