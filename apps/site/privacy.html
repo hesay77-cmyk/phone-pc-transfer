@@ -61,7 +61,7 @@ footer a{text-decoration:none}
   </header>
 
   <div class="sum"><ul>
-    <li>你发的文字、照片和文件，在你的手机和电脑之间直接传，不经过我们的服务器。</li>
+    <li>你发的文字、照片、视频和文件，在你的手机和电脑之间直接传，不经过我们的服务器。</li>
     <li>不需要注册账号；我们不收集、不出售、不分享你的个人数据。</li>
     <li>没有广告，没有统计分析，没有追踪。</li>
     <li>记录只存在你自己的设备上，随时可以清空；卸载插件就全部删除。</li>
@@ -70,20 +70,20 @@ footer a{text-decoration:none}
   <h2>我们会处理哪些内容</h2>
   <p>Tapaste 只处理你主动发送的东西：</p>
   <ul>
-    <li><b>文字、照片和文件</b>：你在手机或电脑上点「发送」或选择的内容，以及电脑网页上你右键选择「发到手机」的文字或图片。</li>
+    <li><b>文字、照片、视频和文件</b>：你在手机或电脑上点「发送」或选择的内容，以及电脑网页上你右键选择「发到手机」的文字或图片。</li>
     <li><b>剪贴板</b>：只有在你点「发刚复制的」、按快捷键，或者自己打开「复制就发」开关（默认关闭）时，插件才读取剪贴板里的文字或图片。「复制就发」打开后，插件每 0.7 秒看一次剪贴板，只在内容变了、并且手机连着的时候发送；看起来像密码的内容不会发送。手机发来的文字会放进电脑剪贴板，方便你直接粘贴。</li>
     <li><b>收到的照片和文件</b>：电脑上自动存进「下载\Tapaste」文件夹；手机上先留在网页里（只留最近 20 条），你点「存到相册」或「存到手机」时才保存到手机。</li>
   </ul>
 
   <h2>内容怎么传过去</h2>
-  <p>手机和电脑配对后，用浏览器自带的 WebRTC 技术<b>直接连接</b>，传输全程加密（DTLS）。文字、照片和文件不经过我们或任何第三方的服务器。</p>
+  <p>手机和电脑配对后，用浏览器自带的 WebRTC 技术<b>直接连接</b>，传输全程加密（DTLS）。文字、照片、视频和文件不经过我们或任何第三方的服务器。</p>
   <p>两台设备第一次互相找到对方时，需要交换一小段连接信息（比如设备在网络里的地址）。这段信息用你们配对时生成的密钥（AES-GCM）加密后，经过一个「介绍人」服务器转交。目前介绍人使用 EMQX 提供的公共服务（<code>broker.emqx.io</code>）。它看不到你的文字和照片，也解不开连接信息，只能看到一个随机的频道名，以及连接它的网络地址（IP）。</p>
   <p>为了在不同网络环境下也能连上，设备会询问公共 STUN 服务器「我在外网看起来是哪个地址」（小米 <code>stun.miwifi.com</code>、Cloudflare、Google）。这些服务器只会看到你的网络地址，看不到任何内容。</p>
 
   <h2>存在你设备上的数据</h2>
   <ul>
     <li><b>配对密钥</b>：用来认出你自己的手机，只存在电脑插件和手机浏览器里。</li>
-    <li><b>收发记录</b>：最近发过、收到的文字、照片和文件，方便你再次复制或保存。超长文字只保留前 2 万字。每一条都可以单独删除，两边也都有「清空记录」。</li>
+    <li><b>收发记录</b>：最近发过、收到的文字、照片、视频和文件，方便你再次复制或保存。超长文字只保留前 2 万字。每一条都可以单独删除，两边也都有「清空记录」。</li>
     <li><b>待发送的内容</b>：对方暂时不在线时先存在本机，连上后自动补发；24 小时没送到就自动丢弃，也可以手动取消。</li>
     <li><b>连过的手机</b>：用来在有新手机连上时提醒你。</li>
   </ul>
@@ -120,7 +120,7 @@ footer a{text-decoration:none}
   </header>
 
   <div class="sum"><ul>
-    <li>Text, photos and files you send go directly between your phone and your computer. They never pass through our servers.</li>
+    <li>Text, photos, videos and files you send go directly between your phone and your computer. They never pass through our servers.</li>
     <li>No account needed. We don't collect, sell or share your personal data.</li>
     <li>No ads, no analytics, no tracking.</li>
     <li>Your history stays on your own devices. You can clear it at any time, and uninstalling the extension deletes everything.</li>
@@ -129,20 +129,20 @@ footer a{text-decoration:none}
   <h2>What Tapaste handles</h2>
   <p>Tapaste only handles what you choose to send:</p>
   <ul>
-    <li><b>Text, photos and files</b> you send from your phone or computer, and text or images on a web page that you right-click and choose “Send to phone”.</li>
+    <li><b>Text, photos, videos and files</b> you send from your phone or computer, and text or images on a web page that you right-click and choose “Send to phone”.</li>
     <li><b>Clipboard.</b> The extension reads your clipboard only when you click “Send what I just copied”, press the keyboard shortcut, or turn on “Send on copy” (off by default). With “Send on copy” on, it checks the clipboard every 0.7 seconds and sends only when the content has changed and your phone is connected. Anything that looks like a password is not sent. Text from your phone is placed on your computer's clipboard so you can paste it.</li>
     <li><b>Received photos and files</b> are saved to the <code>Downloads\Tapaste</code> folder on your computer. On the phone they stay in the page (only the latest 20 items) until you choose to save them to your phone.</li>
   </ul>
 
   <h2>How your content travels</h2>
-  <p>Once paired, your phone and computer connect <b>directly</b> using WebRTC, which is built into the browser. The connection is encrypted end to end (DTLS). Text, photos and files never pass through our servers or anyone else's.</p>
+  <p>Once paired, your phone and computer connect <b>directly</b> using WebRTC, which is built into the browser. The connection is encrypted end to end (DTLS). Text, photos, videos and files never pass through our servers or anyone else's.</p>
   <p>To find each other, the two devices exchange a small piece of connection information, such as their network addresses. It is encrypted with a key created when you pair (AES-GCM) and passed along by a “signaling” relay. Today that relay is a public service run by EMQX (<code>broker.emqx.io</code>). It can't see your text or photos and can't decrypt the connection information. It only sees a random channel name and the IP address that connects to it.</p>
   <p>To connect across different networks, your devices ask public STUN servers (Xiaomi <code>stun.miwifi.com</code>, Cloudflare and Google) what their public address is. These servers only see your IP address, never any content.</p>
 
   <h2>Data stored on your devices</h2>
   <ul>
     <li><b>Pairing key</b>, used to recognise your own phone. It is stored only in the extension and in your phone's browser.</li>
-    <li><b>History</b> of recently sent and received text, photos and files, so you can copy or save them again. Very long text keeps only its first 20,000 characters. You can delete any single item, and both sides have a “Clear history” button.</li>
+    <li><b>History</b> of recently sent and received text, photos, videos and files, so you can copy or save them again. Very long text keeps only its first 20,000 characters. You can delete any single item, and both sides have a “Clear history” button.</li>
     <li><b>Pending items.</b> If the other device is offline, items wait on your device and are sent automatically once it reconnects. Anything not delivered within 24 hours is dropped, and you can cancel items yourself.</li>
     <li><b>Known phones</b>, so Tapaste can tell you when a new phone connects.</li>
   </ul>
