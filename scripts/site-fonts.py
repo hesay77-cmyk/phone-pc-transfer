@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """官网字体：只截取官网用到的字，放进 apps/site/fonts/，生成 fonts.css。
 
-官网文字改了就重新跑一次：  python3 scripts/site-fonts.py
+官网任何页面（apps/site/*.html）文字改了就重新跑一次：  python3 scripts/site-fonts.py
 需要：npm、pip install fonttools brotli
 中文 Noto Sans SC、英文数字 Inter，都是可变字重（100–900），开源字体（OFL）。
 """
@@ -11,7 +11,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = os.path.join(ROOT, 'apps', 'site')
 OUT = os.path.join(SITE, 'fonts')
 
-page = open(os.path.join(SITE, 'index.html'), encoding='utf-8').read()
+page = ''.join(open(os.path.join(SITE, f), encoding='utf-8').read() for f in sorted(os.listdir(SITE)) if f.endswith('.html'))
 text = html.unescape(re.sub(r'<[^>]+>', ' ', page))
 chars = {ord(c) for c in text if ord(c) > 0x2e7f}  # 中文和全角标点；英文数字交给 Inter
 

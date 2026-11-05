@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>安装 Tapaste · 图文步骤</title>
+<meta name="description" content="不用打开 Chrome 商店，五步把 Tapaste 装进 Chrome 或 Edge。">
+<meta name="theme-color" content="#07080c">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* 安装包的图文步骤：和官网同一套颜色和字；每一步右边是一张能点的示意图 */
+:root{
+  --bg:#07080c; --fg:#f2f3f7; --muted:#8d92a5; --line:rgba(255,255,255,.09);
+  --glass:rgba(255,255,255,.04); --blue:#6c7cff; --lime:#e3ff6b;
+  --font:"Inter Var","Noto SC Var","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:radial-gradient(ellipse 80% 50% at 70% -10%,rgba(108,124,255,.16),transparent 60%),var(--bg);color:var(--fg);font-family:var(--font);font-weight:400;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
+.w{max-width:1080px;margin:0 auto;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+nav .w{height:72px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px;font-weight:500;font-size:17px;letter-spacing:-.4px}
+.logo img{width:26px;height:26px;border-radius:7px}
+.lang{appearance:none;border:1px solid var(--line);background:var(--glass);border-radius:999px;padding:7px 14px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.lang:hover{color:var(--fg)}
+header{padding:70px 0 40px}
+.eyebrow{font-size:11.5px;letter-spacing:3px;color:var(--lime);margin-bottom:18px}
+h1{margin:0;font-weight:300;font-size:clamp(34px,4.6vw,56px);line-height:1.15;letter-spacing:-.02em}
+.lead{margin:16px 0 0;color:var(--muted);font-weight:300;font-size:16px;line-height:1.85;max-width:34em}
+.tabs{display:inline-flex;gap:4px;padding:4px;margin-top:30px;border-radius:999px;border:1px solid var(--line);background:var(--glass)}
+.tabs button{appearance:none;border:0;background:transparent;padding:9px 18px;border-radius:999px;font-size:14px;color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--fg);color:var(--bg)}
+.steps{list-style:none;margin:30px 0 0;padding:0;display:flex;flex-direction:column;gap:18px}
+.step{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:36px;align-items:center;padding:32px;border-radius:24px;border:1px solid var(--line);background:var(--glass)}
+.n{font-size:12.5px;letter-spacing:2px;color:var(--muted)}
+.step h2{margin:12px 0 10px;font-weight:400;font-size:22px;letter-spacing:-.2px}
+.step p{margin:0;color:var(--muted);font-weight:300;font-size:15px;line-height:1.85}
+.step p b{color:var(--fg);font-weight:400}
+.btn{height:50px;padding:0 24px;border-radius:999px;font-size:14.5px;font-weight:450;display:inline-flex;align-items:center;gap:8px;margin-top:18px;border:0;cursor:pointer;transition:transform .3s,box-shadow .3s}
+.btn.light{background:var(--fg);color:var(--bg)}
+.btn.light:hover{transform:translateY(-2px);box-shadow:0 0 0 6px rgba(255,255,255,.08)}
+.btn.glass{background:var(--glass);border:1px solid var(--line);color:var(--fg)}
+.btn small{font-size:12px;opacity:.6;font-weight:400}
+.copy{display:inline-flex;align-items:center;gap:10px;margin-top:16px;padding:6px 6px 6px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.25);font-size:14px}
+.copy code{font-family:inherit;color:var(--fg)}
+.copy button{appearance:none;border:0;border-radius:8px;padding:7px 12px;background:var(--fg);color:var(--bg);font-size:12.5px;cursor:pointer}
+
+/* 示意图 */
+.pic{position:relative;min-height:230px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(160deg,#171a26,#0e1017);overflow:hidden;font-size:12.5px;user-select:none}
+.bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+.bar i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.14);flex:none}
+.url{flex:1;margin-left:6px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.07);color:#c9ccd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.url .typed{color:var(--fg)}
+.url .caret{display:inline-block;width:1px;height:13px;background:var(--fg);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hint{position:absolute;right:12px;bottom:10px;font-size:11px;color:var(--lime);display:flex;align-items:center;gap:6px;pointer-events:none}
+.hint::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(227,255,107,.6);animation:pl 1.8s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 8px rgba(227,255,107,0)}100%{box-shadow:0 0 0 0 rgba(227,255,107,0)}}
+.pic.done .hint{color:#58e08a}.pic.done .hint::before{background:#58e08a;animation:none}
+.tap{cursor:pointer}
+.ring{box-shadow:0 0 0 2px var(--lime),0 0 0 6px rgba(227,255,107,.18)}
+.pic.done .ring{box-shadow:none}
+
+/* 1 解压 */
+.files{display:flex;gap:28px;align-items:flex-start;padding:34px 30px}
+.file{width:86px;text-align:center;color:#c9ccd8;font-size:11.5px;line-height:1.4;padding:8px 4px;border-radius:10px;transition:opacity .4s,transform .4s}
+.zip{width:52px;height:62px;margin:0 auto 8px;border-radius:6px;background:linear-gradient(#f3c860,#d89c2e);position:relative}
+.zip::after{content:"";position:absolute;left:22px;top:6px;width:8px;height:40px;background:repeating-linear-gradient(#5b4512 0 4px,#f7dc90 4px 8px)}
+.folder{width:62px;height:48px;margin:7px auto 8px;border-radius:5px;background:linear-gradient(#ffd36b,#f0b43c);position:relative}
+.folder::before{content:"";position:absolute;left:0;top:-6px;width:26px;height:8px;border-radius:4px 4px 0 0;background:#f0b43c}
+.menu{position:absolute;left:120px;top:58px;width:170px;padding:6px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:#1f2230;box-shadow:0 20px 40px rgba(0,0,0,.5);transition:opacity .3s}
+.menu div{padding:7px 10px;border-radius:6px;color:#c9ccd8}
+.menu div.go{background:rgba(108,124,255,.25);color:#fff}
+.out{opacity:0;transform:scale(.6)}
+.pic.done .menu{opacity:0;pointer-events:none}
+.pic.done .out{opacity:1;transform:none}
+
+/* 3 开发者模式 */
+.ext-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.ext-head b{font-weight:400;font-size:15px}
+.dev{display:flex;align-items:center;gap:10px;color:#c9ccd8;padding:6px 8px;border-radius:10px}
+.sw{width:36px;height:20px;border-radius:999px;background:rgba(255,255,255,.18);position:relative;transition:background .25s}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .25s}
+.pic.done .sw{background:#6c7cff}.pic.done .sw::after{transform:translateX(16px)}
+.devrow{display:flex;gap:8px;padding:14px 18px;opacity:0;transform:translateY(-6px);transition:opacity .4s,transform .4s}
+.devrow span{padding:7px 12px;border-radius:8px;border:1px solid rgba(124,139,255,.5);color:#b7bfff;font-size:11.5px}
+.pic.done .devrow{opacity:1;transform:none}
+
+/* 4 加载 */
+.picker{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%) scale(.9);width:260px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#1f2230;box-shadow:0 24px 50px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+.picker .t{color:var(--muted);font-size:11px;margin-bottom:8px}
+.picker .row{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;color:#c9ccd8}
+.picker .row.sel{background:rgba(108,124,255,.25);color:#fff}
+.picker .mini{width:18px;height:14px;border-radius:3px;background:#f0b43c}
+.picker .ok{margin-top:10px;text-align:right}
+.picker .ok span{display:inline-block;padding:6px 14px;border-radius:7px;background:#6c7cff;color:#fff}
+.pic.open .picker{opacity:1;transform:translate(-50%,-50%);pointer-events:auto}
+.card{position:absolute;left:18px;right:18px;bottom:38px;display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);opacity:0;transform:translateY(10px);transition:opacity .5s,transform .5s}
+.card img{width:30px;height:30px;border-radius:8px}
+.card .s{color:var(--muted);font-size:11px;margin-top:2px}
+.card .on{margin-left:auto;width:30px;height:17px;border-radius:999px;background:#6c7cff;position:relative}
+.card .on::after{content:"";position:absolute;right:3px;top:3px;width:11px;height:11px;border-radius:50%;background:#fff}
+.pic.done .card{opacity:1;transform:none}
+#p2.done #p2body{opacity:0}
+#p2body{transition:opacity .3s}
+.pic.done .picker{opacity:0;pointer-events:none}
+
+/* 5 固定、扫码 */
+.tools{display:flex;gap:6px;margin-left:8px}
+.ti{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:#c9ccd8}
+.ti svg{width:16px;height:16px}
+.pinned{opacity:0;transform:scale(.4);transition:opacity .4s,transform .4s}
+.pinned img{width:18px;height:18px;border-radius:5px}
+.pic.done .pinned{opacity:1;transform:none}
+.pop{position:absolute;right:14px;top:46px;width:220px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#1f2230;box-shadow:0 20px 40px rgba(0,0,0,.5);transition:opacity .3s}
+.pop .row{display:flex;align-items:center;gap:8px;padding:6px;border-radius:7px;color:#c9ccd8}
+.pop .row img{width:18px;height:18px;border-radius:5px}
+.pop .pin{margin-left:auto;padding:3px 8px;border-radius:6px;font-size:11px;color:var(--bg);background:var(--lime)}
+.pic.done .pop{opacity:0;pointer-events:none}
+.side{position:absolute;right:0;top:45px;bottom:0;width:150px;border-left:1px solid var(--line);background:#121521;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;opacity:0;transform:translateX(20px);transition:opacity .5s .2s,transform .5s .2s}
+.side .qr{width:84px;height:84px;border-radius:8px;background:#fff;padding:8px}
+.side .qr i{display:block;width:100%;height:100%;background:
+  conic-gradient(from 90deg at 30% 30%,#000 25%,transparent 0) 0 0/22% 22%,
+  repeating-linear-gradient(90deg,#000 0 3px,transparent 3px 7px),repeating-linear-gradient(#000 0 4px,transparent 4px 6px);background-blend-mode:normal;opacity:.85}
+.side .s{font-size:11px;color:var(--muted);text-align:center;padding:0 10px}
+.pic.done .side{opacity:1;transform:none}
+
+.note{margin:44px 0 0;padding:24px 28px;border-radius:20px;border:1px solid var(--line);background:var(--glass)}
+.note h3{margin:0 0 12px;font-weight:400;font-size:17px}
+.note p{margin:0 0 8px;color:var(--muted);font-weight:300;font-size:14.5px;line-height:1.8}
+.note p:last-child{margin:0}
+footer{margin-top:70px;border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:13px}
+footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+[data-b="edge"]{display:none}
+body.edge [data-b="edge"]{display:inline}
+body.edge [data-b="chrome"]{display:none}
+
+@media (max-width:820px){
+  .step{grid-template-columns:minmax(0,1fr);gap:22px;padding:24px}
+  header{padding:40px 0 20px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<nav><div class="w">
+  <a class="logo" href="./"><img src="icon.png" alt="">Tapaste</a>
+  <button class="lang" id="langBtn" type="button">EN</button>
+</div></nav>
+
+<main class="w">
+<header>
+  <div class="eyebrow" data-en="INSTALL">安装</div>
+  <h1 data-en="Install Tapaste in five steps.">五步，装好 Tapaste。</h1>
+  <p class="lead" data-en="No need to open the Chrome Web Store. About two minutes. Each picture on the right can be clicked to see what happens.">不用打开 Chrome 商店，大约两分钟。右边每张图都可以点一下，看看会发生什么。</p>
+  <div class="tabs" role="tablist"><button class="on" data-browser="chrome" type="button">Chrome</button><button data-browser="edge" type="button">Edge</button></div>
+</header>
+
+<ol class="steps">
+  <li class="step">
+    <div>
+      <div class="n">01</div>
+      <h2 data-en="Download and unzip">下载，解压</h2>
+      <p data-en="Download the package, find it in your Downloads folder, right-click it and choose <b>Extract All</b>. You'll get a <b>Tapaste</b> folder. Keep it somewhere it won't be deleted.">下载安装包，在「下载」文件夹里找到它，右键点<b>全部解压缩</b>，会得到一个 <b>Tapaste</b> 文件夹。把它放在不会被删掉的地方。</p>
+      <a class="btn light" id="dl" href="downloads/tapaste-chrome.zip" download><span data-en="Download the package">下载安装包</span> <small id="ver"></small></a>
+    </div>
+    <div class="pic tap" id="p1" role="button" tabindex="0" aria-label="解压示意">
+      <div class="files">
+        <div class="file"><div class="zip"></div>Tapaste.zip</div>
+        <div class="file out"><div class="folder"></div>Tapaste</div>
+      </div>
+      <div class="menu"><div data-en="Open">打开</div><div class="go ring" data-en="Extract All…">全部解压缩…</div><div data-en="Copy">复制</div></div>
+      <div class="hint" data-en="Click “Extract All”" data-en-done="Done: a Tapaste folder" data-zh-done="好了：多了一个 Tapaste 文件夹">点「全部解压缩」</div>
+    </div>
+  </li>
+
+  <li class="step">
+    <div>
+      <div class="n">02</div>
+      <h2 data-en="Open the extensions page">打开扩展程序页面</h2>
+      <p data-en="Copy the address below, paste it into the browser's address bar and press Enter.">复制下面这行，粘到浏览器最上面的地址栏，按回车。</p>
+      <div class="copy"><code id="addr">chrome://extensions</code><button type="button" id="copyBtn" data-en="Copy">复制</button></div>
+    </div>
+    <div class="pic tap" id="p2" role="button" tabindex="0" aria-label="地址栏示意">
+      <div class="bar"><i></i><i></i><i></i><div class="url ring"><span class="typed" id="typed"></span><span class="caret"></span></div></div>
+      <div style="padding:22px 18px;color:var(--muted)" id="p2body" data-en="Click the address bar to type it in">点地址栏，帮你输进去</div>
+      <div class="hint" data-en="Click the address bar" data-en-done="Press Enter: the extensions page opens" data-zh-done="按回车，就到扩展程序页面了">点地址栏</div>
+    </div>
+  </li>
+
+  <li class="step">
+    <div>
+      <div class="n">03</div>
+      <h2 data-en="Turn on Developer mode">打开「开发者模式」</h2>
+      <p><span data-b="chrome" data-en="At the <b>top right</b> of the page, switch on <b>Developer mode</b>.">在页面<b>右上角</b>，把<b>开发者模式</b>打开。</span><span data-b="edge" data-en="In the <b>left column</b>, switch on <b>Developer mode</b>.">在页面<b>左边一栏</b>，把<b>开发人员模式</b>打开。</span></p>
+    </div>
+    <div class="pic tap" id="p3" role="button" tabindex="0" aria-label="开发者模式示意">
+      <div class="bar"><i></i><i></i><i></i><div class="url" data-addr>chrome://extensions</div></div>
+      <div class="ext-head"><b data-en="Extensions">扩展程序</b><div class="dev ring"><span data-b="chrome" data-en="Developer mode">开发者模式</span><span data-b="edge" data-en="Developer mode">开发人员模式</span><div class="sw"></div></div></div>
+      <div class="devrow"><span><span data-b="chrome" data-en="Load unpacked">加载已解压的扩展程序</span><span data-b="edge" data-en="Load unpacked">加载解压缩的扩展</span></span><span data-en="Pack extension">打包扩展程序</span></div>
+      <div class="hint" data-en="Click the switch" data-en-done="On. New buttons appear" data-zh-done="打开了，多出几个按钮">点开关</div>
+    </div>
+  </li>
+
+  <li class="step">
+    <div>
+      <div class="n">04</div>
+      <h2 data-en="Load the Tapaste folder">选中 Tapaste 文件夹</h2>
+      <p><span data-b="chrome" data-en="Click <b>Load unpacked</b>, choose the <b>Tapaste</b> folder from step 1, and click <b>Select Folder</b>.">点<b>加载已解压的扩展程序</b>，选第 1 步解压出来的 <b>Tapaste</b> 文件夹，点<b>选择文件夹</b>。</span><span data-b="edge" data-en="Click <b>Load unpacked</b>, choose the <b>Tapaste</b> folder from step 1, and click <b>Select Folder</b>.">点<b>加载解压缩的扩展</b>，选第 1 步解压出来的 <b>Tapaste</b> 文件夹，点<b>选择文件夹</b>。</span></p>
+    </div>
+    <div class="pic tap" id="p4" role="button" tabindex="0" aria-label="选择文件夹示意">
+      <div class="bar"><i></i><i></i><i></i><div class="url" data-addr>chrome://extensions</div></div>
+      <div class="devrow" style="opacity:1;transform:none"><span class="ring" id="load"><span data-b="chrome" data-en="Load unpacked">加载已解压的扩展程序</span><span data-b="edge" data-en="Load unpacked">加载解压缩的扩展</span></span></div>
+      <div class="picker"><div class="t" data-en="Select a folder">选择文件夹</div><div class="row"><span class="mini"></span><span data-en="Pictures">图片</span></div><div class="row sel"><span class="mini"></span>Tapaste</div><div class="ok"><span data-en="Select Folder">选择文件夹</span></div></div>
+      <div class="card"><img src="icon.png" alt=""><div>Tapaste<div class="s" data-en="Installed">已安装</div></div><div class="on"></div></div>
+      <div class="hint" id="h4" data-en="Click “Load unpacked”" data-en-done="Installed" data-zh-done="装好了">点「加载」按钮</div>
+    </div>
+  </li>
+
+  <li class="step">
+    <div>
+      <div class="n">05</div>
+      <h2 data-en="Pin it, then scan with your phone">固定图标，手机扫一下</h2>
+      <p data-en="Click the <b>puzzle piece</b> at the top right of the browser and pin Tapaste. Click the Tapaste icon: a QR code appears on the side. Scan it with your phone's camera, and you're connected.">点浏览器右上角的<b>拼图</b>图标，把 Tapaste 固定在旁边。点 Tapaste 图标，侧边会出现一个二维码，用手机相机扫一下就连上了。</p>
+    </div>
+    <div class="pic tap" id="p5" role="button" tabindex="0" aria-label="固定图标示意">
+      <div class="bar"><i></i><i></i><i></i><div class="url" data-en="New Tab">新标签页</div>
+        <div class="tools"><div class="ti pinned"><img src="icon.png" alt=""></div><div class="ti"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 3a2 2 0 0 1 4 0v2h4a1 1 0 0 1 1 1v4h-1.5a2 2 0 1 0 0 4H19v4a1 1 0 0 1-1 1h-4v-1.5a2 2 0 1 0-4 0V20H6a1 1 0 0 1-1-1v-4h1.5a2 2 0 1 0 0-4H5V6a1 1 0 0 1 1-1h4z"/></svg></div></div></div>
+      <div class="pop"><div class="row"><img src="icon.png" alt="">Tapaste<span class="pin ring" data-en="Pin">固定</span></div></div>
+      <div class="side"><div class="qr"><i></i></div><div class="s" data-en="Scan with your phone">用手机相机扫一下</div></div>
+      <div class="hint" data-en="Click “Pin”" data-en-done="Scan it with your phone" data-zh-done="用手机扫一下就连上了">点「固定」</div>
+    </div>
+  </li>
+</ol>
+
+<div class="note">
+  <h3 data-en="Good to know">还要知道的</h3>
+  <p data-en="When the browser starts, it may suggest turning off developer-mode extensions. Just close that message; Tapaste keeps working.">浏览器启动时，可能会提示「停用开发者模式扩展程序」。点右上角关掉就行，Tapaste 照常能用。</p>
+  <p data-en="Don't delete the Tapaste folder after installing. The browser reads it from there.">装好以后，别删 Tapaste 文件夹，浏览器要从那里读它。</p>
+  <p data-en="When a new version comes out, download it again and unzip it over the old folder, then click the refresh arrow on Tapaste's card on the extensions page.">有新版本时，重新下载、解压覆盖原来的文件夹，再到扩展程序页面点 Tapaste 卡片上的刷新箭头。</p>
+</div>
+</main>
+
+<footer><div class="w"><a href="./" data-en="← Back to Tapaste">← 回到 Tapaste</a><span>© 2026 Tapaste</span></div></footer>
+
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)},$$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+/* 中英文：中文写在页面里，英文放在 data-en；和官网共用一个记忆 */
+var els=$$('[data-en]');els.forEach(function(e){e._zh=e.innerHTML});
+var lang='zh',browser='chrome';
+function addr(){return (browser==='edge'?'edge':'chrome')+'://extensions'}
+function apply(l){lang=l;document.documentElement.lang=l==='en'?'en':'zh-CN';
+  els.forEach(function(e){if(e.classList.contains('hint')&&e.closest('.pic.done'))return;e.innerHTML=l==='en'?e.dataset.en:e._zh});
+  $$('.pic.done .hint').forEach(doneHint);
+  $('#langBtn').textContent=l==='en'?'中文':'EN';
+  document.title=l==='en'?'Install Tapaste · Step by step':'安装 Tapaste · 图文步骤'}
+var saved=null;try{saved=localStorage.getItem('tapaste-lang')}catch(e){}
+var sys=(navigator.languages&&navigator.languages[0]||navigator.language||'zh').toLowerCase();
+apply(saved||(sys.indexOf('zh')===0?'zh':'en'));
+$('#langBtn').addEventListener('click',function(){var l=lang==='en'?'zh':'en';apply(l);try{localStorage.setItem('tapaste-lang',l)}catch(e){}});
+
+/* Chrome / Edge：Edge 用户默认看 Edge 的说法 */
+function setBrowser(b){browser=b;document.body.classList.toggle('edge',b==='edge');
+  $$('.tabs button').forEach(function(x){x.classList.toggle('on',x.dataset.browser===b)});
+  $('#addr').textContent=addr();$$('[data-addr]').forEach(function(x){x.textContent=addr()})}
+$$('.tabs button').forEach(function(x){x.addEventListener('click',function(){setBrowser(x.dataset.browser)})});
+setBrowser(/Edg\//.test(navigator.userAgent)?'edge':'chrome');
+
+/* 复制地址 */
+$('#copyBtn').addEventListener('click',function(){var b=this,t=addr();
+  function ok(){var o=b.innerHTML;b.textContent=lang==='en'?'Copied ✓':'已复制 ✓';setTimeout(function(){b.innerHTML=o},1600)}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,ok);else ok()});
+
+/* 下载包的版本号 */
+fetch('downloads/version.txt').then(function(r){return r.ok?r.text():''}).then(function(v){v=(v||'').trim();if(v)$('#ver').textContent='v'+v}).catch(function(){});
+
+/* 示意图：点一下就完成这一步，再点一下重来 */
+function doneHint(p){var h=p.querySelector?p:p;var hint=(h.classList&&h.classList.contains('hint'))?h:h.querySelector('.hint');
+  hint.textContent=lang==='en'?hint.dataset.enDone:hint.dataset.zhDone}
+function resetHint(p){var hint=p.querySelector('.hint');hint.innerHTML=lang==='en'?hint.dataset.en:hint._zh}
+function toggle(p,fn){p.addEventListener('click',fn);p.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();fn()}})}
+function simple(id){var p=$(id);toggle(p,function(){if(p.classList.toggle('done'))doneHint(p);else resetHint(p)})}
+simple('#p1');simple('#p3');simple('#p5');
+/* 第 2 步：点地址栏，自动打字 */
+(function(){var p=$('#p2'),typed=$('#typed'),timer=null;
+  toggle(p,function(){clearInterval(timer);if(p.classList.contains('done')){p.classList.remove('done');typed.textContent='';resetHint(p);return}
+    var t=addr(),i=0;typed.textContent='';timer=setInterval(function(){typed.textContent=t.slice(0,++i);if(i>=t.length){clearInterval(timer);p.classList.add('done');doneHint(p)}},45)})})();
+/* 第 4 步：先弹出选文件夹，再点一下装好 */
+(function(){var p=$('#p4');toggle(p,function(){
+  if(p.classList.contains('done')){p.classList.remove('done','open');resetHint(p);return}
+  if(!p.classList.contains('open')){p.classList.add('open');var h=$('#h4');h.textContent=lang==='en'?'Click “Select Folder”':'点「选择文件夹」';return}
+  p.classList.remove('open');p.classList.add('done');doneHint(p)})})();
+})();
+</script>
+</body>
+</html>
