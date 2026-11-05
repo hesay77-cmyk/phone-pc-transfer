@@ -443,7 +443,7 @@ footer a:hover{opacity:1}
     <div class="cap"><div class="k">03 / 在电脑上</div><h2>已经在那了</h2><p>文字已经复制好，照片已经存进「下载」文件夹。电脑上不用再点什么。</p></div>
     <div class="cap"><div class="k">04 / 以后</div><h2>一直连着</h2><p>只扫一次码。以后打开就连上，电脑上的东西也能一点发回手机。</p></div>
   </div>
-  <div class="ctrl"><button class="play" id="play" type="button" aria-label="播放"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button><div class="prog" id="prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
+  <div class="ctrl"><div class="prog" id="prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
   </div></div>
 </section>
 
@@ -834,14 +834,14 @@ tl.from('.demo-wrap',{y:30,opacity:0,filter:'blur(12px)',duration:1.4},.3)
 
 /* 点一下：光点从手机流过去，拼成电脑，再拼成两者连在一起；字幕跟着换（不用一直滚） */
 gsap.set(caps,{opacity:0,y:30,filter:'blur(10px)'});gsap.set(caps[0],{opacity:1,y:0,filter:'blur(0px)'});gsap.set(bars[0],{scaleX:1});
-var play=$('#play'),cur=0;
+var cur=0;
 function showCap(i,tl,at){tl.to(caps[cur],{opacity:0,y:-24,filter:'blur(10px)',duration:.45,ease:'power2.in'},at)
   .fromTo(caps[i],{opacity:0,y:30,filter:'blur(10px)'},{opacity:1,y:0,filter:'blur(0px)',duration:.8,ease:'expo.out'},at+.4)
   .to(bars[i],{scaleX:1,duration:.6,ease:'power2.out'},at+.3);cur=i}
 /* 点一下往前播（手机 → 电脑 → 连在一起），再点一下倒着流回手机，来回循环 */
 var busy=false,fwd=true;
 function playStory(){
-  if(busy)return;busy=true;play.classList.toggle('back',fwd);
+  if(busy)return;busy=true;
   var tl=gsap.timeline({onComplete:function(){busy=false;fwd=!fwd}});
   tl.to(st,{intro:1,glow:1,duration:.5},0);
   if(fwd){
@@ -854,7 +854,6 @@ function playStory(){
     tl.to(st,{story:0,duration:1.8,ease:'power2.inOut'},3.9);showCap(0,tl,4.1);tl.to(bars[1],{scaleX:0,duration:.5},4.1);
   }
 }
-play.addEventListener('click',function(e){e.stopPropagation();playStory()});
 $('#story').addEventListener('click',playStory);
 /* 故事结束后光点淡下去，让内容清楚 */
 gsap.to(canvas,{opacity:.18,ease:'none',scrollTrigger:{trigger:'.solid',start:'top 90%',end:'top 20%',scrub:true}});
