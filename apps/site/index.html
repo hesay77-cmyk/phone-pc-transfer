@@ -335,20 +335,20 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 /* ---------- 同一个人做的其他小工具 ---------- */
 #family .head{margin-left:auto;margin-right:auto;text-align:center}
 .fam{display:grid;grid-template-columns:1.25fr 1fr .8fr;gap:14px;align-items:stretch}
-.fx{position:relative;border-radius:26px;padding:30px;border:1px solid rgba(255,255,255,.1);background:var(--glass);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:250px;transition:border-color .4s}
-.fx:hover{border-color:rgba(255,255,255,.22)}
-.fx .ic{width:64px;height:64px;border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.45);background:#1c1c22}
-.fx h3{margin:6px 0 0;font-size:21px;font-weight:500;letter-spacing:-.2px}
-.fx h3 small{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
-.fx p{margin:0;color:var(--muted);font-size:14.5px;font-weight:300;line-height:1.8;flex:1}
-.fx .tag2{position:absolute;right:22px;top:22px;font-size:11.5px;padding:4px 10px;border-radius:999px;color:var(--lime);background:rgba(227,255,107,.12)}
-.fx.rux::before{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,92,92,.35),transparent 65%);filter:blur(10px);pointer-events:none}
-.fx.tap::before{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(124,110,255,.35),transparent 65%);filter:blur(10px);pointer-events:none}
-.fx.next{border-style:dashed;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;align-items:flex-start;justify-content:center}
-.fx.next .ic{display:grid;place-items:center;background:rgba(255,255,255,.04);box-shadow:none;border:1px dashed rgba(255,255,255,.2);font-size:26px;font-weight:200;color:var(--muted)}
-.fx.next .ic span{display:block;animation:spinp 6s linear infinite}
+.pc2{position:relative;border-radius:26px;padding:30px;border:1px solid rgba(255,255,255,.1);background:var(--glass);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:250px;transition:border-color .4s}
+.pc2:hover{border-color:rgba(255,255,255,.22)}
+.pc2 .ic{width:64px;height:64px;border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.45);background:#1c1c22}
+.pc2 h3{margin:6px 0 0;font-size:21px;font-weight:500;letter-spacing:-.2px}
+.pc2 h3 small{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+.pc2 p{margin:0;color:var(--muted);font-size:14.5px;font-weight:300;line-height:1.8;flex:1}
+.pc2 .tag2{position:absolute;right:22px;top:22px;font-size:11.5px;padding:4px 10px;border-radius:999px;color:var(--lime);background:rgba(227,255,107,.12)}
+.pc2.rux::before{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,92,92,.35),transparent 65%);filter:blur(10px);pointer-events:none}
+.pc2.tap::before{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(124,110,255,.35),transparent 65%);filter:blur(10px);pointer-events:none}
+.pc2.next{border-style:dashed;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;align-items:flex-start;justify-content:center}
+.pc2.next .ic{display:grid;place-items:center;background:rgba(255,255,255,.04);box-shadow:none;border:1px dashed rgba(255,255,255,.2);font-size:26px;font-weight:200;color:var(--muted)}
+.pc2.next .ic span{display:block;animation:spinp 6s linear infinite}
 @keyframes spinp{to{transform:rotate(360deg)}}
-.fx .go{align-self:flex-start;height:42px;padding:0 18px;font-size:13.5px}
+.pc2 .go{align-self:flex-start;height:42px;padding:0 18px;font-size:13.5px}
 .famline{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:26px;font-size:12.5px;color:var(--muted)}
 .famline i{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime)}
 footer a{color:var(--fg);opacity:.8}
@@ -373,7 +373,7 @@ footer a:hover{opacity:1}
   .card.wide{grid-column:auto}
   .faq{grid-template-columns:minmax(0,1fr);gap:10px}
   .fam{grid-template-columns:minmax(0,1fr)}
-  .fx{min-height:0}
+  .pc2{min-height:0}
   section{padding:90px 0}
 }
 @media (max-width:560px){
@@ -516,9 +516,9 @@ footer a:hover{opacity:1}
 <section id="family"><div class="w">
   <div class="head rv"><div class="eyebrow">更多作品</div><h2 class="big">同一个人做的小工具。</h2><p>每一个都只做好一件事。</p></div>
   <div class="fam">
-    <a class="fx rux rv" href="https://hidaydream.cloud/" target="_blank" rel="noopener"><img class="ic" src="fam-ruxget.png" alt=""><h3>Ruxget<small>拾影</small></h3><p>免费、开源、无广告的视频下载助手。B站、抖音、快手、小红书一键下载；Windows 版还能下 YouTube。</p><span class="btn glass go">去看看 ↗</span></a>
-    <div class="fx tap rv"><span class="tag2">你在这里</span><img class="ic" src="icon.png" alt=""><h3>Tapaste</h3><p>手机和电脑之间互传文字和照片。</p></div>
-    <div class="fx next rv"><div class="ic"><span>+</span></div><h3>下一个</h3><p>还在做，敬请期待。</p></div>
+    <a class="pc2 rux rv" href="https://hidaydream.cloud/" target="_blank" rel="noopener"><img class="ic" src="fam-ruxget.png" alt=""><h3>Ruxget<small>拾影</small></h3><p>免费、开源、无广告的视频下载助手。B站、抖音、快手、小红书一键下载；Windows 版还能下 YouTube。</p><span class="btn glass go">去看看 ↗</span></a>
+    <div class="pc2 tap rv"><span class="tag2">你在这里</span><img class="ic" src="icon.png" alt=""><h3>Tapaste</h3><p>手机和电脑之间互传文字和照片。</p></div>
+    <div class="pc2 next rv"><div class="ic"><span>+</span></div><h3>下一个</h3><p>还在做，敬请期待。</p></div>
   </div>
 </div></section>
 
