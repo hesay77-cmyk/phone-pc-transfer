@@ -282,6 +282,55 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .capt{display:flex;justify-content:center;gap:60px;margin-top:40px;font-size:13px;color:var(--muted);letter-spacing:.5px}
 .capt b{color:var(--fg);font-weight:400;margin-right:8px}
 
+
+/* ---------- 卡片里一直在动的小场景 ---------- */
+.card{transform-style:preserve-3d;will-change:transform}
+.card .vis{pointer-events:none}
+.thumbs{min-height:70px}
+.thumbs div{flex:none}
+.path{display:flex;gap:10px;align-items:center}
+.path .cnt{padding:3px 9px;border-radius:999px;background:rgba(227,255,107,.12);color:var(--lime);font-size:11.5px}
+.bubble{position:relative;min-height:44px;max-width:100%;white-space:nowrap}
+.bubble.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.caret{display:inline-block;width:2px;height:1.05em;margin-left:2px;vertical-align:-2px;background:#c9c8ff;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.okc{display:inline-flex;margin-top:12px;margin-left:2px;font-size:12px;padding:5px 11px;border-radius:999px;color:#0b0c10;background:var(--lime);opacity:0}
+.mini{position:relative;height:118px;border-radius:14px;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.mini>i{display:block;height:7px;border-radius:4px;background:rgba(255,255,255,.1)}
+.selx{position:relative;font-size:13px;color:#e6e7f0;padding:1px 2px}
+.selx>span:last-child{position:relative}
+.selbg{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:3px;background:rgba(108,124,255,.55)}
+.ctx{position:absolute;left:46%;top:40px;display:flex;flex-direction:column;padding:5px;border-radius:10px;background:rgba(30,32,44,.96);border:1px solid rgba(255,255,255,.14);box-shadow:0 14px 34px rgba(0,0,0,.5);font-size:11.5px;opacity:0;transform-origin:top left}
+.ctx span{padding:5px 12px;border-radius:6px;color:#c9ccd8;white-space:nowrap}
+.ctx .hi.on{background:#5e5ce6;color:#fff}
+.cur{position:absolute;left:20px;top:20px;width:14px;height:14px;opacity:0;background:no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 2l16 10-7 1.5L9.5 21z' fill='white' stroke='black' stroke-width='1.2'/></svg>")}
+.note{position:absolute;right:0;top:-6px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);font-size:12px;opacity:0;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.note img{width:18px;height:18px;border-radius:5px}
+.wire{position:relative;flex:1;max-width:320px;height:2px!important;border-radius:2px;background:rgba(255,255,255,.12)!important;animation:none!important;box-shadow:none!important}
+.wire i{position:absolute;top:50%;left:0;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px 3px rgba(227,255,107,.6);animation:pkt 2.4s cubic-bezier(.5,0,.5,1) infinite}
+.wire i:nth-child(2){animation-delay:.8s}.wire i:nth-child(3){animation-delay:1.6s}
+.wire i.r{background:#8b8fff;box-shadow:0 0 12px 3px rgba(139,143,255,.7);animation-name:pktr;animation-duration:3s}
+.wire i.r:nth-child(5){animation-delay:1.5s}
+@keyframes pkt{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:100%;opacity:0}}
+@keyframes pktr{0%{left:100%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:0;opacity:0}}
+.nocloud{display:inline-flex;align-items:center;gap:8px;margin-top:18px;font-size:12.5px;color:var(--muted);padding:6px 12px;border-radius:999px;border:1px dashed rgba(255,255,255,.16)}
+.nocloud svg{width:18px;height:18px;color:#ff8a8a}
+/* 三步：轮流亮起来 */
+.node{position:relative;overflow:hidden}
+.node::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(227,255,107,.55),0 0 40px rgba(227,255,107,.12);opacity:0;animation:stepGlow 6s infinite}
+.node:nth-child(2)::after{animation-delay:2s}.node:nth-child(3)::after{animation-delay:4s}
+@keyframes stepGlow{0%,40%,100%{opacity:0}8%,30%{opacity:1}}
+.node .n{display:inline-block;transition:color .3s}
+
+/* ---------- 好玩的：点哪里都会迸出光点、鼠标带一团柔光、标签能点飞 ---------- */
+#fun{position:fixed;inset:0;width:100%;height:100%;z-index:70;pointer-events:none}
+.glowc{position:fixed;left:0;top:0;width:420px;height:420px;margin:-210px 0 0 -210px;border-radius:50%;z-index:2;pointer-events:none;background:radial-gradient(circle,rgba(124,110,255,.16),transparent 65%);opacity:0;transition:opacity .6s}
+.lane span{cursor:pointer;transition:background .25s,border-color .25s,transform .25s}
+.lane span:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);transform:translateY(-2px)}
+.uses:hover .lane{animation-play-state:paused}
+.flytag{position:fixed;z-index:71;pointer-events:none;display:inline-flex;align-items:center;gap:9px;padding:11px 18px;border-radius:999px;font-size:14px;color:#0b0c10;background:var(--lime);box-shadow:0 10px 30px rgba(227,255,107,.35)}
+.logo img{transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.logo:hover img{transform:rotate(-12deg) scale(1.12)}
 /* ---------- 能传什么：两行慢慢滑过的小标签 ---------- */
 .uses{padding:30px 0 90px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .lane{display:flex;gap:12px;width:max-content;animation:lane 46s linear infinite;margin-bottom:12px}
@@ -323,6 +372,7 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 </style>
 </head>
 <body>
+<canvas id="fun" aria-hidden="true"></canvas><div class="glowc" id="glowc" aria-hidden="true"></div>
 <div class="neb" aria-hidden="true"><i></i><i></i><i></i></div>
 <canvas id="gl" aria-hidden="true"></canvas>
 <div class="vignette"></div><div class="grain"></div>
@@ -413,10 +463,10 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <section id="features"><div class="w">
   <div class="head rv"><div class="eyebrow">能做什么</div><h2 class="big">那些每天都有的小事。</h2><p>以前要发给自己、插数据线、登网盘的，现在点一下。</p></div>
   <div class="bento">
-    <div class="card wide rv"><div class="vis"><div class="thumbs"><div class="t1"></div><div class="t2"></div><div class="t3"></div><div class="t4"></div></div><div class="path">下载 / 互传</div></div><h3>原图，直接存好</h3><p>刚拍的照片、截图，原图送到电脑，自己进「下载」文件夹。也能从侧边栏直接拖进网页。</p></div>
-    <div class="card rv"><div class="vis"><div class="bubble mono">git pull &amp;&amp; npm run build</div></div><h3>到了就能用</h3><p>一段代码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。</p></div>
-    <div class="card rv"><div class="vis"><div class="swap">⇄</div></div><h3>电脑也能发手机</h3><p>网页上的字和图，右键「发到手机」。别的软件里的一大段字，复制一下就到手机。</p></div>
-    <div class="card wide rv"><div class="vis"><div class="lan"><span>手机</span><b></b><span>电脑</span></div></div><h3>只在你家里走</h3><p>东西只在你的手机和电脑之间直接传，不上传，也不存在任何服务器上。不用注册，不用登录。</p></div>
+    <div class="card wide rv" id="cPhotos"><div class="vis"><div class="thumbs" id="thumbs"></div><div class="path"><span>下载 / 互传</span><span class="cnt"><b id="pcount">0</b> <span>张原图</span></span></div></div><h3>原图，直接存好</h3><p>刚拍的照片、截图，原图送到电脑，自己进「下载」文件夹。也能从侧边栏直接拖进网页。</p></div>
+    <div class="card rv" id="cType"><div class="vis"><div class="bubble" id="tyB"><span id="tyT"></span><i class="caret"></i></div><div class="okc" id="tyOk">✓ 已复制</div></div><h3>到了就能用</h3><p>一段代码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。</p></div>
+    <div class="card rv" id="cMenu"><div class="vis"><div class="mini"><i style="width:78%"></i><span class="selx"><span class="selbg" id="selbg"></span><span>这段话发到手机上看</span></span><i style="width:58%"></i><div class="ctx" id="ctx"><span>复制</span><span class="hi">发到手机</span><span>检查</span></div><div class="cur" id="cur"></div></div><div class="note" id="note"><img src="icon.png" alt=""><span>手机上收到了</span></div></div><h3>电脑也能发手机</h3><p>网页上的字和图，右键「发到手机」。别的软件里的一大段字，复制一下就到手机。</p></div>
+    <div class="card wide rv"><div class="vis"><div class="lan"><span>手机</span><b class="wire"><i></i><i></i><i></i><i class="r"></i><i class="r"></i></b><span>电脑</span></div><div class="nocloud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 9.2 4.5 4.5 0 0 0 7 18z"/><path d="M4 4l16 16"/></svg><span>不经过任何服务器</span></div></div><h3>只在你家里走</h3><p>东西只在你的手机和电脑之间直接传，不上传，也不存在任何服务器上。不用注册，不用登录。</p></div>
   </div>
 </div></section>
 
@@ -461,7 +511,7 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 /* 中英文：中文写在页面里；英文按系统语言自动切换，也可以点右上角手动换（记在本机） */
 (function(){
 var EN={
-'怎么回事':'How it works','真实的样子':'The real thing','电脑上一个侧边栏，手机上一个网页。':'A side panel on your computer. A web page on your phone.','不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。':'Nothing to learn. Open the side panel in your browser, scan the code on your phone. That’s it.','你正在看的网页':'any web page','周末去海边':'A weekend by the sea','已连上手机':'Phone connected','输入或粘贴文字、代码、网址':'Type or paste text, code, a link','发到手机':'Send to phone','发刚复制的':'Send clipboard','选图片…':'Pick image…','手机发来的':'From phone','发到手机的':'Sent to phone','08:51 · 已复制':'08:51 · Copied','明天上午 10 点在三楼会议室':'10am tomorrow, 3rd floor room','08:48 · 已复制':'08:48 · Copied','照片 · 2.4 MB':'Photo · 2.4 MB','08:40 · 存进 下载/互传':'08:40 · Saved to Downloads','复制':'Copy','已连上电脑':'Connected','粘贴并发送到电脑':'Paste & send to computer','发照片到电脑':'Send photo to computer','或者在这里打字':'Or type here','电脑发来的':'From computer','明早 9 点开会':'9am meeting','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','电脑':'Computer','Chrome / Edge 侧边栏':'Chrome / Edge side panel','手机':'Phone','扫码打开的网页，不用装 App':'A web page you scan to open. No app.','邮箱地址':'Email addresses','验证码':'Verification codes','快递地址':'Addresses','会议链接':'Meeting links','刚拍的照片':'Photos just taken','截图':'Screenshots','一段代码':'Code snippets','电话号码':'Phone numbers','网址':'Links','发票照片':'Receipts','聊天里的一段话':'A line from a chat','文章里的一段':'A paragraph from an article','表格里的数字':'Numbers from a sheet','备忘':'Notes','刚收到 · 已复制':'Just now · Copied','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
+'怎么回事':'How it works','张原图':'originals','这段话发到手机上看':'Read this on my phone','检查':'Inspect','手机上收到了':'Arrived on your phone','不经过任何服务器':'Never touches a server','明早 9 点开会，记得带电脑':'9am meeting, bring your laptop','真实的样子':'The real thing','电脑上一个侧边栏，手机上一个网页。':'A side panel on your computer. A web page on your phone.','不用学。电脑在浏览器旁边点开，手机扫码打开，就这两样。':'Nothing to learn. Open the side panel in your browser, scan the code on your phone. That’s it.','你正在看的网页':'any web page','周末去海边':'A weekend by the sea','已连上手机':'Phone connected','输入或粘贴文字、代码、网址':'Type or paste text, code, a link','发到手机':'Send to phone','发刚复制的':'Send clipboard','选图片…':'Pick image…','手机发来的':'From phone','发到手机的':'Sent to phone','08:51 · 已复制':'08:51 · Copied','明天上午 10 点在三楼会议室':'10am tomorrow, 3rd floor room','08:48 · 已复制':'08:48 · Copied','照片 · 2.4 MB':'Photo · 2.4 MB','08:40 · 存进 下载/互传':'08:40 · Saved to Downloads','复制':'Copy','已连上电脑':'Connected','粘贴并发送到电脑':'Paste & send to computer','发照片到电脑':'Send photo to computer','或者在这里打字':'Or type here','电脑发来的':'From computer','明早 9 点开会':'9am meeting','文三路 90 号 3 幢 502':'12 Elm Street, Apt 502','电脑':'Computer','Chrome / Edge 侧边栏':'Chrome / Edge side panel','手机':'Phone','扫码打开的网页，不用装 App':'A web page you scan to open. No app.','邮箱地址':'Email addresses','验证码':'Verification codes','快递地址':'Addresses','会议链接':'Meeting links','刚拍的照片':'Photos just taken','截图':'Screenshots','一段代码':'Code snippets','电话号码':'Phone numbers','网址':'Links','发票照片':'Receipts','聊天里的一段话':'A line from a chat','文章里的一段':'A paragraph from an article','表格里的数字':'Numbers from a sheet','备忘':'Notes','刚收到 · 已复制':'Just now · Copied','能做什么':'What it does','常见问题':'FAQ','下载':'Download',
 '点一下，':'Tap once.','就到另一边。':'It’s already there.',
 '手机和电脑之间互传文字和照片。':'Send text and photos between your phone and computer.',
 '不用数据线，不用登录，手机不用装 App。':'No cables. No sign-in. No app on your phone.',
@@ -621,10 +671,44 @@ var navEl=$('nav');
 })();
 addEventListener('scroll',function(){navEl.classList.toggle('solid',scrollY>innerHeight*.6)},{passive:true});
 
-/* 卡片点一下，里面的东西再来一遍 */
-$$('.card').forEach(function(c){c.style.cursor='pointer';c.addEventListener('click',function(){if(!window.gsap||reduce)return;
-  var els=c.querySelectorAll('.thumbs div,.bubble,.swap,.lan span,.lan b,.path');
-  gsap.fromTo(els,{y:-24,opacity:0,scale:.7},{y:0,opacity:1,scale:1,stagger:.07,duration:.8,ease:'back.out(2)',overwrite:true})})});
+/* ---------- 卡片里的小场景：看得见时一直循环 ---------- */
+function whenSeen(el,start,stop){var on=false;new IntersectionObserver(function(es){var v=es[0].isIntersecting;if(v&&!on){on=true;start()}else if(!v&&on){on=false;stop&&stop()}},{threshold:.25}).observe(el)}
+/* 1. 照片一张张飞进「下载」文件夹 */
+(function(){var box=$('#thumbs'),cnt=$('#pcount');if(!box)return;
+  var G=['linear-gradient(135deg,#ffb88c,#de6262)','linear-gradient(135deg,#8ec5fc,#6c7cff)','linear-gradient(135deg,#d4fc79,#58c897)','linear-gradient(135deg,#e0c3fc,#8e7cff)','linear-gradient(135deg,#ffe08a,#ff9f45)','linear-gradient(135deg,#7ef0e0,#3aa0d8)','linear-gradient(135deg,#ff9a9e,#fad0c4)'];
+  var n=0,timer=null,MAX=innerWidth<560?4:6;
+  function add(){
+    if(box.children.length>=MAX){gsap.to(box.children,{y:12,opacity:0,scale:.8,stagger:.05,duration:.4,ease:'power2.in',onComplete:function(){box.innerHTML='';n=0;cnt.textContent=0}});return}
+    var d=document.createElement('div');d.style.background=G[(n+Math.floor(Math.random()*3))%G.length];box.appendChild(d);n++;
+    gsap.fromTo(d,{x:-260,y:-50,rotate:-25,scale:.5,opacity:0},{x:0,y:0,rotate:0,scale:1,opacity:1,duration:1,ease:'expo.out'});
+    gsap.fromTo(cnt,{scale:1.5},{scale:1,duration:.5,ease:'back.out(3)',onStart:function(){cnt.textContent=n}})}
+  whenSeen(box,function(){if(reduce){for(var i=0;i<4;i++)add();return}add();timer=setInterval(add,1300)},function(){clearInterval(timer)})})();
+/* 2. 一段字打出来，然后「已复制」 */
+(function(){var b=$('#tyB'),t=$('#tyT'),ok=$('#tyOk');if(!b)return;
+  var L=[['git pull && npm run build',1],['文三路 90 号 3 幢 502',0],['明早 9 点开会，记得带电脑',0]],k=0,tl=null;
+  function one(){var it=L[k++%L.length],txt=it[1]?it[0]:T(it[0]),o={i:0};b.classList.toggle('mono',!!it[1]);t.textContent='';
+    tl=gsap.timeline({onComplete:one});
+    tl.to(o,{i:txt.length,duration:txt.length*.055,ease:'none',onUpdate:function(){t.textContent=txt.slice(0,Math.round(o.i))}})
+      .fromTo(ok,{opacity:0,y:8,scale:.8},{opacity:1,y:0,scale:1,duration:.45,ease:'back.out(2.5)'},'+=.25')
+      .to([b,ok],{opacity:0,y:-8,duration:.4,ease:'power2.in'},'+=1.4').set(b,{opacity:1,y:0}).set(ok,{opacity:0,y:0})}
+  whenSeen(b,function(){if(reduce){t.textContent=L[0][0];b.classList.add('mono');ok.style.opacity=1;return}one()},function(){if(tl){tl.kill();tl=null}gsap.set([b,ok],{opacity:1,y:0});ok.style.opacity=0})})();
+/* 3. 选中文字 → 右键 → 发到手机 → 手机收到 */
+(function(){var sel=$('#selbg'),ctx=$('#ctx'),cur=$('#cur'),note=$('#note'),hi=ctx&&ctx.querySelector('.hi');if(!sel)return;var tl=null;
+  function loop(){tl=gsap.timeline({repeat:-1,repeatDelay:.6});
+    tl.set([ctx,note],{opacity:0}).set(sel,{width:0}).set(cur,{opacity:0,x:0,y:0}).call(function(){hi.classList.remove('on')})
+      .to(cur,{opacity:1,duration:.2}).to(cur,{x:10,y:18,duration:.4,ease:'power2.out'})
+      .to(sel,{width:'100%',duration:.9,ease:'power1.inOut'},'<.1').to(cur,{x:130,duration:.9,ease:'power1.inOut'},'<')
+      .fromTo(ctx,{opacity:0,scale:.85},{opacity:1,scale:1,duration:.3,ease:'back.out(2)'},'+=.25')
+      .to(cur,{x:150,y:56,duration:.45,ease:'power2.inOut'}).call(function(){hi.classList.add('on')})
+      .to(cur,{scale:.8,duration:.1,yoyo:true,repeat:1},'+=.2')
+      .to(ctx,{opacity:0,duration:.25}).to(cur,{opacity:0,duration:.2},'<')
+      .fromTo(note,{opacity:0,y:-14,scale:.9},{opacity:1,y:0,scale:1,duration:.6,ease:'back.out(2)'})
+      .to(note,{opacity:0,y:-8,duration:.4},'+=1.4')}
+  whenSeen(sel,function(){if(reduce){sel.style.width='100%';note.style.opacity=1;return}loop()},function(){if(tl){tl.kill();tl=null}})})();
+/* 卡片跟着鼠标轻轻倾斜 */
+if(!reduce&&matchMedia('(hover:hover)').matches)$$('.card,.node,.d').forEach(function(c){
+  c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;gsap.to(c,{rotateY:x*6,rotateX:-y*6,transformPerspective:900,duration:.5,ease:'power2.out'})});
+  c.addEventListener('pointerleave',function(){gsap.to(c,{rotateY:0,rotateX:0,duration:.8,ease:'expo.out'})})});
 /* 卡片跟随鼠标的光 */
 $$('.card').forEach(function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();c.style.setProperty('--x',(e.clientX-r.left)+'px');c.style.setProperty('--y',(e.clientY-r.top)+'px')})});
 
@@ -742,7 +826,35 @@ $('#story').addEventListener('click',playStory);
 gsap.to(canvas,{opacity:.18,ease:'none',scrollTrigger:{trigger:'.solid',start:'top 90%',end:'top 20%',scrub:true}});
 gsap.to(['.hero .copy','.demo-wrap'],{opacity:0,y:-60,filter:'blur(8px)',ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom 30%',scrub:true}});
 
+/* ---------- 好玩的 ---------- */
+(function(){if(reduce)return;
+  var cv=$('#fun'),x=cv.getContext('2d'),dp=Math.min(devicePixelRatio||1,2),P=[],run=false;
+  var C=['227,255,107','139,143,255','255,138,190','110,220,255'];
+  function size(){cv.width=innerWidth*dp;cv.height=innerHeight*dp}size();addEventListener('resize',size);
+  function tick(){x.setTransform(dp,0,0,dp,0,0);x.clearRect(0,0,innerWidth,innerHeight);
+    for(var i=P.length-1;i>=0;i--){var p=P[i];p.l-=.016;if(p.l<=0){P.splice(i,1);continue}p.vx*=.96;p.vy=p.vy*.96+p.g;p.x+=p.vx;p.y+=p.vy;
+      var a=p.l/p.L,r=p.r*(.4+a*.6),g=x.createRadialGradient(p.x,p.y,0,p.x,p.y,r*3);g.addColorStop(0,'rgba('+p.c+','+a+')');g.addColorStop(1,'rgba('+p.c+',0)');x.fillStyle=g;x.beginPath();x.arc(p.x,p.y,r*3,0,7);x.fill()}
+    if(P.length)requestAnimationFrame(tick);else{run=false;x.clearRect(0,0,innerWidth,innerHeight)}}
+  window.sparks=function(px,py,n,sp,gr){for(var i=0;i<n;i++){var a=Math.random()*Math.PI*2,v=(.4+Math.random())*(sp||5);P.push({x:px,y:py,vx:Math.cos(a)*v,vy:Math.sin(a)*v-(gr?2:0),g:gr||.04,r:1.5+Math.random()*2.5,c:C[i%4],l:.7+Math.random()*.6,L:1.3})}if(!run){run=true;requestAnimationFrame(tick)}};
+  /* 点空白处：迸出一圈光点 */
+  addEventListener('click',function(e){if(e.target.closest('a,button,.lane span,#story,.demo'))return;sparks(e.clientX,e.clientY,22,4)});
+  /* 鼠标带一团柔光 */
+  if(matchMedia('(hover:hover)').matches){var gc=$('#glowc'),gx=innerWidth/2,gy=innerHeight/2,tx=gx,ty=gy;
+    addEventListener('pointermove',function(e){tx=e.clientX;ty=e.clientY;gc.style.opacity=1},{passive:true});
+    (function mv(){gx+=(tx-gx)*.12;gy+=(ty-gy)*.12;gc.style.transform='translate('+gx+'px,'+gy+'px)';requestAnimationFrame(mv)})();
+    /* 按钮像磁铁一样跟着鼠标 */
+    $$('.btn,.play,nav .cta').forEach(function(b){b.addEventListener('pointermove',function(e){var r=b.getBoundingClientRect();gsap.to(b,{x:(e.clientX-r.left-r.width/2)*.25,y:(e.clientY-r.top-r.height/2)*.35,duration:.4,ease:'power2.out'})});
+      b.addEventListener('pointerleave',function(){gsap.to(b,{x:0,y:0,duration:.7,ease:'elastic.out(1,.4)'})})})}
+  /* 点小标签：它会被「发」走，飞上去炸成光点 */
+  $$('.lane span').forEach(function(t){t.addEventListener('click',function(){var r=t.getBoundingClientRect(),f=document.createElement('div');f.className='flytag';f.textContent=t.textContent;document.body.appendChild(f);
+    f.style.left=r.left+'px';f.style.top=r.top+'px';var o={t:0},sx=r.left,sy=r.top,ex=innerWidth*(.3+Math.random()*.4),ey=-40,cx=(sx+ex)/2+(Math.random()-.5)*300,cy=Math.min(sy,innerHeight*.2)-120;
+    gsap.fromTo(f,{scale:1},{scale:1.15,duration:.15,yoyo:true,repeat:1});
+    gsap.to(o,{t:1,duration:1.1,ease:'power2.in',onUpdate:function(){var k=o.t,u=1-k,X=u*u*sx+2*u*k*cx+k*k*ex,Y=u*u*sy+2*u*k*cy+k*k*ey;f.style.transform='translate('+(X-sx)+'px,'+(Y-sy)+'px) rotate('+(k*20)+'deg)';if(Math.random()<.6)sparks(X+r.width/2,Y+r.height/2,1,1,.02)},
+      onComplete:function(){var b=f.getBoundingClientRect();sparks(b.left+b.width/2,Math.max(10,b.top+b.height/2),30,6,.08);document.body.removeChild(f)}})})});
+})();
 /* 内容浮现 */
+$$('h2.big').forEach(function(h){gsap.fromTo(h,{clipPath:'inset(-10% 100% -20% 0)',x:-16},{clipPath:'inset(-10% 0% -20% 0)',x:0,duration:1.4,ease:'power3.out',scrollTrigger:{trigger:h,start:'top 85%'},clearProps:'clipPath,transform'})});
+$$('.card h3,.node h3,.d h3').forEach(function(h){gsap.from(h,{y:18,opacity:0,duration:.9,ease:'expo.out',delay:.25,scrollTrigger:{trigger:h,start:'top 92%'},clearProps:'transform,opacity'})});
 /* ---------- 真实的样子：进入视野时设备浮上来，手机上点一下，光飞进侧边栏，多一条 ---------- */
 (function(){
   var wrap=$('#showWrap'),show=$('#show');if(!show)return;
