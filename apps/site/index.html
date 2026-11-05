@@ -307,10 +307,10 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .note{position:absolute;right:0;top:-6px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);font-size:12px;opacity:0;box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .note img{width:18px;height:18px;border-radius:5px}
 .wire{position:relative;flex:1;max-width:320px;height:2px!important;border-radius:2px;background:rgba(255,255,255,.12)!important;animation:none!important;box-shadow:none!important}
-.wire i{position:absolute;top:50%;left:0;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px 3px rgba(227,255,107,.6);animation:pkt 2.4s cubic-bezier(.5,0,.5,1) infinite}
-.wire i:nth-child(2){animation-delay:.8s}.wire i:nth-child(3){animation-delay:1.6s}
-.wire i.r{background:#8b8fff;box-shadow:0 0 12px 3px rgba(139,143,255,.7);animation-name:pktr;animation-duration:3s}
-.wire i.r:nth-child(5){animation-delay:1.5s}
+.wire i{position:absolute;top:50%;left:0;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px 3px rgba(227,255,107,.6);animation:pkt 4.2s cubic-bezier(.5,0,.5,1) infinite}
+.wire i:nth-child(2){animation-delay:1.4s}.wire i:nth-child(3){animation-delay:2.8s}
+.wire i.r{background:#8b8fff;box-shadow:0 0 12px 3px rgba(139,143,255,.7);animation-name:pktr;animation-duration:5s}
+.wire i.r:nth-child(5){animation-delay:2.5s}
 @keyframes pkt{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:100%;opacity:0}}
 @keyframes pktr{0%{left:100%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:0;opacity:0}}
 .nocloud{display:inline-flex;align-items:center;gap:8px;margin-top:18px;font-size:12.5px;color:var(--muted);padding:6px 12px;border-radius:999px;border:1px dashed rgba(255,255,255,.16)}
@@ -356,8 +356,8 @@ footer a:hover{opacity:1}
 
 /* ---------- 能传什么：两行慢慢滑过的小标签 ---------- */
 .uses{padding:30px 0 90px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
-.lane{display:flex;gap:12px;width:max-content;animation:lane 46s linear infinite;margin-bottom:12px}
-.lane.r{animation-direction:reverse;animation-duration:54s}
+.lane{display:flex;gap:12px;width:max-content;animation:lane 80s linear infinite;margin-bottom:12px}
+.lane.r{animation-direction:reverse;animation-duration:95s}
 .lane span{display:inline-flex;align-items:center;gap:9px;padding:11px 18px;border-radius:999px;font-size:14px;color:#d9dbe6;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:var(--frost);-webkit-backdrop-filter:var(--frost);white-space:nowrap}
 .lane span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c,#8b8fff);box-shadow:0 0 10px var(--c,#8b8fff)}
 @keyframes lane{to{transform:translateX(-50%)}}
@@ -712,23 +712,23 @@ function whenSeen(el,start,stop){var on=false;new IntersectionObserver(function(
   var G=['linear-gradient(135deg,#ffb88c,#de6262)','linear-gradient(135deg,#8ec5fc,#6c7cff)','linear-gradient(135deg,#d4fc79,#58c897)','linear-gradient(135deg,#e0c3fc,#8e7cff)','linear-gradient(135deg,#ffe08a,#ff9f45)','linear-gradient(135deg,#7ef0e0,#3aa0d8)','linear-gradient(135deg,#ff9a9e,#fad0c4)'];
   var n=0,timer=null,MAX=innerWidth<560?4:6;
   function add(){
-    if(box.children.length>=MAX){gsap.to(box.children,{y:12,opacity:0,scale:.8,stagger:.05,duration:.4,ease:'power2.in',onComplete:function(){box.innerHTML='';n=0;cnt.textContent=0}});return}
+    if(box.children.length>=MAX){gsap.to(box.children,{y:12,opacity:0,scale:.8,stagger:.08,duration:.7,ease:'power2.in',onComplete:function(){box.innerHTML='';n=0;cnt.textContent=0}});return}
     var d=document.createElement('div');d.style.background=G[(n+Math.floor(Math.random()*3))%G.length];box.appendChild(d);n++;
-    gsap.fromTo(d,{x:-260,y:-50,rotate:-25,scale:.5,opacity:0},{x:0,y:0,rotate:0,scale:1,opacity:1,duration:1,ease:'expo.out'});
+    gsap.fromTo(d,{x:-260,y:-50,rotate:-25,scale:.5,opacity:0},{x:0,y:0,rotate:0,scale:1,opacity:1,duration:1.6,ease:'expo.out'});
     gsap.fromTo(cnt,{scale:1.5},{scale:1,duration:.5,ease:'back.out(3)',onStart:function(){cnt.textContent=n}})}
-  whenSeen(box,function(){if(reduce){for(var i=0;i<4;i++)add();return}add();timer=setInterval(add,1300)},function(){clearInterval(timer)})})();
+  whenSeen(box,function(){if(reduce){for(var i=0;i<4;i++)add();return}add();timer=setInterval(add,2600)},function(){clearInterval(timer)})})();
 /* 2. 一段字打出来，然后「已复制」 */
 (function(){var b=$('#tyB'),t=$('#tyT'),ok=$('#tyOk');if(!b)return;
   var L=[['git pull && npm run build',1],['文三路 90 号 3 幢 502',0],['明早 9 点开会，记得带电脑',0]],k=0,tl=null;
   function one(){var it=L[k++%L.length],txt=it[1]?it[0]:T(it[0]),o={i:0};b.classList.toggle('mono',!!it[1]);t.textContent='';
     tl=gsap.timeline({onComplete:one});
-    tl.to(o,{i:txt.length,duration:txt.length*.055,ease:'none',onUpdate:function(){t.textContent=txt.slice(0,Math.round(o.i))}})
+    tl.to(o,{i:txt.length,duration:txt.length*.1,ease:'none',onUpdate:function(){t.textContent=txt.slice(0,Math.round(o.i))}})
       .fromTo(ok,{opacity:0,y:8,scale:.8},{opacity:1,y:0,scale:1,duration:.45,ease:'back.out(2.5)'},'+=.25')
-      .to([b,ok],{opacity:0,y:-8,duration:.4,ease:'power2.in'},'+=1.4').set(b,{opacity:1,y:0}).set(ok,{opacity:0,y:0})}
+      .to([b,ok],{opacity:0,y:-8,duration:.6,ease:'power2.in'},'+=2.8').set(b,{opacity:1,y:0}).set(ok,{opacity:0,y:0})}
   whenSeen(b,function(){if(reduce){t.textContent=L[0][0];b.classList.add('mono');ok.style.opacity=1;return}one()},function(){if(tl){tl.kill();tl=null}gsap.set([b,ok],{opacity:1,y:0});ok.style.opacity=0})})();
 /* 3. 选中文字 → 右键 → 发到手机 → 手机收到 */
 (function(){var sel=$('#selbg'),ctx=$('#ctx'),cur=$('#cur'),note=$('#note'),hi=ctx&&ctx.querySelector('.hi');if(!sel)return;var tl=null;
-  function loop(){tl=gsap.timeline({repeat:-1,repeatDelay:.6});
+  function loop(){tl=gsap.timeline({repeat:-1,repeatDelay:1.4});tl.timeScale(.6);
     tl.set([ctx,note],{opacity:0}).set(sel,{width:0}).set(cur,{opacity:0,x:0,y:0}).call(function(){hi.classList.remove('on')})
       .to(cur,{opacity:1,duration:.2}).to(cur,{x:10,y:18,duration:.4,ease:'power2.out'})
       .to(sel,{width:'100%',duration:.9,ease:'power1.inOut'},'<.1').to(cur,{x:130,duration:.9,ease:'power1.inOut'},'<')
@@ -883,11 +883,11 @@ gsap.to(['.hero .copy','.demo-wrap'],{opacity:0,y:-60,filter:'blur(8px)',ease:'n
   $$('.lane span').forEach(function(t){t.addEventListener('click',function(){var r=t.getBoundingClientRect(),f=document.createElement('div');f.className='flytag';f.textContent=t.textContent;document.body.appendChild(f);
     f.style.left=r.left+'px';f.style.top=r.top+'px';var o={t:0},sx=r.left,sy=r.top,ex=innerWidth*(.3+Math.random()*.4),ey=-40,cx=(sx+ex)/2+(Math.random()-.5)*300,cy=Math.min(sy,innerHeight*.2)-120;
     gsap.fromTo(f,{scale:1},{scale:1.15,duration:.15,yoyo:true,repeat:1});
-    gsap.to(o,{t:1,duration:1.1,ease:'power2.in',onUpdate:function(){var k=o.t,u=1-k,X=u*u*sx+2*u*k*cx+k*k*ex,Y=u*u*sy+2*u*k*cy+k*k*ey;f.style.transform='translate('+(X-sx)+'px,'+(Y-sy)+'px) rotate('+(k*20)+'deg)';if(Math.random()<.6)sparks(X+r.width/2,Y+r.height/2,1,1,.02)},
+    gsap.to(o,{t:1,duration:1.6,ease:'power2.in',onUpdate:function(){var k=o.t,u=1-k,X=u*u*sx+2*u*k*cx+k*k*ex,Y=u*u*sy+2*u*k*cy+k*k*ey;f.style.transform='translate('+(X-sx)+'px,'+(Y-sy)+'px) rotate('+(k*20)+'deg)';if(Math.random()<.6)sparks(X+r.width/2,Y+r.height/2,1,1,.02)},
       onComplete:function(){var b=f.getBoundingClientRect();sparks(b.left+b.width/2,Math.max(10,b.top+b.height/2),30,6,.08);document.body.removeChild(f)}})})});
 })();
 /* 内容浮现 */
-$$('h2.big').forEach(function(h){gsap.fromTo(h,{clipPath:'inset(-10% 100% -20% 0)',x:-16},{clipPath:'inset(-10% 0% -20% 0)',x:0,duration:1.4,ease:'power3.out',scrollTrigger:{trigger:h,start:'top 85%'},clearProps:'clipPath,transform'})});
+$$('h2.big').forEach(function(h){gsap.fromTo(h,{clipPath:'inset(-10% 100% -20% 0)',x:-16},{clipPath:'inset(-10% 0% -20% 0)',x:0,duration:2,ease:'power3.out',scrollTrigger:{trigger:h,start:'top 85%'},clearProps:'clipPath,transform'})});
 $$('.card h3,.node h3,.d h3').forEach(function(h){gsap.from(h,{y:18,opacity:0,duration:.9,ease:'expo.out',delay:.25,scrollTrigger:{trigger:h,start:'top 92%'},clearProps:'transform,opacity'})});
 /* ---------- 真实的样子：进入视野时设备浮上来，手机上点一下，光飞进侧边栏，多一条 ---------- */
 (function(){
@@ -906,7 +906,7 @@ $$('.card h3,.node h3,.d h3').forEach(function(h){gsap.from(h,{y:18,opacity:0,du
   function once(){
     var a=pos(tile,.5,.5),b=pos(list,.5,0),c={x:(a.x+b.x)/2,y:Math.min(a.y,b.y)-200},o={t:0};
     gsap.fromTo(tile,{scale:1},{scale:.94,duration:.15,yoyo:true,repeat:1});
-    gsap.to(o,{t:1,duration:1.1,ease:'power2.inOut',onStart:function(){beam.style.opacity=1},onUpdate:function(){var t=o.t,u=1-t;beam.style.transform='translate('+(u*u*a.x+2*u*t*c.x+t*t*b.x)+'px,'+(u*u*a.y+2*u*t*c.y+t*t*b.y)+'px)'},
+    gsap.to(o,{t:1,duration:1.6,ease:'power2.inOut',onStart:function(){beam.style.opacity=1},onUpdate:function(){var t=o.t,u=1-t;beam.style.transform='translate('+(u*u*a.x+2*u*t*c.x+t*t*b.x)+'px,'+(u*u*a.y+2*u*t*c.y+t*t*b.y)+'px)'},
       onComplete:function(){beam.style.opacity=0;
         var m=msgs[k++%msgs.length],photo=m==='刚拍的照片',it=document.createElement('div');it.className='s-it new';
         it.innerHTML=(photo?'<span class="ph2"></span>':'')+'<div class="tx"><b></b><small></small></div>'+(photo?'':'<span class="cp">'+T('复制')+'</span>');
@@ -916,7 +916,7 @@ $$('.card h3,.node h3,.d h3').forEach(function(h){gsap.from(h,{y:18,opacity:0,du
         badge.textContent=++n;gsap.fromTo(badge,{scale:1.6},{scale:1,duration:.5,ease:'back.out(3)'})}})}
   var timer=null;
   ScrollTrigger.create({trigger:'#showWrap',start:'top 65%',end:'bottom 20%',onToggle:function(self){
-    if(self.isActive&&!timer){setTimeout(once,1400);timer=setInterval(once,3600)}else if(!self.isActive&&timer){clearInterval(timer);timer=null}}});
+    if(self.isActive&&!timer){setTimeout(once,1600);timer=setInterval(once,5600)}else if(!self.isActive&&timer){clearInterval(timer);timer=null}}});
 })();
 
 ScrollTrigger.batch('.rv',{start:'top 88%',once:true,onEnter:function(els){gsap.from(els,{y:40,opacity:0,filter:'blur(10px)',duration:1.1,ease:'expo.out',stagger:.08,clearProps:'filter,transform,opacity'})}});
