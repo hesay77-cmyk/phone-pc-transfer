@@ -1,7 +1,7 @@
 #!/bin/sh
 # 把官网页 apps/site 挂到 https://hidaydream.com/tapaste/（曦的腾讯云香港服务器）。
 # 在曦电脑上运行：双击「挂官网.bat」，或 cd E:/ai/phone-pc-transfer && sh scripts/deploy-site.sh
-# 只动 /var/lib/tapaste/public 和 nginx 里新增的 /tapaste/ 两条 location；
+# 只动 /var/lib/tapaste/public 和 nginx 里新增的 /tapaste/ 两条 location（带 expires -1，浏览器每次检查新版）；
 # 改 nginx 前先备份，nginx -t 不通过就还原。重复运行只会更新页面文件。
 set -e
 cd "$(dirname "$0")/.."
@@ -30,12 +30,19 @@ CONFS=$(grep -RlE 'server_name[^;]*[[:space:]]hidaydream\.com' /etc/nginx/sites-
 [ -n "$CONFS" ] || { echo "找不到 hidaydream.com 的 nginx 配置，没改。server_name 有这些："; grep -Rn server_name /etc/nginx 2>/dev/null | head -20; exit 1; }
 for f in $CONFS; do
   real=$(readlink -f "$f")
-  if grep -q 'location \^~ /tapaste/' "$real"; then echo "已配置过：$real"; continue; fi
+  if grep -q 'location \^~ /tapaste/' "$real"; then
+    # 让浏览器每次都来问一下有没有新版（expires -1 = Cache-Control: no-cache，没变就 304，不费流量）
+    if grep -q 'alias /var/lib/tapaste/public/; index index.html; expires -1;' "$real"; then echo "已配置过：$real"; continue; fi
+    bak="$real.bak-tapaste-$(date +%Y%m%d%H%M%S)"; cp "$real" "$bak"; echo "备份：$bak"
+    sed -i 's#alias /var/lib/tapaste/public/; index index.html; }#alias /var/lib/tapaste/public/; index index.html; expires -1; }#' "$real"
+    if nginx -t; then echo "已设成每次检查新版：$real"; else cp "$bak" "$real"; echo "nginx -t 不通过，已还原"; exit 1; fi
+    continue
+  fi
   bak="$real.bak-tapaste-$(date +%Y%m%d%H%M%S)"
   cp "$real" "$bak"; echo "备份：$bak"
   awk '{print} /server_name[^;]*[[:space:]]hidaydream\.com/ {
     print "    location = /tapaste { return 301 /tapaste/; }";
-    print "    location ^~ /tapaste/ { alias /var/lib/tapaste/public/; index index.html; }" }' "$bak" > "$real"
+    print "    location ^~ /tapaste/ { alias /var/lib/tapaste/public/; index index.html; expires -1; }" }' "$bak" > "$real"
   if nginx -t; then echo "已加 /tapaste/：$real"; else cp "$bak" "$real"; echo "nginx -t 不通过，已还原"; exit 1; fi
 done
 systemctl reload nginx
@@ -47,3 +54,4 @@ for u in https://hidaydream.com/tapaste/ https://hidaydream.com/tapaste/icon.png
   echo "$u $(curl -s -o /dev/null -w '%{http_code}' "$u")"
 done
 curl -s https://hidaydream.com/tapaste/ | grep -q Tapaste && echo "页面内容正确" || echo "页面内容不对"
+curl -sI https://hidaydream.com/tapaste/ | grep -i '^cache-control' || echo "（没有 Cache-Control）"
