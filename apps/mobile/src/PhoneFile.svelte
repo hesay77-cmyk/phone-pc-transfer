@@ -55,7 +55,8 @@
   .file { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; }
   .ic { position: relative; flex: none; width: 40px; height: 48px; color: var(--tint); }
   .ic svg { width: 100%; height: 100%; fill: var(--tint-soft); stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
-  .ic span { position: absolute; left: -2px; right: -2px; bottom: 9px; text-align: center; font-size: 8.5px; font-weight: 700; }
+  /* 扩展名做成一个小色块标签：比纸宽也像是故意的，不会被裁 */
+  .ic span { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 1px 3px; border-radius: 3px; background: var(--tint); color: #fff; font-size: 8px; line-height: 1.25; font-weight: 700; white-space: nowrap; }
   .name { min-width: 0; font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
   .btns { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border: none; border-radius: 17px; background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer; transition: transform .25s var(--ease), opacity .2s; }

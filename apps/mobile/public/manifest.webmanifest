@@ -1,7 +1,7 @@
 {
   "name": "Tapaste",
   "short_name": "Tapaste",
-  "description": "手机和电脑之间互传文字、照片和文件",
+  "description": "手机和电脑之间互传文字、照片、视频和文件",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f2f2f7",
