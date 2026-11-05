@@ -265,15 +265,67 @@ await phone.waitForFunction(() => window.__hutong.transfer.pending.length === 0,
 const copies = await panel.evaluate(() => [...document.querySelectorAll('.item .text')].filter((e) => e.textContent === '只该出现一次').length);
 check('手机重发同一条，电脑只收一次', copies === 1, `出现 ${copies} 次`);
 
-// 手机网页关着时电脑发的，打开后补发
+// 手机网页关着时电脑发的：中间 Chrome 还重启了一次（引擎重开），手机打开后照样补发
+// 同时开着「复制就发」：手机没连着时复制的，连上后送最后一条
 await phone.close();
 await sleep(1000);
 await panel.fill('textarea', '攒着的一句话');
 await panel.click('button:has-text("发到手机")');
+const restartEngine = async () => {
+  await (ctx.serviceWorkers()[0] ?? sw).evaluate(() => chrome.offscreen.closeDocument());
+  await panel.reload();
+  await panel.waitForSelector('.status', { timeout: 10000 });
+  await sleep(1500);
+};
+await restartEngine();
+await panel.check('.auto input');
+await sleep(1000);
+await panel.evaluate((t) => navigator.clipboard.writeText(t), '锁屏时复制的第一条');
+await sleep(1000);
+await panel.evaluate((t) => navigator.clipboard.writeText(t), '锁屏时复制的最后一条');
+await sleep(1000);
 phone = await phoneCtx.newPage();
+logPhone(phone);
 await phone.goto('http://localhost:8080/');
-await phone.waitForFunction(() => document.body.innerText.includes('攒着的一句话'), null, { timeout: 25000 });
-check('手机重新打开网页（不用再扫码），收到攒着的', true);
+await phone.waitForFunction(() => document.body.innerText.includes('攒着的一句话'), null, { timeout: 25000 })
+  .then(() => check('Chrome 重启过、手机重新打开网页：收到攒着的', true), () => check('Chrome 重启过、手机重新打开网页：收到攒着的', false));
+await phone.waitForFunction(() => document.body.innerText.includes('锁屏时复制的最后一条'), null, { timeout: 8000 }).catch(() => {});
+const clipGot = await phone.evaluate(() => ({ last: document.body.innerText.includes('锁屏时复制的最后一条'), first: document.body.innerText.includes('锁屏时复制的第一条') }));
+check('「复制就发」：没连着时复制的，连上后只送最后一条', clipGot.last && !clipGot.first, JSON.stringify(clipGot));
+await panel.uncheck('.auto input');
+
+// 模拟 iPhone 锁屏 20 秒：直连断了，到介绍人的连接也悄悄死了（看着还连着，其实发不出去）。解锁后要很快连上
+await phone.waitForSelector('.status[data-link="connected"]', { timeout: 10000 });
+await phone.evaluate(() => {
+  const s = window.__hutong;
+  const c = s.signal.bus.client;
+  c.stream.write = () => true;      // 发出去的都丢了
+  c.removeAllListeners('message');  // 也收不到了
+  s.link.pc?.close();
+});
+const vis2 = (hidden) => phone.evaluate((h) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
+await vis2(true);
+await phone.evaluate(() => { const real = Date.now; Date.now = () => real() + 20000; }); // 时间过了 20 秒
+await panel.fill('textarea', '锁屏时电脑发的');
+await panel.click('button:has-text("发到手机")');
+const tUnlock = Date.now();
+await vis2(false);
+const unlockOk = await phone.waitForFunction(() => document.body.innerText.includes('锁屏时电脑发的'), null, { timeout: 10000 }).then(() => true, () => false);
+check('锁屏 20 秒后解锁：很快重连，收到锁屏时电脑发的', unlockOk, `${Date.now() - tUnlock} 毫秒`);
+if (!unlockOk) console.log('--- 手机日志 ---\n' + phoneLog.slice(-25).join('\n'));
+
+// 手机发的时候电脑关着，手机网页也被关掉重开：电脑开了以后照样收到
+await (ctx.serviceWorkers()[0] ?? sw).evaluate(() => chrome.offscreen.closeDocument());
+await sleep(500);
+await phone.fill('textarea', '手机攒着的一句话');
+await phone.getByRole('button', { name: '发送', exact: true }).click();
+await sleep(500);
+await phone.reload();
+await phone.waitForSelector('.sent', { timeout: 5000 }).catch(() => {});
+const phoneRestored = await phone.evaluate(() => document.querySelector('.sent')?.textContent ?? '');
+await panel.reload();
+const phoneQueuedOk = await panel.waitForFunction(() => document.body.innerText.includes('手机攒着的一句话'), null, { timeout: 25000 }).then(() => true, () => false);
+check('手机网页关掉重开、电脑后来才开：照样收到手机攒着的', phoneQueuedOk, phoneRestored.trim());
 
 if (process.env.E2E_SHOTS) {
   await panel.setViewportSize({ width: 380, height: 900 });

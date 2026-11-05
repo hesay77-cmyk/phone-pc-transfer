@@ -14,8 +14,16 @@ export interface SignalBus {
   start(topic: string, onMessage: (payload: string) => void): void;
   publish(payload: string): void;
   onStatus(cb: (s: BusStatus, detail: string) => void): void;
+  /**
+   * 网页从后台回来（比如 iPhone 解锁）时调用。在后台待久了，到服务器的连接多半已经死了但看起来还连着，
+   * 要等心跳超时（几十秒）才发现——这就是「解锁后连半天」。所以待久了就直接重新连。
+   */
+  wake?(hiddenMs: number): void;
   close(): void;
 }
+
+/** 在后台待超过这么久，就当介绍人那条连接已经断了 */
+export const STALE_AFTER_HIDDEN_MS = 4000;
 
 /** 用公共 MQTT 当介绍人。连不上第一个地址就换下一个。 */
 export class MqttBus implements SignalBus {
@@ -57,19 +65,30 @@ export class MqttBus implements SignalBus {
         this.connect();
       }
     }, 10000);
+    const mine = () => this.client === c;
     c.on('connect', () => {
+      if (!mine()) return;
       this.everOnline = true;
       clearTimeout(this.giveUpTimer);
       c.subscribe(this.topic, { qos: 0 });
       this.statusCb('online', url);
     });
-    c.on('offline', () => this.statusCb('offline', url));
-    c.on('reconnect', () => this.statusCb('connecting', url));
-    c.on('message', (_t, payload) => this.onMessage(payload.toString()));
+    c.on('offline', () => { if (mine()) this.statusCb('offline', url); });
+    c.on('reconnect', () => { if (mine()) this.statusCb('connecting', url); });
+    c.on('message', (_t, payload) => { if (mine()) this.onMessage(payload.toString()); });
   }
 
   publish(payload: string) {
     this.client?.publish(this.topic, payload, { qos: 0 });
+  }
+
+  wake(hiddenMs: number) {
+    if (!this.client || !this.topic) return;
+    if (this.client.connected && hiddenMs < STALE_AFTER_HIDDEN_MS) return;
+    const old = this.client;
+    this.client = null;
+    old.end(true);
+    this.connect();
   }
 
   close() {
@@ -128,6 +147,17 @@ export class WsBus implements SignalBus {
     };
   }
 
+  wake(hiddenMs: number) {
+    if (this.closed || !this.topic) return;
+    if (this.ws?.readyState === WebSocket.OPEN && hiddenMs < STALE_AFTER_HIDDEN_MS) return;
+    clearTimeout(this.retry);
+    const old = this.ws;
+    this.ws = null;
+    old?.close();
+    this.backoff = 1000;
+    this.connect();
+  }
+
   publish(payload: string) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ pub: this.topic, data: payload }));
     else { this.queue.push(payload); if (this.queue.length > 20) this.queue.shift(); }
@@ -181,6 +211,8 @@ export class SecureSignal {
 
   onMessage(h: (m: SignalMsg) => void) { this.handlers.push(h); }
   onStatus(h: (s: BusStatus, detail: string) => void) { this.statusHandlers.push(h); }
+  /** 网页从后台回来：让介绍人那条连接该重连就重连 */
+  wake(hiddenMs: number) { this.bus.wake?.(hiddenMs); }
 
   async send(m: SignalMsg) {
     if (!this.keys) return;

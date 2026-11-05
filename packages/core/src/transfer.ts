@@ -5,6 +5,7 @@
 
 import { PROTOCOL_VERSION, randomId, type FileMeta, type Msg, type MsgBody } from './protocol';
 import { SeenIds, type KV } from './store';
+import type { OutboxStore } from './outbox';
 
 /** 一条通道要提供的能力。PeerLink 已经满足；以后的「服务器中转」也照这个来。 */
 export interface Pipe {
@@ -46,8 +47,17 @@ export class Transfer {
   private seen: SeenIds;
   private rx: { id: string; createdAt: number; meta: FileMeta; parts: ArrayBuffer[]; got: number; t0: number; skip: boolean } | null = null;
 
-  constructor(private pipe: Pipe, kv: KV, private ev: TransferEvents = {}, private chunkSize = 16 * 1024) {
+  constructor(private pipe: Pipe, kv: KV, private ev: TransferEvents = {}, private chunkSize = 16 * 1024, private store?: OutboxStore) {
     this.seen = new SeenIds(kv, 'seen-ids');
+  }
+
+  /** 把上次没送到的（存在本机的）放回待发队列 */
+  async restore() {
+    if (!this.store) return;
+    const items = await this.store.load();
+    const have = new Set(this.out.map((p) => p.item.id));
+    for (const item of items) if (!have.has(item.id)) this.out.push({ item, inflight: false, tries: 0, waited: true });
+    if (items.length) { this.log(`上次还有 ${items.length} 个没送到，连上后接着送`); this.ev.queue?.(this.out.length); void this.flush(); }
   }
 
   get pending(): OutItem[] { return this.out.map((p) => p.item); }
@@ -64,7 +74,8 @@ export class Transfer {
   /** 通道刚连上（或重连上）：之前没确认的全部重新发 */
   linkUp() {
     for (const p of this.out) { p.inflight = false; clearTimeout(p.timer); }
-    this.rx = null;
+    // 注意：这里不清正在收的文件。新通道刚开，对方可能已经开始发了（比这边「连上了」的通知还早到），
+    // 清掉就会把它丢了、对方白等 8 秒。旧通道收了一半的，对方重发时 file-start 会把它换掉。
     if (this.out.length) this.log('连上了，补发 ' + this.out.length + ' 个还没送到的');
     void this.flush();
   }
@@ -141,6 +152,7 @@ export class Transfer {
 
   private enqueue(item: OutItem): OutItem {
     this.out.push({ item, inflight: false, tries: 0, waited: false });
+    this.persist();
     this.ev.queue?.(this.out.length);
     void this.flush();
     return item;
@@ -152,9 +164,12 @@ export class Transfer {
     const [p] = this.out.splice(i, 1);
     if (!p) return;
     clearTimeout(p.timer);
+    this.persist();
     this.ev.delivered?.(p.item, { waitedForLink: p.waited, resent: p.tries > 1 });
     this.ev.queue?.(this.out.length);
   }
+
+  private persist() { this.store?.save(this.out.map((p) => p.item)); }
 
   private ack(id: string) { this.pipe.send({ t: 'ack', id }); }
 

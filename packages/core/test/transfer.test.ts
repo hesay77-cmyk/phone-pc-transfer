@@ -111,3 +111,41 @@ describe('发一条 / 收一条', () => {
     expect(delivered).toHaveLength(1);
   });
 });
+
+import { persistentOutbox } from '../src/outbox';
+
+describe('待发队列存到本机', () => {
+  it('关掉再打开（新建一个 Transfer），没送到的还在，连上后送到', async () => {
+    const kv = memoryKV();
+    const pa = new FakePipe(); pa.open = false;
+    const a1 = new Transfer(pa, kv, {}, 1000, persistentOutbox(kv));
+    a1.sendText('关 Chrome 前没送到的');
+    expect(a1.pending.length).toBe(1);
+
+    // 「重启」：同一个本机存储，新的 Transfer
+    const pa2 = new FakePipe(), pb = new FakePipe();
+    const received: Incoming[] = [];
+    const a2 = new Transfer(pa2, kv, {}, 1000, persistentOutbox(kv));
+    const b = new Transfer(pb, memoryKV(), { received: (i) => received.push(i) }, 1000);
+    pa2.target = b; pb.target = a2; pa2.other = pb; pb.other = pa2;
+    await a2.restore();
+    await flush(); await flush();
+    expect(received.map((r) => r.kind === 'text' && r.text)).toEqual(['关 Chrome 前没送到的']);
+    expect(a2.pending.length).toBe(0);
+    expect(JSON.parse(kv.get('outbox') || '[]')).toEqual([]);
+  });
+});
+
+describe('新通道刚开的竞态', () => {
+  it('对方的文件比「连上了」的通知先到，也不能丢', async () => {
+    const { a, b, pa, received, delivered } = pair();
+    // 让 b 在收到 file-start 之后、数据块之前，才知道「连上了」
+    const orig = b.handle.bind(b);
+    b.handle = (m) => { const r = orig(m); if (m.t === 'file-start') b.linkUp(); return r; };
+    a.sendFile(new Blob([new Uint8Array(3500)], { type: 'image/png' }), { name: 'x.png' });
+    for (let i = 0; i < 10; i++) await flush();
+    expect(received.length).toBe(1);
+    expect(delivered.length).toBe(1);
+    expect(pa.reconnects).toEqual([]);
+  });
+});

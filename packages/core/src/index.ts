@@ -7,3 +7,4 @@ export * from './store';
 export * from './transfer';
 export * from './session';
 export * from './blobstore';
+export * from './outbox';

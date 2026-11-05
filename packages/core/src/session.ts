@@ -5,6 +5,7 @@ import { CONFIG } from './config';
 import { PeerLink, type LinkInfo, type LinkState } from './link';
 import type { DeviceInfo, Role } from './protocol';
 import { createBus, SecureSignal, type BusStatus, type SignalBus } from './signal';
+import type { OutboxStore } from './outbox';
 import type { KV } from './store';
 import { Transfer, type TransferEvents } from './transfer';
 
@@ -19,6 +20,8 @@ export interface Session {
   signal: SecureSignal;
   link: PeerLink;
   transfer: Transfer;
+  /** 手机网页回到前台（解锁、切回来）时调用：介绍人和直连该重连的马上重连 */
+  resume(hiddenMs?: number): void;
   close(): void;
 }
 
@@ -30,6 +33,8 @@ export async function startSession(opts: {
   events?: SessionEvents;
   /** 测试或以后换服务器时传入别的介绍人 */
   bus?: SignalBus;
+  /** 待发队列存到本机（关掉再打开也不丢） */
+  outbox?: OutboxStore;
 }): Promise<Session> {
   const ev = opts.events ?? {};
   const bus = opts.bus ?? createBus(CONFIG.signal.kind, CONFIG.signal.urls, CONFIG.signal.topicPrefix);
@@ -51,7 +56,8 @@ export async function startSession(opts: {
     binary: (b) => transfer.handleBinary(b),
     newerPeer: () => ev.newerPeer?.()
   });
-  transfer = new Transfer(link, opts.kv, ev, CONFIG.chunkSize);
+  transfer = new Transfer(link, opts.kv, ev, CONFIG.chunkSize, opts.outbox);
+  await transfer.restore();
 
   await signal.start(opts.secret);
   link.start();
@@ -59,6 +65,7 @@ export async function startSession(opts: {
     signal,
     link,
     transfer,
+    resume(hiddenMs = 0) { signal.wake(hiddenMs); link.resume(hiddenMs); },
     close() { link.close(); signal.close(); }
   };
 }

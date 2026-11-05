@@ -98,13 +98,14 @@ export class PeerLink {
     this.helloTimer = setInterval(say, HELLO_EVERY_MS);
   }
 
-  /** 手机：网页回到前台时调用 */
-  resume() {
+  /** 手机：网页回到前台时调用。hiddenMs = 在后台待了多久；待久了（比如锁屏）直连多半已经死了，不用探，直接重连 */
+  resume(hiddenMs = 0) {
     this.resumedAt = Date.now();
     if (!(this.dc && this.dc.readyState === 'open')) {
       if (this.opts.role === 'phone') this.connect('切回网页，连接已断');
       return;
     }
+    if (hiddenMs > LONG_HIDDEN_MS && this.opts.role === 'phone') { this.connect(`在后台待了 ${Math.round(hiddenMs / 1000)} 秒`); return; }
     this.sendRaw({ t: 'probe' });
     setTimeout(() => {
       if (this.lastHeard < this.resumedAt && this.opts.role === 'phone') this.connect('切回网页后电脑没回应');
@@ -306,6 +307,9 @@ export class PeerLink {
     };
   }
 }
+
+/** 在后台待超过这么久，直连就不探了，直接重连（探一次要等 1.5 秒） */
+const LONG_HIDDEN_MS = 15000;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 

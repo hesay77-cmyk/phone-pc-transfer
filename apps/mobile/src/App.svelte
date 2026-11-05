@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    BlobStore, localKV, randomId, secretFromHash, startSession,
+    BlobStore, localKV, persistentOutbox, randomId, secretFromHash, startSession,
     type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Session
   } from '@hutong/core';
   import PhoneImage from './PhoneImage.svelte';
@@ -82,6 +82,8 @@
     if (!secret) return;
     session = await startSession({
       role: 'phone', secret, device: device(), kv,
+      // 没送到电脑的存在手机上，网页被关掉再打开也接着送
+      outbox: persistentOutbox(kv, new BlobStore('hutong-out', 'files', 50)),
       events: {
         signal: (s) => (signal = s),
         link: (s) => (link = s),
@@ -109,14 +111,22 @@
     });
   }
   void start().then(() => {
+    // 上次没发完的：列出来，连上后会自动补发
+    for (const it of session?.transfer.pending ?? []) track(it);
     // 自动测试用：让测试脚本能摸到内部状态（正式构建里没有这一行的效果）
     if (import.meta.env.VITE_E2E) (window as any).__hutong = session;
   });
 
-  // iPhone 切到别的 App 再回来：马上确认连接，断了就重连
+  // iPhone 切到别的 App、锁屏再回来：马上确认连接，断了就重连（在后台待得越久，越直接重连）
+  let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) session?.link.resume();
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    session?.resume(hiddenAt ? Date.now() - hiddenAt : 0);
+    hiddenAt = 0;
   });
+  // 从「返回」缓存里恢复、或者网络刚恢复：都当作待了很久
+  window.addEventListener('pageshow', (e) => { if (e.persisted) session?.resume(60000); });
+  window.addEventListener('online', () => session?.resume(60000));
 
   function track(it: OutItem) {
     const s: Sent = { id: it.id, label: label(it), state: session?.link.ready ? 'sending' : 'waiting' };

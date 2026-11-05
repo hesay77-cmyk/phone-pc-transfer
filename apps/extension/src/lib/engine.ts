@@ -1,7 +1,7 @@
 // 引擎：在看不见的小页面里一直开着。连手机、收东西、写剪贴板、存照片、发通知。
 
 import {
-  CONFIG, localKV, newSecret, pairingUrl, randomId, startSession,
+  BlobStore, CONFIG, localKV, persistentOutbox, newSecret, pairingUrl, randomId, startSession,
   type DeviceInfo, type Incoming, type Session
 } from '@hutong/core';
 import { browser } from 'wxt/browser';
@@ -71,6 +71,8 @@ export class Engine {
       secret,
       device: this.device(),
       kv,
+      // 没送到手机的存在本机，关掉 Chrome 再打开也接着送
+      outbox: persistentOutbox(kv, new BlobStore('hutong-out', 'files', 50)),
       events: {
         log: (s) => this.log(s),
         signal: (s) => { this.state.signal = s; this.push(); },
@@ -78,6 +80,7 @@ export class Engine {
           this.state.link = s;
           if (info) { this.state.route = info.route; this.state.connectMs = info.connectMs; }
           if (s === 'connected' && !this.state.everPaired) { this.state.everPaired = true; kv.set('everPaired', '1'); }
+          if (s === 'connected') this.sendPendingClip();
           this.push();
         },
         peer: (d) => { this.state.phoneName = d.name; kv.set('phoneName', d.name); this.push(); },
@@ -127,14 +130,27 @@ export class Engine {
     this.push();
   }
 
+  private pendingClip: { text: string; at: number } | null = null;
+
   private watchClipboard() {
     const c = readClipboard(false);
     if (!c.ok || c.text === this.lastClip) return;
     this.lastClip = c.text;
-    // 手机网页没开着就不发（免得攒一堆），也不补发
-    if (!c.text.trim() || !this.session?.link.ready) return;
+    if (!c.text.trim()) return;
+    // 手机没连着（锁屏、网页没开）：只记住最后一条，连上后送这一条，不攒一堆
+    if (!this.session?.link.ready) { this.pendingClip = { text: c.text, at: Date.now() }; return; }
+    this.pendingClip = null;
     this.sendText(c.text);
     this.log(`复制就发：${c.text.length} 个字`);
+  }
+
+  /** 手机连上了：把没连着时最后复制的那条送过去（10 分钟以前的就算了） */
+  private sendPendingClip() {
+    const p = this.pendingClip;
+    this.pendingClip = null;
+    if (!p || !this.state.autoSend || Date.now() - p.at > 10 * 60_000) return;
+    this.sendText(p.text);
+    this.log(`复制就发：手机连上了，补发最后复制的 ${p.text.length} 个字`);
   }
 
   /** 剪贴板里有图（截图）就发图，否则发文字 */
