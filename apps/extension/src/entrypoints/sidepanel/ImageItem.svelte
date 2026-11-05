@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getFile, photoName, toPng } from '../../lib/files';
-  import { armPageDrop, disarmPageDropSoon, DRAG_TYPE } from '../../lib/pagedrop';
+  import { disarmPageDropSoon, startPhotoDrag } from '../../lib/pagedrop';
   import type { Item } from '../../lib/types';
   let { item, onShow, onNeedPermission }: { item: Item; onShow: (id: number) => void; onNeedPermission: () => void } = $props();
 
@@ -13,13 +13,12 @@
     return () => { if (made) URL.revokeObjectURL(made); };
   });
 
-  // 拖进网页：开始拖的时候让网页准备好接照片（见 lib/pagedrop.ts）
+  // 拖进网页 / 拖进 Chrome：见 lib/pagedrop.ts
   function dragStart(e: DragEvent) {
-    e.dataTransfer?.setData(DRAG_TYPE, item.id);
     // 文件名和「下载\互传」里存的那张一样
     const saved = item.saved?.path?.split(/[\\/]/).pop();
     const name = saved && /\.\w{3,4}$/.test(saved) ? saved : photoName(item.mime || 'image/jpeg', false, new Date(item.time));
-    void armPageDrop({ id: item.id, name }).then((r) => { if (r === 'no-permission') onNeedPermission(); });
+    startPhotoDrag(e, { id: item.id, name }, onNeedPermission);
   }
   const dragEnd = () => disarmPageDropSoon();
 

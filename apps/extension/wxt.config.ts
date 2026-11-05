@@ -19,6 +19,8 @@ export default defineConfig({
     // 右键发网页上的图时才问用户要（自动测试时直接给，免得弹窗卡住）
     ...(process.env.VITE_E2E ? { host_permissions: ['<all_urls>'] } : { optional_host_permissions: ['<all_urls>'] }),
     action: { default_title: '互传' },
+    // 照片拖到网页或新标签页上时，Chrome 会打开这个「看照片」页面
+    web_accessible_resources: [{ resources: ['view.html'], matches: ['<all_urls>'] }],
     commands: {
       _execute_action: { suggested_key: { default: 'Alt+Shift+V' }, description: '打开互传' },
       // 全局快捷键：Chrome 不在前台（在 Word、记事本里）也能用。Chrome 只允许 Ctrl+Shift+数字 做全局键

@@ -4,6 +4,8 @@
 // 办法：开始拖的那一下，往当前网页里放一小段「接收员」代码。照片拖到网页上时它接住，
 // 向侧边栏要来照片，做成真正的文件，再交给网页（就像从文件夹里拖进去一样）。
 // 需要「在网页上读取和更改数据」的权限（和右键发网页上的图是同一个），没给就提示用户在侧边栏点「允许」。
+// 拖到接收员管不到的地方（新标签页、Chrome 自己的页面、标签栏、地址栏），Chrome 会打开拖着的地址：
+// 所以把地址换成插件的「看照片」页面（view.html），打开就是这张照片，跟从 QQ 拖图进 Chrome 一样。
 
 import { browser } from 'wxt/browser';
 import { getFile } from './files';
@@ -17,10 +19,28 @@ export type ArmResult = 'ok' | 'no-permission' | 'no-page';
 
 let seq = 0;
 
-/** 侧边栏开着时，网页里的接收员来要照片本身（消息里只能传文字，所以转成 base64） */
-export function answerDragFile() {
-  browser.runtime.onMessage.addListener((m: ToPanel, _sender, reply) => {
-    if (m?.to !== 'panel' || m.type !== 'drag-file') return;
+/** 「看照片」页面的地址 */
+export const viewUrl = (id: string, name: string) =>
+  browser.runtime.getURL('/view.html') + '?id=' + encodeURIComponent(id) + '&name=' + encodeURIComponent(name);
+
+/** 照片开始被拖（dragstart 里调用） */
+export function startPhotoDrag(e: DragEvent, arm: DropArm, onNeedPermission?: () => void) {
+  e.dataTransfer?.setData(DRAG_TYPE, arm.id);
+  e.dataTransfer?.setData('text/uri-list', viewUrl(arm.id, arm.name));
+  void armPageDrop(arm).then((r) => { if (r === 'no-permission') onNeedPermission?.(); });
+}
+
+/** 侧边栏 / 看照片页面开着时，回应网页里的接收员：要照片本身（消息里只能传文字，所以转成 base64），或在新标签页打开照片 */
+export function servePageDrop() {
+  browser.runtime.onMessage.addListener((m: ToPanel, sender, reply) => {
+    if (m?.to !== 'panel') return;
+    if (m.type === 'open-photo') {
+      const t = sender.tab;
+      void browser.tabs.create({ url: viewUrl(m.id, m.name), active: true, ...(t?.id !== undefined ? { index: t.index + 1, openerTabId: t.id, windowId: t.windowId } : {}) })
+        .then(() => reply(true), () => reply(false));
+      return true;
+    }
+    if (m.type !== 'drag-file') return;
     void (async () => {
       const blob = await getFile(m.id).catch(() => undefined);
       if (!blob) return reply({ ok: false });
@@ -141,6 +161,7 @@ export function pageDropHelper(arm: DropArm | null) {
     const t = targetOf(e);
     const fp = getFile(e);
     const pending = [...entered];
+    const photo = cur ?? { id: e.dataTransfer?.getData(TYPE) || '', name: '' };
     w.__hutongDrop!.set(null);
     void fp.then((f) => {
       if (!f) return toast('照片没取到，请再拖一次', false);
@@ -151,7 +172,10 @@ export function pageDropHelper(arm: DropArm | null) {
       if (toInput(t, f)) return;
       // 3) 拖到了输入框里：当作粘贴（很多聊天、AI 网站的输入框支持粘贴图片）
       if (pasteInto(t, f)) return;
-      toast('这个位置放不了图片。拖到网页的上传框或聊天输入框里，或者在侧边栏点「复制这张图」再 Ctrl+V', false);
+      // 4) 都不收：像 Chrome 打开拖进来的图片一样，在旁边新标签页打开这张照片（不把当前网页换掉）
+      rt.sendMessage({ to: 'panel', type: 'open-photo', id: photo.id, name: f.name }, (ok: boolean | undefined) => {
+        if (rt.lastError || !ok) toast('这个位置放不了图片。拖到网页的上传框或聊天输入框里，或者在侧边栏点「复制这张图」再 Ctrl+V', false);
+      });
     });
   };
 

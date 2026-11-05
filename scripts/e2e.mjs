@@ -268,12 +268,13 @@ const want = await panel.evaluate(async () => {
   const b = new Uint8Array(await (await fetch(img.src)).arrayBuffer());
   return { size: b.length, sum: b.reduce((a, x) => (a * 31 + x) >>> 0, 7) };
 });
+let viewLink = '';
 async function dragTo(sel) {
   const id = await panel.evaluate(() => {
     const dt = new DataTransfer();
     document.querySelector('.item[data-kind="image"][data-from="phone"] img').dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
-    return dt.getData('application/x-hutong-photo');
-  });
+    return [dt.getData('application/x-hutong-photo'), dt.getData('text/uri-list')];
+  }).then(([id, uri]) => { viewLink = uri; return id; });
   await sleep(600);
   const before = await drop.evaluate(() => log.length);
   await drop.evaluate(async ([sel, id]) => {
@@ -300,9 +301,21 @@ got = await dragTo('#pick');
 check('照片拖到「选择文件」按钮上：放进去了', same(got.find((x) => x.where === 'input')?.file), JSON.stringify(got).slice(0, 200));
 got = await dragTo('#ed');
 check('照片拖进输入框：当作粘贴放进去了', same(got.find((x) => x.where === 'paste')?.file), JSON.stringify(got).slice(0, 200));
+const opened = ctx.waitForEvent('page', { timeout: 5000 }).catch(() => null);
 got = await dragTo('#plain');
-const dropToast = await drop.evaluate(() => document.getElementById('hutong-toast')?.dataset.ok);
-check('拖到放不了图的地方：网页右下角说明怎么办，不会打开空白页', dropToast === 'false' && got.length === 0, `${dropToast} ${JSON.stringify(got)}`);
+const viewPage = await opened;
+const viewSize = async (pg) => {
+  await pg.waitForSelector('img', { timeout: 5000 });
+  return pg.evaluate(async () => (await (await fetch(document.querySelector('img').src)).arrayBuffer()).byteLength);
+};
+check('拖到网页上放不了图的地方：在旁边新标签页打开这张照片', !!viewPage && viewPage.url().includes('/view.html?') && (await viewSize(viewPage)) === want.size && got.length === 0,
+  `${viewPage?.url().slice(0, 70)} ${JSON.stringify(got)}`);
+await viewPage?.close();
+// 拖到接收员管不到的地方（新标签页、Chrome 自己的页面）：Chrome 会打开拖着的地址，现在打开的是这张照片
+check('拖着的地址是「看照片」页面', /^chrome-extension:\/\/[a-z]+\/view\.html\?id=/.test(viewLink), viewLink.slice(0, 60));
+await drop.evaluate((u) => { location.href = u; }, viewLink);
+await drop.waitForURL(/view\.html/, { timeout: 5000 }).catch(() => {});
+check('网页被换成这个地址时：显示照片（不是空白页）', drop.url().includes('/view.html') && (await viewSize(drop).catch(() => -1)) === want.size, drop.url().slice(0, 70));
 await drop.close();
 
 // 切到别的 App 再回来，电脑那头其实早断了（模拟 iPhone 暂停网页）：要自动重连，并把这时发的照片送到

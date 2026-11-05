@@ -1,7 +1,7 @@
 <script lang="ts">
   import { browser } from 'wxt/browser';
   import { putFile } from '../../lib/files';
-  import { answerDragFile } from '../../lib/pagedrop';
+  import { servePageDrop } from '../../lib/pagedrop';
   import type { EngineState, Item, SendResult, ToBg, ToEngine, ToPanel } from '../../lib/types';
   import ImageItem from './ImageItem.svelte';
   import Qr from './Qr.svelte';
@@ -28,7 +28,7 @@
   }
   let needImagePermission = $state(false);
 
-  answerDragFile();
+  servePageDrop();
   const engine = (m: ToEngine) => browser.runtime.sendMessage(m);
   const bg = (m: ToBg) => browser.runtime.sendMessage(m);
 
