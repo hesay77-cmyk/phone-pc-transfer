@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>隐私政策 · Tapaste</title>
+<meta name="description" content="Tapaste 的隐私政策：内容在你的设备之间直接传，不经过我们的服务器，不收集个人数据。">
+<meta name="theme-color" content="#07080c">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* 隐私政策：和官网、安装步骤同一套颜色和字；中英文两份，按系统语言显示，右上角可切换 */
+:root{
+  --bg:#07080c; --fg:#f2f3f7; --muted:#8d92a5; --line:rgba(255,255,255,.09);
+  --glass:rgba(255,255,255,.04); --blue:#6c7cff; --lime:#e3ff6b;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Inter Var","Noto SC Var","Microsoft YaHei",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:radial-gradient(ellipse 80% 50% at 70% -10%,rgba(108,124,255,.16),transparent 60%),var(--bg);color:var(--fg);font-family:var(--font);font-weight:400;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
+.w{max-width:760px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+nav .w{max-width:1080px;height:72px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px;font-weight:500;font-size:17px;letter-spacing:-.4px;text-decoration:none}
+.logo img{width:26px;height:26px;border-radius:7px}
+.lang{appearance:none;border:1px solid var(--line);background:var(--glass);border-radius:999px;padding:7px 14px;font:inherit;font-size:12.5px;color:var(--muted);cursor:pointer}
+.lang:hover{color:var(--fg)}
+header{padding:56px 0 8px}
+.eyebrow{font-size:11.5px;letter-spacing:3px;color:var(--lime);margin-bottom:16px}
+h1{margin:0;font-weight:300;font-size:clamp(32px,5vw,48px);line-height:1.15;letter-spacing:-.02em}
+.date{margin:14px 0 0;color:var(--muted);font-size:13.5px}
+.sum{margin:34px 0 10px;padding:24px 26px;border-radius:22px;border:1px solid var(--line);background:var(--glass)}
+.sum ul{margin:0;padding-left:1.1em;line-height:1.9;font-size:15px}
+.sum li::marker{color:var(--lime)}
+h2{margin:44px 0 10px;font-size:19px;font-weight:500;letter-spacing:-.2px}
+p,li{color:#c6c9d6;font-size:15px;line-height:1.85;font-weight:300}
+.sum li{color:var(--fg)}
+ul{padding-left:1.2em}
+b{color:var(--fg);font-weight:500}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;color:var(--fg);background:rgba(255,255,255,.06);padding:1px 6px;border-radius:6px}
+article[hidden]{display:none}
+footer{margin-top:70px;border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:13px}
+footer .w{max-width:1080px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer a{text-decoration:none}
+</style>
+</head>
+<body>
+<nav><div class="w">
+  <a class="logo" href="./"><img src="icon.png" alt="">Tapaste</a>
+  <button class="lang" id="langBtn" type="button">EN</button>
+</div></nav>
+
+<main class="w">
+<article id="zh" lang="zh-CN">
+  <header>
+    <div class="eyebrow">隐私政策</div>
+    <h1>你的东西，只在你的设备之间。</h1>
+    <p class="date">适用于 Tapaste 浏览器插件（Chrome / Edge）和 Tapaste 手机网页 · 更新于 2026 年 11 月 5 日</p>
+  </header>
+
+  <div class="sum"><ul>
+    <li>你发的文字和照片，在你的手机和电脑之间直接传，不经过我们的服务器。</li>
+    <li>不需要注册账号；我们不收集、不出售、不分享你的个人数据。</li>
+    <li>没有广告，没有统计分析，没有追踪。</li>
+    <li>记录只存在你自己的设备上，随时可以清空；卸载插件就全部删除。</li>
+  </ul></div>
+
+  <h2>我们会处理哪些内容</h2>
+  <p>Tapaste 只处理你主动发送的东西：</p>
+  <ul>
+    <li><b>文字和照片</b>：你在手机或电脑上点「发送」的内容，以及电脑网页上你右键选择「发到手机」的文字或图片。</li>
+    <li><b>剪贴板</b>：只有在你点「发刚复制的」、按快捷键，或者自己打开「复制就发」开关（默认关闭）时，插件才读取剪贴板里的文字或图片。「复制就发」打开后，插件每 0.7 秒看一次剪贴板，只在内容变了、并且手机连着的时候发送；看起来像密码的内容不会发送。手机发来的文字会放进电脑剪贴板，方便你直接粘贴。</li>
+    <li><b>收到的照片</b>：自动存进电脑的「下载\互传」文件夹。</li>
+  </ul>
+
+  <h2>内容怎么传过去</h2>
+  <p>手机和电脑配对后，用浏览器自带的 WebRTC 技术<b>直接连接</b>，传输全程加密（DTLS）。文字和照片不经过我们或任何第三方的服务器。</p>
+  <p>两台设备第一次互相找到对方时，需要交换一小段连接信息（比如设备在网络里的地址）。这段信息用你们配对时生成的密钥（AES-GCM）加密后，经过一个「介绍人」服务器转交。目前介绍人使用 EMQX 提供的公共服务（<code>broker.emqx.io</code>）。它看不到你的文字和照片，也解不开连接信息，只能看到一个随机的频道名，以及连接它的网络地址（IP）。</p>
+  <p>为了在不同网络环境下也能连上，设备会询问公共 STUN 服务器「我在外网看起来是哪个地址」（小米 <code>stun.miwifi.com</code>、Cloudflare、Google）。这些服务器只会看到你的网络地址，看不到任何内容。</p>
+
+  <h2>存在你设备上的数据</h2>
+  <ul>
+    <li><b>配对密钥</b>：用来认出你自己的手机，只存在电脑插件和手机浏览器里。</li>
+    <li><b>收发记录</b>：最近发过、收到的文字和照片，方便你再次复制。超长文字只保留前 2 万字。两边都有「清空记录」。</li>
+    <li><b>待发送的内容</b>：对方暂时不在线时先存在本机，连上后自动补发；24 小时没送到就自动丢弃，也可以手动取消。</li>
+    <li><b>连过的手机</b>：用来在有新手机连上时提醒你。</li>
+  </ul>
+  <p>这些数据都不会上传。卸载插件、清除手机浏览器的网站数据，就会全部删除。</p>
+
+  <h2>插件权限的用途</h2>
+  <ul>
+    <li><b>读取 / 写入剪贴板</b>：发送你刚复制的内容，把手机发来的文字放进剪贴板。</li>
+    <li><b>下载</b>：把手机发来的照片存进「下载\互传」文件夹。</li>
+    <li><b>右键菜单、当前标签页、脚本注入</b>：网页上右键「发到手机」时，读取你选中的文字（保留换行）。</li>
+    <li><b>访问网页上的图片（可选，用到时才询问）</b>：右键发网页上的图片、或把侧边栏照片拖进网页时才需要。只用来取那一张图或放进那张照片，不读取你的浏览记录和网页内容。</li>
+    <li><b>通知</b>：收到照片、发送失败时提醒你。</li>
+    <li><b>后台页面、本地存储</b>：保持和手机的连接，保存上面说的本机数据。</li>
+  </ul>
+
+  <h2>手机网页</h2>
+  <p>手机网页目前放在 GitHub Pages（<code>github.io</code>）上，GitHub 作为网站服务商会按它自己的隐私政策记录访问日志。手机网页只在你点「扫码配对」时使用摄像头，画面只在手机上识别二维码，不保存也不上传。</p>
+
+  <h2>儿童</h2>
+  <p>Tapaste 不面向 13 岁以下儿童，也不会有意收集任何人的个人信息。</p>
+
+  <h2>变更</h2>
+  <p>如果做法有变化（比如以后提供服务器中转），我们会先更新这一页，并修改上面的日期。</p>
+
+  <h2>联系我们</h2>
+  <p>有任何问题，可以在 <a href="https://github.com/hesay77-cmyk/phone-pc-transfer/issues" target="_blank" rel="noopener">GitHub</a> 上留言。</p>
+</article>
+
+<article id="en" lang="en" hidden>
+  <header>
+    <div class="eyebrow">PRIVACY POLICY</div>
+    <h1>Your things stay between your devices.</h1>
+    <p class="date">Applies to the Tapaste browser extension (Chrome / Edge) and the Tapaste phone web page · Updated November 5, 2026</p>
+  </header>
+
+  <div class="sum"><ul>
+    <li>Text and photos you send go directly between your phone and your computer. They never pass through our servers.</li>
+    <li>No account needed. We don't collect, sell or share your personal data.</li>
+    <li>No ads, no analytics, no tracking.</li>
+    <li>Your history stays on your own devices. You can clear it at any time, and uninstalling the extension deletes everything.</li>
+  </ul></div>
+
+  <h2>What Tapaste handles</h2>
+  <p>Tapaste only handles what you choose to send:</p>
+  <ul>
+    <li><b>Text and photos</b> you send from your phone or computer, and text or images on a web page that you right-click and choose “Send to phone”.</li>
+    <li><b>Clipboard.</b> The extension reads your clipboard only when you click “Send what I just copied”, press the keyboard shortcut, or turn on “Send on copy” (off by default). With “Send on copy” on, it checks the clipboard every 0.7 seconds and sends only when the content has changed and your phone is connected. Anything that looks like a password is not sent. Text from your phone is placed on your computer's clipboard so you can paste it.</li>
+    <li><b>Received photos</b> are saved to the <code>Downloads\互传</code> folder on your computer.</li>
+  </ul>
+
+  <h2>How your content travels</h2>
+  <p>Once paired, your phone and computer connect <b>directly</b> using WebRTC, which is built into the browser. The connection is encrypted end to end (DTLS). Text and photos never pass through our servers or anyone else's.</p>
+  <p>To find each other, the two devices exchange a small piece of connection information, such as their network addresses. It is encrypted with a key created when you pair (AES-GCM) and passed along by a “signaling” relay. Today that relay is a public service run by EMQX (<code>broker.emqx.io</code>). It can't see your text or photos and can't decrypt the connection information. It only sees a random channel name and the IP address that connects to it.</p>
+  <p>To connect across different networks, your devices ask public STUN servers (Xiaomi <code>stun.miwifi.com</code>, Cloudflare and Google) what their public address is. These servers only see your IP address, never any content.</p>
+
+  <h2>Data stored on your devices</h2>
+  <ul>
+    <li><b>Pairing key</b>, used to recognise your own phone. It is stored only in the extension and in your phone's browser.</li>
+    <li><b>History</b> of recently sent and received text and photos, so you can copy them again. Very long text keeps only its first 20,000 characters. Both sides have a “Clear history” button.</li>
+    <li><b>Pending items.</b> If the other device is offline, items wait on your device and are sent automatically once it reconnects. Anything not delivered within 24 hours is dropped, and you can cancel items yourself.</li>
+    <li><b>Known phones</b>, so Tapaste can tell you when a new phone connects.</li>
+  </ul>
+  <p>None of this is uploaded. Uninstalling the extension, or clearing the site data in your phone's browser, deletes it.</p>
+
+  <h2>Why the extension asks for each permission</h2>
+  <ul>
+    <li><b>Clipboard read / write</b>: to send what you just copied, and to put text from your phone on the clipboard.</li>
+    <li><b>Downloads</b>: to save photos from your phone into <code>Downloads\互传</code>.</li>
+    <li><b>Context menus, active tab, scripting</b>: to read the text you selected (keeping line breaks) when you right-click “Send to phone”.</li>
+    <li><b>Access to web pages (optional, asked only when needed)</b>: only for sending an image from a web page, or dropping a photo from the side panel into a page. It is used just for that one image or photo. It never reads your browsing history or page content.</li>
+    <li><b>Notifications</b>: to tell you when a photo arrives or a send fails.</li>
+    <li><b>Offscreen document, storage</b>: to keep the connection to your phone alive and store the on-device data described above.</li>
+  </ul>
+
+  <h2>Phone web page</h2>
+  <p>The phone web page is currently hosted on GitHub Pages (<code>github.io</code>). As the host, GitHub keeps access logs under its own privacy policy. The page uses your camera only when you tap “Scan to pair”. The QR code is read on your phone, and the image is never saved or uploaded.</p>
+
+  <h2>Children</h2>
+  <p>Tapaste is not directed at children under 13, and we do not knowingly collect personal information from anyone.</p>
+
+  <h2>Changes</h2>
+  <p>If anything changes, for example if a relay server is added later, we will update this page and its date first.</p>
+
+  <h2>Contact</h2>
+  <p>Questions? Leave a message on <a href="https://github.com/hesay77-cmyk/phone-pc-transfer/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+</article>
+</main>
+
+<footer><div class="w"><a href="./" id="back">← 回到 Tapaste</a><span>© 2026 Tapaste</span></div></footer>
+
+<script>
+(function(){
+  var zh=document.getElementById('zh'),en=document.getElementById('en'),btn=document.getElementById('langBtn'),back=document.getElementById('back');
+  function apply(l){var e=l==='en';zh.hidden=e;en.hidden=!e;document.documentElement.lang=e?'en':'zh-CN';
+    document.title=e?'Privacy Policy · Tapaste':'隐私政策 · Tapaste';btn.textContent=e?'中文':'EN';back.textContent=e?'← Back to Tapaste':'← 回到 Tapaste'}
+  var saved=null;try{saved=localStorage.getItem('tapaste-lang')}catch(e){}
+  var sys=(navigator.languages&&navigator.languages[0]||navigator.language||'zh').toLowerCase();
+  var q=/[?&]lang=(en|zh)/.exec(location.search);
+  apply(q?q[1]:saved||(sys.indexOf('zh')===0?'zh':'en'));
+  btn.addEventListener('click',function(){var l=en.hidden?'en':'zh';apply(l);try{localStorage.setItem('tapaste-lang',l)}catch(e){}});
+})();
+</script>
+</body>
+</html>
