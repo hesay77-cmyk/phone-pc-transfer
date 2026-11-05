@@ -25,16 +25,18 @@
 </script>
 
 {#if url}
-  <img src={url} alt="手机发来的照片" draggable="true" title="可以直接拖进网页" />
+  <img src={url} alt={item.from === 'phone' ? '手机发来的照片' : '发到手机的图片'} draggable="true" title="可以直接拖进网页" />
 {:else}
   <div class="gone">照片已经不在了（只保留最近 30 张）</div>
 {/if}
-<div class="row">
-  <button onclick={copy}>{copyLabel}</button>
-  {#if item.saved?.ok && item.saved.downloadId !== undefined}
-    <button onclick={() => onShow(item.saved!.downloadId!)}>打开所在文件夹</button>
-  {/if}
-</div>
+{#if item.from === 'phone'}
+  <div class="row">
+    <button onclick={copy}>{copyLabel}</button>
+    {#if item.saved?.ok && item.saved.downloadId !== undefined}
+      <button onclick={() => onShow(item.saved!.downloadId!)}>打开所在文件夹</button>
+    {/if}
+  </div>
+{/if}
 {#if item.saved && !item.saved.ok}
   <div class="small bad">没能自动保存：{item.saved.detail}</div>
 {/if}

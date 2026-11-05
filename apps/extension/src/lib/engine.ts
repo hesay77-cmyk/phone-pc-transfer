@@ -6,8 +6,8 @@ import {
 } from '@hutong/core';
 import { browser } from 'wxt/browser';
 import { copyText } from './clipboard';
-import { photoName, pruneFiles, putFile, thumbnail } from './files';
-import type { EngineState, Item, SavedInfo, ToBg, ToEngine, ToPanel } from './types';
+import { deleteFile, getFile, photoName, pruneFiles, putFile, thumbnail } from './files';
+import type { EngineState, Item, SavedInfo, SendResult, ToBg, ToEngine, ToPanel } from './types';
 
 const kv = localKV('hutong:pc:');
 const MAX_ITEMS = 30;
@@ -33,6 +33,7 @@ export class Engine {
       phoneName: kv.get('phoneName') || undefined,
       items: loadItems(),
       pendingToPhone: 0,
+      unseen: Number(kv.get('unseen') || 0),
       newerPeer: false,
       log: []
     };
@@ -43,9 +44,13 @@ export class Engine {
       if (msg?.to !== 'engine') return;
       if (msg.type === 'get-state') { reply(this.state); return; }
       if (msg.type === 'send-text') { reply(this.sendText(msg.text)); return; }
+      if (msg.type === 'send-image-url') { void this.sendImageUrl(msg.url).then(reply); return true; }
+      if (msg.type === 'send-file') { void this.sendStoredFile(msg.fileId, msg.name).then(reply); return true; }
       if (msg.type === 'reset-pairing') { void this.resetPairing().then(() => reply(this.state)); return true; }
       if (msg.type === 'log') { this.log(msg.text); return; }
+      if (msg.type === 'seen') { this.setUnseen(0); return; }
     });
+    this.badge();
     await this.connect();
   }
 
@@ -75,7 +80,11 @@ export class Engine {
         newerPeer: () => { this.state.newerPeer = true; this.push(); },
         received: (it) => void this.onReceived(it),
         delivered: (it) => { this.patch(it.id, { delivered: true }); },
-        queue: (n) => { this.state.pendingToPhone = n; this.push(); }
+        queue: (n) => {
+          if (!n && this.state.pendingToPhone) this.flashOk(); // 攒着的全送到手机了
+          this.state.pendingToPhone = n;
+          this.push();
+        }
       }
     });
   }
@@ -92,10 +101,46 @@ export class Engine {
     await this.connect();
   }
 
-  private sendText(text: string) {
-    if (!this.session || !text.trim()) return { ok: false };
+  private sendText(text: string): SendResult {
+    if (!this.session || !text.trim()) return { ok: false, error: '没有可发的文字' };
     const out = this.session.transfer.sendText(text);
     this.addItem({ id: out.id, from: 'pc', kind: 'text', time: Date.now(), text, delivered: false });
+    return { ok: true, connected: this.session.link.ready };
+  }
+
+  /** 网页上的图：插件自己下载下来再发（需要用户点过「允许」读取网页图片） */
+  private async sendImageUrl(url: string): Promise<SendResult> {
+    let blob: Blob;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(String(r.status));
+      blob = await r.blob();
+    } catch (e) {
+      this.log(`下载网页图片失败（${String(e)}）：${url.slice(0, 120)}`);
+      return { ok: false, error: '这张图下载不下来。可以先把图存到电脑，再拖进侧边栏发送' };
+    }
+    const name = decodeURIComponent(url.startsWith('data:') ? '' : (new URL(url).pathname.split('/').pop() ?? '')) || '图片';
+    return this.sendBlob(blob, name);
+  }
+
+  /** 侧边栏放进小数据库的图 */
+  private async sendStoredFile(fileId: string, name: string): Promise<SendResult> {
+    const blob = await getFile(fileId);
+    void deleteFile(fileId);
+    if (!blob) return { ok: false, error: '图片没读到，请再试一次' };
+    return this.sendBlob(blob, name);
+  }
+
+  private async sendBlob(blob: Blob, name: string): Promise<SendResult> {
+    if (!this.session) return { ok: false, error: '插件还没准备好，请稍等再试' };
+    let w: number | undefined, h: number | undefined;
+    try { const b = await createImageBitmap(blob); w = b.width; h = b.height; b.close(); }
+    catch { if (!blob.type.startsWith('image/')) return { ok: false, error: '这不是图片' }; }
+    const out = this.session.transfer.sendFile(blob, { name, w, h });
+    await putFile(out.id, blob);
+    this.addItem({ id: out.id, from: 'pc', kind: 'image', time: Date.now(), size: blob.size, w, h, mime: blob.type, name, delivered: false });
+    this.log(`发图片到手机：${name}，${kb(blob.size)}`);
+    void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
     return { ok: true, connected: this.session.link.ready };
   }
 
@@ -126,7 +171,32 @@ export class Engine {
     void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
   }
 
+  // ---------- 插件图标上的角标：新收到几条（蓝色数字）；发到手机送到了闪一下绿色 ✓ ----------
+  private flashing: ReturnType<typeof setTimeout> | undefined;
+
+  private setUnseen(n: number) {
+    if (n === this.state.unseen) return;
+    this.state.unseen = n;
+    kv.set('unseen', String(n));
+    this.badge();
+    this.push();
+  }
+
+  private flashOk() {
+    clearTimeout(this.flashing);
+    this.flashing = setTimeout(() => { this.flashing = undefined; this.badge(); }, 2500);
+    this.badge();
+  }
+
+  private badge() {
+    const n = this.state.unseen;
+    this.bg(this.flashing
+      ? { to: 'bg', type: 'badge', text: '✓', color: '#16a34a' }
+      : { to: 'bg', type: 'badge', text: n ? String(Math.min(n, 99)) : '', color: '#2563eb' });
+  }
+
   private addItem(item: Item) {
+    if (item.from === 'phone') this.setUnseen(this.state.unseen + 1);
     this.state.items = [item, ...this.state.items.filter((x) => x.id !== item.id)].slice(0, MAX_ITEMS);
     this.saveItems();
     this.push();
@@ -158,7 +228,7 @@ export class Engine {
 
   private bg(msg: ToBg): Promise<any> {
     const p = browser.runtime.sendMessage(msg);
-    if (msg.type === 'notify') p.catch(() => { /* 通知不需要回复 */ });
+    if (msg.type === 'notify' || msg.type === 'badge') p.catch(() => { /* 通知不需要回复 */ });
     return p;
   }
 }

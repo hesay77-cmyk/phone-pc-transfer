@@ -1,10 +1,14 @@
 <script lang="ts">
   import {
-    localKV, randomId, secretFromHash, startSession,
+    BlobStore, localKV, randomId, secretFromHash, startSession,
     type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Session
   } from '@hutong/core';
+  import PhoneImage from './PhoneImage.svelte';
 
-  interface Got { id: string; text: string; time: number }
+  /** 电脑发来的一条。老版本存的没有 kind，都是文字 */
+  interface Got { id: string; kind?: 'text' | 'image'; text?: string; name?: string; size?: number; time: number }
+  const MAX_GOT = 20;
+  const photos = new BlobStore('hutong', 'files', MAX_GOT);
   interface Sent { id: string; label: string; state: 'sending' | 'waiting' | 'done'; pct?: number }
 
   const kv = localKV('hutong:phone:');
@@ -52,10 +56,16 @@
         link: (s) => (link = s),
         peer: (d) => (pcName = d.name),
         newerPeer: () => (newer = true),
-        received: (it) => {
-          if (it.kind !== 'text') return;
-          got = [{ id: it.id, text: it.text, time: Date.now() }, ...got].slice(0, 20);
+        received: async (it) => {
+          let g: Got;
+          if (it.kind === 'text') g = { id: it.id, kind: 'text', text: it.text, time: Date.now() };
+          else {
+            await photos.put(it.id, it.blob);
+            g = { id: it.id, kind: 'image', name: it.meta.name, size: it.blob.size, time: Date.now() };
+          }
+          got = [g, ...got.filter((x) => x.id !== g.id)].slice(0, MAX_GOT);
           kv.set('got', JSON.stringify(got));
+          void photos.prune(got.filter((x) => x.kind === 'image').map((x) => x.id));
         },
         progress: (it, r) => setSent(it.id, { state: 'sending', pct: Math.round(r * 100) }),
         delivered: (it) => { setSent(it.id, { state: 'done' }); note = ''; },
@@ -125,6 +135,8 @@
     return { cls: 'wait', text: '正在连接电脑…' };
   });
   const isUrl = (t: string) => /^https?:\/\/\S+$/.test(t.trim());
+  /** 像验证码（4~8 位，带数字）：放大显示，方便看着输 */
+  const isCode = (t: string) => /^[A-Za-z0-9]{4,8}$/.test(t.trim()) && /\d/.test(t);
   const kb = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 </script>
@@ -163,13 +175,18 @@
 
     <section>
       <h2>电脑发来的</h2>
-      {#if got.length === 0}<p class="hint">还没有。在电脑上的侧边栏里可以发文字、网址过来。</p>{/if}
+      {#if got.length === 0}<p class="hint">还没有。电脑上可以在网页里右键「发到手机」，或者在互传侧边栏里发文字、网址、图片过来。</p>{/if}
       {#each got as g (g.id)}
-        <div class="item">
-          <div class="meta">{time(g.time)}</div>
-          <div class="text">{g.text}</div>
-          {#if isUrl(g.text)}<a class="btn" href={g.text.trim()} target="_blank" rel="noopener">打开网址</a>{/if}
-          <button class="btn" onclick={(e) => copy(g.text, e)}>复制</button>
+        <div class="item" data-kind={g.kind ?? 'text'}>
+          <div class="meta">{time(g.time)}{#if g.size} · {kb(g.size)}{/if}</div>
+          {#if g.kind === 'image'}
+            <PhoneImage id={g.id} name={g.name ?? ''} store={photos} />
+          {:else}
+            {@const t = g.text ?? ''}
+            <div class="text" class:code={isCode(t)}>{isCode(t) ? t.trim() : t}</div>
+            {#if isUrl(t)}<a class="btn" href={t.trim()} target="_blank" rel="noopener">打开网址</a>{/if}
+            <button class="btn" onclick={(e) => copy(t.trim(), e)}>复制</button>
+          {/if}
         </div>
       {/each}
     </section>
@@ -200,5 +217,6 @@
   .item { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
   .meta { font-size: 12px; color: var(--muted); }
   .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 4px; font-size: 17px; }
+  .text.code { font-size: 40px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; margin: 6px 0; }
   footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 10px; }
 </style>

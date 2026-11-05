@@ -17,6 +17,7 @@ export interface Item {
   w?: number;
   h?: number;
   mime?: string;
+  name?: string;
   saved?: SavedInfo;
   /** 文字：已自动复制 */
   copied?: boolean;
@@ -35,6 +36,8 @@ export interface EngineState {
   everPaired: boolean;
   items: Item[];
   pendingToPhone: number;
+  /** 新收到、还没打开侧边栏看过的条数 */
+  unseen: number;
   newerPeer: boolean;
   log: string[];
 }
@@ -43,12 +46,23 @@ export type ToBg =
   | { to: 'bg'; type: 'ensure-engine' }
   | { to: 'bg'; type: 'notify'; kind: 'text' | 'image'; title: string; message: string; imageUrl?: string; itemId?: string }
   | { to: 'bg'; type: 'save-file'; url: string; filename: string; fallbackName: string }
-  | { to: 'bg'; type: 'show-file'; downloadId: number };
+  | { to: 'bg'; type: 'show-file'; downloadId: number }
+  /** 插件图标上的小角标：有几条新收到的没看，或者刚送到手机的 ✓ */
+  | { to: 'bg'; type: 'badge'; text: string; color: string };
+
+/** 发到手机的结果 */
+export interface SendResult { ok: boolean; connected?: boolean; error?: string }
 
 export type ToEngine =
   | { to: 'engine'; type: 'get-state' }
   | { to: 'engine'; type: 'send-text'; text: string }
+  /** 网页上右键「把这张图发到手机」：引擎自己去下载这张图 */
+  | { to: 'engine'; type: 'send-image-url'; url: string }
+  /** 侧边栏里选的/粘贴的/拖进来的图：先放进小数据库，再告诉引擎 id */
+  | { to: 'engine'; type: 'send-file'; fileId: string; name: string }
   | { to: 'engine'; type: 'reset-pairing' }
+  /** 侧边栏开着、看过了：清掉图标上的数字 */
+  | { to: 'engine'; type: 'seen' }
   | { to: 'engine'; type: 'log'; text: string };
 
 export type ToPanel = { to: 'panel'; type: 'state'; state: EngineState };

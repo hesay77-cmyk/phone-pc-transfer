@@ -30,14 +30,23 @@ const extPath = join(extDir, 'chrome-mv3');
 
 createBroker(aedes, { ws: true }).listen(8888);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const webPic = testPngLater();
 createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
+  // 模拟一个普通网页（右键「发到手机」用）
+  if (p === '/e2e/page.html') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end('<!doctype html><title>测试网页</title><p id="t">第一行<br>第二行</p><img id="pic" src="/e2e/pic.png">');
+  }
+  if (p === '/e2e/pic.png') { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(webPic()); }
   if (p.endsWith('/')) p += 'index.html';
   const f = join(mobileDir, p);
   if (!existsSync(f) || !statSync(f).isFile()) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { 'content-type': types[extname(f)] || 'application/octet-stream' });
   res.end(readFileSync(f));
 }).listen(8080);
+
+function testPngLater() { let b; return () => (b ??= testPng(400, 300)); }
 
 /** 生成一张 900×700 的 PNG 测试照片（随机像素，压不小） */
 function testPng(w = 900, h = 700) {
@@ -104,12 +113,72 @@ const sizeOk = await panel.evaluate(async (n) => {
   return b.size === n;
 }, png.length);
 check('照片一字节不差', sizeOk);
+const swNow = ctx.serviceWorkers()[0] ?? sw;
+const notes = await swNow.evaluate(async () => {
+  const all = await chrome.notifications.getAll();
+  return { ids: Object.keys(all), level: await chrome.notifications.getPermissionLevel() };
+}).catch((e) => ({ ids: [], level: String(e) }));
+check('弹出文字通知', notes.ids.some((k) => k.startsWith('txt:')), `${notes.level}：${notes.ids.join(', ')}`);
+check('弹出照片通知', notes.ids.some((k) => k.startsWith('img:')), `${notes.level}：${notes.ids.join(', ')}`);
 
 // 电脑发到手机
 await panel.fill('textarea', 'https://example.com/abc');
 await panel.click('button:has-text("发到手机")');
 await phone.waitForFunction(() => document.body.innerText.includes('example.com/abc'), null, { timeout: 5000 });
 check('电脑发到手机：手机收到网址', await phone.isVisible('text=打开网址'));
+
+// 电脑发图片到手机（侧边栏里选图）
+const pcPng = testPng(500, 400);
+await panel.setInputFiles('.send input[type=file]', { name: 'screenshot.png', mimeType: 'image/png', buffer: pcPng });
+await phone.waitForSelector('.item[data-kind="image"] img', { timeout: 15000 });
+const phoneImgOk = await phone.evaluate(async (n) => {
+  const b = await (await fetch(document.querySelector('.item[data-kind="image"] img').src)).blob();
+  return b.size === n;
+}, pcPng.length);
+check('电脑发图片到手机：手机显示，一字节不差', phoneImgOk);
+check('手机上有「存到相册」', await phone.isVisible('text=存到相册'));
+
+// 验证码大字显示
+await panel.fill('textarea', '384920');
+await panel.click('button:has-text("发到手机")');
+await phone.waitForSelector('.text.code', { timeout: 5000 });
+check('验证码在手机上大字显示', (await phone.textContent('.text.code')) === '384920');
+
+// 网页上右键「发到手机」（测试脚本点不了真的右键菜单，直接调用插件里处理菜单的那段）
+const web = await ctx.newPage();
+await web.goto('http://localhost:8080/e2e/page.html');
+await web.evaluate(() => { const r = document.createRange(); r.selectNodeContents(document.getElementById('t')); getSelection().removeAllRanges(); getSelection().addRange(r); });
+const bgw = () => ctx.serviceWorkers()[0] ?? sw;
+const menu = (info) => bgw().evaluate(async (info) => {
+  const [tab] = await chrome.tabs.query({ url: 'http://localhost:8080/e2e/*' });
+  await globalThis.__menuClicked(info, tab);
+}, info);
+await menu({ menuItemId: 'sel', selectionText: '第一行 第二行', frameId: 0 });
+await phone.waitForFunction(() => [...document.querySelectorAll('.item .text')].some((e) => e.textContent === '第一行\n第二行'), null, { timeout: 5000 })
+  .then(() => check('右键发选中的文字：手机收到（换行保留）', true), () => check('右键发选中的文字：手机收到（换行保留）', false));
+check('网页右下角闪出「已发到手机」', await web.evaluate(() => document.getElementById('hutong-toast')?.dataset.ok === 'true'));
+const imgsBefore = await phone.locator('.item[data-kind="image"]').count();
+await menu({ menuItemId: 'img', srcUrl: 'http://localhost:8080/e2e/pic.png' });
+await phone.waitForFunction((n) => document.querySelectorAll('.item[data-kind="image"] img').length > n, imgsBefore, { timeout: 15000 })
+  .then(() => check('右键发网页上的图：手机收到', true), () => check('右键发网页上的图：手机收到', false));
+await menu({ menuItemId: 'page', pageUrl: 'http://localhost:8080/e2e/page.html' });
+await phone.waitForFunction(() => document.body.innerText.includes('localhost:8080/e2e/page.html'), null, { timeout: 5000 })
+  .then(() => check('右键发网址：手机收到', true), () => check('右键发网址：手机收到', false));
+
+// 手机发来东西时，侧边栏没在看：插件图标上出数字；打开侧边栏看了就清掉
+await sleep(2800); // 等刚才「送到了 ✓」闪完
+const panelVis = (v) => panel.evaluate((v) => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v }); document.dispatchEvent(new Event('visibilitychange')); }, v);
+await panelVis('hidden');
+await phone.fill('textarea', '角标测试');
+await phone.getByRole('button', { name: '发送', exact: true }).click();
+await panel.waitForFunction(() => document.body.innerText.includes('角标测试'), null, { timeout: 5000 });
+await sleep(300);
+const badgeOn = await bgw().evaluate(() => chrome.action.getBadgeText({}));
+await panelVis('visible');
+await sleep(500);
+const badgeOff = await bgw().evaluate(() => chrome.action.getBadgeText({}));
+check('插件图标上出现新消息数字，看过后清掉', /^\d+$/.test(badgeOn) && badgeOff === '', `「${badgeOn}」→「${badgeOff}」`);
+await web.close();
 
 // 切到别的 App 再回来，电脑那头其实早断了（模拟 iPhone 暂停网页）：要自动重连，并把这时发的照片送到
 const before = await panel.locator('.item[data-kind="image"]').count();

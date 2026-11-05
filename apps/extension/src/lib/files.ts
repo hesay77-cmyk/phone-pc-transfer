@@ -1,36 +1,11 @@
 // 收到的照片存在插件自己的小数据库里（引擎、侧边栏、复制小窗口都能读），只留最近 30 张。
+import { BlobStore } from '@hutong/core';
 
-const DB = 'hutong';
-const STORE = 'files';
-const KEEP = 30;
-
-function db(): Promise<IDBDatabase> {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open(DB, 1);
-    r.onupgradeneeded = () => r.result.createObjectStore(STORE);
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-
-function tx<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return db().then((d) => new Promise<T>((res, rej) => {
-    const t = d.transaction(STORE, mode);
-    const req = fn(t.objectStore(STORE));
-    t.oncomplete = () => { res(req.result); d.close(); };
-    t.onerror = () => { rej(t.error); d.close(); };
-  }));
-}
-
-export const putFile = (id: string, blob: Blob) => tx('readwrite', (s) => s.put(blob, id));
-export const getFile = (id: string) => tx<Blob | undefined>('readonly', (s) => s.get(id));
-
-/** 只留 keepIds 里的（最近的那些） */
-export async function pruneFiles(keepIds: string[]) {
-  const keys = (await tx<IDBValidKey[]>('readonly', (s) => s.getAllKeys())) as string[];
-  const keep = new Set(keepIds.slice(0, KEEP));
-  await Promise.all(keys.filter((k) => !keep.has(k)).map((k) => tx('readwrite', (s) => s.delete(k))));
-}
+const store = new BlobStore('hutong', 'files', 30);
+export const putFile = (id: string, blob: Blob) => store.put(id, blob);
+export const getFile = (id: string) => store.get(id);
+export const deleteFile = (id: string) => store.delete(id);
+export const pruneFiles = (recentIds: string[]) => store.prune(recentIds);
 
 /** 剪贴板只收 PNG：别的格式先转一下 */
 export async function toPng(blob: Blob): Promise<Blob> {

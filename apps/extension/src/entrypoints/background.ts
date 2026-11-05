@@ -2,7 +2,7 @@
 
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
-import type { SavedInfo, ToBg } from '../lib/types';
+import type { SavedInfo, SendResult, ToBg, ToEngine } from '../lib/types';
 
 export default defineBackground(() => {
   const ENGINE = '/offscreen.html';
@@ -22,6 +22,7 @@ export default defineBackground(() => {
 
   browser.runtime.onInstalled.addListener(() => {
     browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+    makeMenus();
     void ensureEngine();
   });
   browser.runtime.onStartup.addListener(() => void ensureEngine());
@@ -42,8 +43,104 @@ export default defineBackground(() => {
       case 'show-file':
         try { browser.downloads.show(msg.downloadId); } catch { void browser.downloads.showDefaultFolder(); }
         return;
+      case 'badge':
+        void browser.action.setBadgeBackgroundColor({ color: msg.color });
+        void browser.action.setBadgeText({ text: msg.text });
+        return;
     }
   });
+
+  // ---------- 网页上右键「发到手机」 ----------
+  const MENUS: { id: string; title: string; contexts: ['selection' | 'link' | 'image' | 'page'] }[] = [
+    { id: 'sel', title: '把选中的文字发到手机', contexts: ['selection'] },
+    { id: 'link', title: '把这个链接发到手机', contexts: ['link'] },
+    { id: 'img', title: '把这张图发到手机', contexts: ['image'] },
+    { id: 'page', title: '把这个网页的网址发到手机', contexts: ['page'] }
+  ];
+  function makeMenus() {
+    void browser.contextMenus.removeAll().then(() => { for (const m of MENUS) browser.contextMenus.create(m); });
+  }
+  browser.contextMenus.onClicked.addListener((info, tab) => void menuClicked(info, tab));
+
+  interface MenuInfo { menuItemId: string | number; selectionText?: string; linkUrl?: string; srcUrl?: string; pageUrl?: string; frameId?: number }
+
+  async function menuClicked(info: MenuInfo, tab?: { id?: number; url?: string }) {
+    // 发网页上的图要用户「允许」一次；只能在点菜单的这一下问，晚了 Chrome 就不弹了
+    const isImg = info.menuItemId === 'img';
+    const asked = isImg && !info.srcUrl?.startsWith('data:')
+      ? browser.permissions.request({ origins: ['<all_urls>'] }).catch(() => false) : Promise.resolve(true);
+    await ensureEngine();
+    let r: SendResult;
+    if (info.menuItemId === 'sel') {
+      r = await toEngine({ type: 'send-text', text: (await selectedText(tab?.id, info.frameId)) || info.selectionText || '' });
+    } else if (info.menuItemId === 'link') {
+      r = await toEngine({ type: 'send-text', text: info.linkUrl ?? '' });
+    } else if (isImg) {
+      const allowed = await asked;
+      r = await toEngine({ type: 'send-image-url', url: info.srcUrl ?? '' });
+      if (!r.ok && !allowed) {
+        void browser.storage.local.set({ needImagePermission: true });
+        r.error = '第一次发网页上的图，要先允许一下：打开互传侧边栏，点「允许发网页上的图」，再右键发一次';
+      }
+    } else {
+      r = await toEngine({ type: 'send-text', text: info.pageUrl || tab?.url || '' });
+    }
+    const text = r.ok ? (r.connected ? '已发到手机' : '手机没打开互传网页，先存着，打开后自动送到') : (r.error || '没发出去');
+    if (!(await toast(tab?.id, text, r.ok)) && !r.ok) notify({ to: 'bg', type: 'notify', kind: 'text', title: '没发到手机', message: text });
+  }
+  // 自动测试用：测试脚本没法点真的右键菜单，直接调这个
+  if (import.meta.env.VITE_E2E) (globalThis as any).__menuClicked = menuClicked;
+
+  const toEngine = (m: { type: 'send-text'; text: string } | { type: 'send-image-url'; url: string }): Promise<SendResult> =>
+    browser.runtime.sendMessage({ to: 'engine', ...m } satisfies ToEngine).catch(() => ({ ok: false, error: '插件后台没响应，请再试一次' }));
+
+  /** 网页里选中的字（带换行；Chrome 直接给的会把换行吃掉） */
+  async function selectedText(tabId?: number, frameId?: number): Promise<string> {
+    if (tabId === undefined) return '';
+    try {
+      const [res] = await browser.scripting.executeScript({
+        target: { tabId, frameIds: [frameId ?? 0] },
+        func: () => {
+          const el = document.activeElement as HTMLInputElement | null;
+          if (el && /^(TEXTAREA|INPUT)$/.test(el.tagName) && el.selectionStart !== null && el.selectionEnd !== null) {
+            return el.value.slice(el.selectionStart, el.selectionEnd);
+          }
+          return getSelection()?.toString() ?? '';
+        }
+      });
+      return (res?.result as string) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  /** 在网页右下角闪一个小提示；Chrome 自己的页面放不了，就返回 false */
+  async function toast(tabId: number | undefined, text: string, ok: boolean): Promise<boolean> {
+    if (tabId === undefined) return false;
+    try {
+      await browser.scripting.executeScript({
+        target: { tabId },
+        args: [text, ok],
+        func: (text: string, ok: boolean) => {
+          document.getElementById('hutong-toast')?.remove();
+          const host = document.createElement('div');
+          host.id = 'hutong-toast';
+          host.dataset.ok = String(ok);
+          const box = document.createElement('div');
+          box.textContent = (ok ? '✓ ' : '') + text;
+          box.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:2147483647;max-width:340px;padding:12px 16px;border-radius:12px;'
+            + 'font:15px/1.5 system-ui,"Microsoft YaHei",sans-serif;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.25);'
+            + 'background:' + (ok ? '#16a34a' : '#b45309');
+          host.attachShadow({ mode: 'open' }).appendChild(box);
+          document.documentElement.appendChild(host);
+          setTimeout(() => host.remove(), ok ? 2500 : 6000);
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   function notify(msg: Extract<ToBg, { type: 'notify' }>) {
     const id = msg.kind === 'image' && msg.itemId ? 'img:' + msg.itemId : 'txt:' + Date.now();

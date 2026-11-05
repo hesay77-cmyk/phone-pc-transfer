@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from 'wxt/browser';
-  import type { EngineState, Item, ToBg, ToEngine, ToPanel } from '../../lib/types';
+  import { putFile } from '../../lib/files';
+  import type { EngineState, Item, SendResult, ToBg, ToEngine, ToPanel } from '../../lib/types';
   import ImageItem from './ImageItem.svelte';
   import Qr from './Qr.svelte';
 
@@ -9,19 +10,48 @@
   let out = $state('');
   let sendTip = $state('');
   let failed = $state(false);
+  let dragging = $state(false);
+  let fileInput = $state<HTMLInputElement>();
+  let notPinned = $state(false);
+  let needImagePermission = $state(false);
 
   const engine = (m: ToEngine) => browser.runtime.sendMessage(m);
   const bg = (m: ToBg) => browser.runtime.sendMessage(m);
 
   browser.runtime.onMessage.addListener((m: ToPanel) => {
-    if (m?.to === 'panel' && m.type === 'state') s = m.state;
+    if (m?.to === 'panel' && m.type === 'state') { s = m.state; markSeen(); }
   });
+
+  // 侧边栏开着就算看过了：清掉插件图标上的数字
+  function markSeen() {
+    if (s?.unseen && document.visibilityState === 'visible') void engine({ to: 'engine', type: 'seen' }).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', markSeen);
+
+  // 插件图标没固定在右上角的话，用户看不到图标上的数字：提醒一下
+  async function checkPinned() {
+    try {
+      const st = await (browser.action as any).getUserSettings?.();
+      notPinned = st ? !st.isOnToolbar && localStorage.getItem('pinTipClosed') !== '1' : false;
+    } catch { notPinned = false; }
+  }
+  void checkPinned();
+  setInterval(checkPinned, 5000);
+
+  void browser.storage.local.get('needImagePermission').then((r) => (needImagePermission = !!r.needImagePermission));
+  async function allowImages() {
+    if (await browser.permissions.request({ origins: ['<all_urls>'] })) {
+      needImagePermission = false;
+      void browser.storage.local.remove('needImagePermission');
+      sendTip = '好了，现在可以在网页的图片上右键「把这张图发到手机」';
+    }
+  }
 
   async function load() {
     await bg({ to: 'bg', type: 'ensure-engine' }).catch(() => {});
     for (let i = 0; i < 15; i++) {
       const st = await engine({ to: 'engine', type: 'get-state' }).catch(() => null);
-      if (st) { s = st; return; }
+      if (st) { s = st; markSeen(); return; }
       await new Promise((r) => setTimeout(r, 300));
     }
     failed = true;
@@ -36,12 +66,45 @@
     return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开互传网页就会自动连上' : '还没配对手机' };
   });
 
+  const tipFor = (r: SendResult | undefined) =>
+    !r?.ok ? (r?.error ?? '没发出去') : r.connected ? '已发出' : '手机现在没打开网页，先存着，打开后自动送到';
+
   async function send() {
     const text = out;
     if (!text.trim()) return;
-    const r = await engine({ to: 'engine', type: 'send-text', text });
+    const r: SendResult = await engine({ to: 'engine', type: 'send-text', text });
     out = '';
-    sendTip = r?.connected ? '已发出' : '手机现在没打开网页，先存着，打开后自动送到';
+    sendTip = tipFor(r);
+  }
+
+  /** 发图片：选的、粘贴的、拖进来的都走这里（先放进小数据库，再让引擎发） */
+  async function sendImages(files: File[]) {
+    const imgs = files.filter((f) => f.type.startsWith('image/'));
+    if (!imgs.length) { if (files.length) sendTip = '现在只能发图片'; return; }
+    for (const f of imgs) {
+      const fileId = 'up:' + Math.random().toString(36).slice(2);
+      await putFile(fileId, f);
+      const r: SendResult = await engine({ to: 'engine', type: 'send-file', fileId, name: f.name || '图片' });
+      sendTip = tipFor(r);
+    }
+  }
+
+  function onPaste(e: ClipboardEvent) {
+    const files = Array.from(e.clipboardData?.files ?? []);
+    if (files.some((f) => f.type.startsWith('image/'))) { e.preventDefault(); void sendImages(files); }
+  }
+
+  function onDrop(e: DragEvent) {
+    e.preventDefault();
+    dragging = false;
+    void sendImages(Array.from(e.dataTransfer?.files ?? []));
+  }
+
+  function onPick() {
+    if (!fileInput) return;
+    const files = Array.from(fileInput.files ?? []);
+    fileInput.value = '';
+    void sendImages(files);
   }
 
   async function reset() {
@@ -83,6 +146,13 @@
       </section>
     {/if}
 
+    {#if s.everPaired && notPinned}
+      <section class="tip">
+        <b>把互传固定到右上角</b>：点 Chrome 右上角的拼图图标，再点「互传」旁边的图钉。这样手机发来东西时，图标上会出现数字提醒你。
+        <button class="link" onclick={() => { localStorage.setItem('pinTipClosed', '1'); notPinned = false; }}>知道了</button>
+      </section>
+    {/if}
+
     <section>
       <h2>收到的</h2>
       {#if s.items.length === 0}
@@ -107,11 +177,16 @@
       </div>
     </section>
 
-    <section>
+    <section class="send" class:dragging aria-label="发到手机"
+      ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
       <h2>发到手机</h2>
-      <textarea rows="2" bind:value={out} placeholder="输入或粘贴一段文字，比如一个网址"></textarea>
+      <textarea rows="2" bind:value={out} onpaste={onPaste} placeholder="输入或粘贴文字、网址；截图也可以直接粘贴进来"></textarea>
       <button class="primary" onclick={send}>发到手机</button>
-      <span class="small">{sendTip}</span>
+      <button onclick={() => fileInput?.click()}>发图片…</button>
+      <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
+      <div class="small">{sendTip}</div>
+      <p class="hint">图片也可以直接拖到这里。在网页上选中文字、或在链接和图片上点右键，选「发到手机」也行。</p>
+      {#if needImagePermission}<button onclick={allowImages}>允许发网页上的图</button>{/if}
     </section>
 
     <footer>
@@ -140,6 +215,8 @@
   .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
   .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; }
   textarea { margin-bottom: 6px; }
+  .send.dragging { outline: 2px dashed #2563eb; outline-offset: 2px; border-radius: 8px; }
+  .tip { background: #fef3c7; color: #78350f; border-radius: 10px; padding: 10px 12px; font-size: 13px; border: none; margin: 8px 0; }
   footer { border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: 12px; }
   pre { white-space: pre-wrap; font-size: 11.5px; max-height: 260px; overflow: auto; }
 </style>

@@ -13,6 +13,8 @@
 - 每条消息带协议版本号 `v`。看不懂的消息不能崩，只提示升级（`decode` 返回 `newer`）。加新消息类型时保持向后兼容。
 - 插件：连接和写剪贴板都在 offscreen 引擎（`apps/extension/src/lib/engine.ts`）里。offscreen 只能用 `chrome.runtime` 收发消息，不能用 storage、getManifest 等；需要的数据用 localStorage / IndexedDB。
 - Chrome 不允许后台页面往剪贴板放图片：照片自动存进「下载\互传」，复制靠点通知弹出的小窗口（`copyimg`）或侧边栏按钮。
+- 网页右键「发到手机」在后台（`background.ts` 的 `menuClicked`）：选中文字用 scripting 重新取（保留换行），网页上的图要可选权限 `<all_urls>`，只能在点菜单那一下 `permissions.request`；被拒或报错就让用户去侧边栏点「允许发网页上的图」。结果用网页右下角小提示（toast）告诉用户，不依赖 Windows 通知（很多人关了 Chrome 通知）。
+- 插件图标角标由引擎管：蓝色数字 = 新收到没看的条数（侧边栏可见时清零），绿色 ✓ = 发到手机的都送到了。
 - iPhone 网页切到别的 App 连接就断：手机回到前台要调用 `link.resume()`；发出去的东西没确认就留在待发队列，连上后自动补发，接收方按 id 去重。
 
 ## 改完必须
