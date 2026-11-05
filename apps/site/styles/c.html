@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tapaste</title>
+<style>
+/* 风格 C「大色块」：整屏钴蓝、巨大的 Tap. Paste. 字样、飘着的卡片和贴纸，活泼、年轻 */
+:root{--blue:#2f4bff;--deep:#1a2ccc;--ink:#0d1030;--white:#ffffff;--lemon:#e8ff5a;--pink:#ff8fc7;--paper:#f4f5ff}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.hero{background:var(--blue);color:var(--white);position:relative;overflow:hidden;padding-bottom:80px}
+.w{max-width:1180px;margin:0 auto;padding:0 max(20px,env(safe-area-inset-left))}
+nav{display:flex;justify-content:space-between;align-items:center;height:76px}
+.logo{font:900 24px/1 system-ui,sans-serif;letter-spacing:-1px}
+nav a{background:var(--lemon);color:var(--ink);font-weight:800;padding:11px 20px;border-radius:999px;text-decoration:none;font-size:15px}
+.big{font:900 clamp(76px,15vw,200px)/.88 system-ui,"Arial Black",sans-serif;letter-spacing:-.06em;margin:60px 0 0;position:relative;z-index:2}
+.big span{display:block}
+.big span:nth-child(2){padding-left:12%;color:var(--lemon)}
+.sub{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-top:40px;position:relative;z-index:2;flex-wrap:wrap}
+.sub p{font-size:24px;line-height:1.55;max-width:20em;margin:0;font-weight:600}
+.sub .cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{height:58px;padding:0 30px;border-radius:999px;font-size:18px;font-weight:800;display:inline-flex;align-items:center;text-decoration:none}
+.btn.y{background:var(--lemon);color:var(--ink)}.btn.o{border:2px solid rgba(255,255,255,.6);color:#fff}
+.float{position:absolute;z-index:1;background:var(--white);color:var(--ink);border-radius:20px;box-shadow:0 24px 50px rgba(10,16,80,.35);padding:14px 18px;font-size:16px;font-weight:600}
+.f1{right:6%;top:120px;transform:rotate(6deg);animation:bob 5s ease-in-out infinite}
+.f2{right:24%;top:250px;width:150px;height:150px;padding:8px;transform:rotate(-8deg);animation:bob 6s ease-in-out infinite reverse}
+.f2 div{width:100%;height:100%;border-radius:14px;background:linear-gradient(135deg,var(--pink),#ffb36b)}
+.f3{right:4%;top:330px;background:var(--ink);color:var(--lemon);transform:rotate(-4deg);animation:bob 4.5s ease-in-out infinite}
+.sticker{position:absolute;left:58%;top:96px;z-index:3;width:130px;height:130px;border-radius:50%;background:var(--pink);color:var(--ink);display:flex;align-items:center;justify-content:center;text-align:center;
+ font-weight:900;font-size:18px;line-height:1.2;transform:rotate(-12deg);animation:spin 14s linear infinite}
+@keyframes bob{50%{translate:0 -16px}}
+@keyframes spin{to{transform:rotate(348deg)}}
+.how{padding:90px 0}
+.how h2{font:900 52px/1.05 system-ui,sans-serif;letter-spacing:-2px;margin:0 0 44px}
+.row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.c{border-radius:28px;padding:32px;display:flex;flex-direction:column;gap:56px}
+.c:nth-child(1){background:var(--lemon)}.c:nth-child(2){background:var(--pink)}.c:nth-child(3){background:var(--ink);color:#fff}
+.c b{font:900 64px/1 system-ui;letter-spacing:-2px}
+.c h3{font-size:24px;margin:0 0 6px}.c p{margin:0;font-size:16px;line-height:1.6;opacity:.85}
+@media(max-width:900px){.f1,.f2,.f3{display:none}.sticker{left:auto;right:16px;top:80px;width:100px;height:100px;font-size:14px}.row{grid-template-columns:1fr}.sub p{font-size:19px}.how h2{font-size:36px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head><body>
+<section class="hero"><div class="w">
+ <nav><span class="logo">tapaste</span><a href="#">下载插件</a></nav>
+ <h1 class="big"><span>Tap.</span><span>Paste.</span></h1>
+ <div class="sub">
+  <p>手机上点一下，电脑上直接粘。文字、照片，一秒到电脑。</p>
+  <div class="cta"><a class="btn y" href="#">下载电脑插件</a><a class="btn o" href="#">怎么用</a></div>
+ </div>
+</div>
+<div class="sticker">不用装<br>App!</div>
+<div class="float f1">「明早 9 点开会」 ✓ 已复制</div>
+<div class="float f2"><div></div></div>
+<div class="float f3">✓ 照片已存进电脑</div>
+</section>
+<section class="how"><div class="w">
+ <h2>三步，以后天天省事。</h2>
+ <div class="row">
+  <div class="c"><b>1</b><div><h3>电脑装插件</h3><p>Chrome、Edge 都行，装好出现一个二维码。</p></div></div>
+  <div class="c"><b>2</b><div><h3>手机扫一下</h3><p>相机扫码就配对好了，只扫这一次。</p></div></div>
+  <div class="c"><b>3</b><div><h3>点一下就到</h3><p>字进了剪贴板，照片存进了文件夹。</p></div></div>
+ </div>
+</div></section>
+</body></html>

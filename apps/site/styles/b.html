@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tapaste</title>
+<style>
+/* 风格 B「产品发布会」：白底、超大标题居中、真实比例的设备，照片沿弧线飞进电脑文件夹 */
+:root{--bg:#ffffff;--soft:#f5f5f7;--ink:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--frame:#1d1d1f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.w{max-width:1080px;margin:0 auto;padding:0 max(20px,env(safe-area-inset-left))}
+nav{height:52px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);border-bottom:1px solid #e8e8ed}
+nav .logo{font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.3px}
+nav .r{display:flex;gap:26px;align-items:center}nav .r a{color:var(--muted);text-decoration:none}
+nav .r .b{background:var(--blue);color:#fff;padding:5px 13px;border-radius:999px}
+.hero{text-align:center;padding:80px 0 0;overflow:hidden}
+.eyebrow{font-size:21px;font-weight:600;color:#bf4800;margin-bottom:6px}
+h1{font-size:80px;line-height:1.05;letter-spacing:-3px;font-weight:700;margin:0 0 20px}
+.lead{font-size:24px;line-height:1.45;color:var(--muted);max-width:26em;margin:0 auto 28px;font-weight:500}
+.cta{display:flex;gap:28px;justify-content:center;align-items:center;font-size:19px}
+.cta .p{background:var(--blue);color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none}
+.cta .l{color:var(--blue);text-decoration:none}
+.stage{position:relative;height:500px;margin-top:60px}
+.mac{position:absolute;left:50%;bottom:30px;transform:translateX(-36%);width:620px}
+.mac .lid{background:var(--frame);border-radius:20px 20px 0 0;padding:14px 14px 18px}
+.mac .scr{aspect-ratio:16/10;border-radius:6px;background:linear-gradient(160deg,#dfe9f7,#f4f1fa);position:relative;overflow:hidden}
+.mac .base{height:16px;background:linear-gradient(#d2d2d7,#a1a1a6);border-radius:0 0 14px 14px;margin:0 -9%}
+.folder{position:absolute;left:28px;top:28px;width:250px;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);overflow:hidden}
+.folder .t{font-size:12px;font-weight:600;padding:9px 12px;border-bottom:1px solid #e8e8ed;color:#444}
+.folder .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px}
+.folder .g div{aspect-ratio:1;border-radius:6px}
+.p1{background:linear-gradient(135deg,#ffb36b,#ff6b8b)}.p2{background:linear-gradient(135deg,#6bc5ff,#5a7cff)}.p3{background:linear-gradient(135deg,#9be38f,#3fb37f)}
+.new{background:linear-gradient(135deg,#ffd86b,#ff8a3d);animation:land 5s infinite}
+.iph{position:absolute;left:50%;bottom:30px;transform:translateX(-262%);width:190px;aspect-ratio:9/19.5;background:var(--frame);border-radius:38px;padding:9px;box-shadow:0 30px 60px rgba(0,0,0,.18)}
+.iph .scr{height:100%;border-radius:30px;background:#fff;overflow:hidden;position:relative}
+.iph .ph{position:absolute;inset:44px 10px 74px;border-radius:14px;background:linear-gradient(135deg,#ffd86b,#ff8a3d)}
+.iph .btn{position:absolute;left:12px;right:12px;bottom:16px;height:44px;border-radius:12px;background:var(--blue);color:#fff;font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;animation:tap 5s infinite}
+.fly{position:absolute;left:50%;bottom:220px;width:70px;height:70px;border-radius:10px;background:linear-gradient(135deg,#ffd86b,#ff8a3d);box-shadow:0 14px 30px rgba(255,138,61,.4);
+ offset-path:path("M -330 40 C -230 -180, 0 -200, 40 -60");animation:fly 5s infinite}
+@keyframes tap{0%,14%{transform:none}17%{transform:scale(.94)}20%,100%{transform:none}}
+@keyframes fly{0%,18%{offset-distance:0%;opacity:0;scale:1}22%{opacity:1}52%{offset-distance:100%;opacity:1;scale:.35}54%,100%{offset-distance:100%;opacity:0}}
+@keyframes land{0%,52%{opacity:0;transform:scale(.4)}58%{opacity:1;transform:scale(1.12)}62%,94%{opacity:1;transform:none}100%{opacity:0}}
+.band{background:var(--soft);padding:100px 0;text-align:center}
+.band h2{font-size:48px;letter-spacing:-1.5px;margin:0 0 50px;line-height:1.1}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:left}
+.tile{background:#fff;border-radius:22px;padding:34px 30px}
+.tile b{display:block;font-size:44px;letter-spacing:-1.5px;margin-bottom:8px}
+.tile p{margin:0;color:var(--muted);font-size:17px;line-height:1.55}
+@media(max-width:900px){h1{font-size:46px;letter-spacing:-1.5px}.lead{font-size:19px}.stage{height:380px;transform:scale(.62);transform-origin:top center}.tiles{grid-template-columns:1fr}.band h2{font-size:34px}nav .r a:not(.b){display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head><body>
+<div class="w"><nav><span class="logo">Tapaste</span><span class="r"><a href="#">功能</a><a href="#">常见问题</a><a class="b" href="#">下载</a></span></nav></div>
+<section class="hero w">
+ <div class="eyebrow">手机电脑互传</div>
+ <h1>拍完，就在电脑上了。</h1>
+ <p class="lead">手机里的照片和文字，点一下就到电脑。照片存进文件夹，文字放进剪贴板。</p>
+ <div class="cta"><a class="p" href="#">下载电脑插件</a><a class="l" href="#">看看怎么用 ›</a></div>
+ <div class="stage">
+  <div class="mac"><div class="lid"><div class="scr">
+   <div class="folder"><div class="t">下载 › 互传</div><div class="g"><div class="p1"></div><div class="p2"></div><div class="p3"></div><div class="new"></div></div></div>
+  </div></div><div class="base"></div></div>
+  <div class="iph"><div class="scr"><div class="ph"></div><div class="btn">发到电脑</div></div></div>
+  <div class="fly"></div>
+ </div>
+</section>
+<section class="band"><div class="w">
+ <h2>快，而且只在你家里。</h2>
+ <div class="tiles">
+  <div class="tile"><b>1 秒</b><p>同一个 Wi-Fi 下，手机直接送到电脑，原图不压缩。</p></div>
+  <div class="tile"><b>0 次上传</b><p>内容不经过任何服务器，只在你的手机和电脑之间走。</p></div>
+  <div class="tile"><b>不用装 App</b><p>手机上就是一个网页，扫一次码，以后打开就连上。</p></div>
+ </div>
+</div></section>
+</body></html>
