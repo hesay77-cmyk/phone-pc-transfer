@@ -8,7 +8,11 @@
 import { decode, encode, randomId, type DeviceInfo, type Msg, type MsgBody, type Role } from './protocol';
 import type { SecureSignal, SignalMsg } from './signal';
 
-export type LinkState = 'idle' | 'connecting' | 'connected' | 'offline';
+/**
+ * idle：电脑在等手机来连；connecting：正在连；connected：连上了；offline：（手机）找不到电脑；
+ * blocked：通过介绍人找到对方了，但直连连不上——多半是这个网络不让设备之间直接通信（有些公司/公共 Wi-Fi）。
+ */
+export type LinkState = 'idle' | 'connecting' | 'connected' | 'offline' | 'blocked';
 
 export interface LinkInfo {
   /** true=局域网直连；false=经公网；null=看不出来 */
@@ -40,6 +44,10 @@ const HEARTBEAT_MS = 5000;
 const DEAD_AFTER_MS = 15000;
 const PROBE_WAIT_MS = 1500;
 const CONNECT_GUARD_MS = 15000;
+/** 双方都回应了，这么久还没直连上，就告诉用户「这个网络不让直连」（同一个 Wi-Fi 下一般 1 秒内就连上） */
+const BLOCKED_AFTER_MS = 6000;
+/** 电脑这么久没再听到手机来连，就不再显示「不让直连」 */
+const BLOCKED_FORGET_MS = 40000;
 const HELLO_EVERY_MS = 3000;
 
 export class PeerLink {
@@ -56,6 +64,10 @@ export class PeerLink {
   private helloTimer: ReturnType<typeof setInterval> | undefined;
   private helloStarted = 0;
   private guardTimer: ReturnType<typeof setTimeout> | undefined;
+  private slowTimer: ReturnType<typeof setTimeout> | undefined;
+  /** 已经发现这个网络不让直连：接着重试，但界面上一直显示 blocked，直到连上 */
+  private blockedHint = false;
+  private lastHelloAt = 0;
   private beatTimer: ReturnType<typeof setInterval> | undefined;
   private answeredSid = '';
 
@@ -89,7 +101,7 @@ export class PeerLink {
     clearInterval(this.helloTimer);
     const say = () => {
       if (this.state === 'connected') return clearInterval(this.helloTimer);
-      if (this.state === 'connecting' && Date.now() - this.helloStarted > (this.opts.offlineAfterMs ?? 9000)) {
+      if ((this.state === 'connecting' || this.state === 'blocked') && Date.now() - this.helloStarted > (this.opts.offlineAfterMs ?? 9000)) {
         this.setState('offline');
       }
       void this.signal.send({ type: 'hello', sid: this.sid });
@@ -157,6 +169,8 @@ export class PeerLink {
   private log(s: string) { this.ev.log?.(s); }
 
   private setState(s: LinkState, info?: LinkInfo) {
+    if (s === 'connected' || s === 'offline') this.blockedHint = false;
+    if (this.blockedHint && (s === 'connecting' || s === 'idle')) s = 'blocked';
     if (this.state === s && !info) return;
     this.state = s;
     this.ev.state?.(s, info);
@@ -164,6 +178,7 @@ export class PeerLink {
 
   private teardown() {
     clearTimeout(this.guardTimer);
+    clearTimeout(this.slowTimer);
     const pc = this.pc;
     this.pc = null;
     this.dc = null;
@@ -171,6 +186,10 @@ export class PeerLink {
   }
 
   private heartbeat() {
+    if (this.blockedHint && this.opts.role === 'pc' && Date.now() - this.lastHelloAt > BLOCKED_FORGET_MS) {
+      this.blockedHint = false;
+      if (this.state === 'blocked') this.setState('idle');
+    }
     if (!this.dc || this.dc.readyState !== 'open') return;
     if (this.opts.role === 'pc') this.sendRaw({ t: 'ping' });
     if (this.state === 'connected' && Date.now() - this.lastHeard > DEAD_AFTER_MS) {
@@ -185,7 +204,8 @@ export class PeerLink {
     if (this.opts.role === 'pc') {
       if (m.type === 'hello') await this.pcOnHello(m.sid);
       else if (m.type === 'answer' && m.sid === this.sid && this.pc) {
-        try { await this.pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); }
+        const pc = this.pc;
+        try { await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); this.watchSlow(pc); }
         catch (e) { this.log('设置手机的回应出错：' + (e as Error).message); }
       }
     } else {
@@ -200,6 +220,7 @@ export class PeerLink {
 
   /** 电脑：手机来打招呼了 */
   private async pcOnHello(sid: string) {
+    this.lastHelloAt = Date.now();
     if (sid === this.sid && this.pc?.localDescription) {
       // 手机没收到上一封，重发同一个 offer，不重新开始
       void this.signal.send({ type: 'offer', sid, sdp: this.pc.localDescription.sdp });
@@ -239,6 +260,18 @@ export class PeerLink {
     if (this.pc !== pc) return;
     void this.signal.send({ type: 'answer', sid, sdp: pc.localDescription!.sdp });
     this.guard(pc);
+    this.watchSlow(pc);
+  }
+
+  /** 双方都回应了还迟迟连不上：多半是网络不让直连，告诉用户（不打断重试） */
+  private watchSlow(pc: RTCPeerConnection) {
+    clearTimeout(this.slowTimer);
+    this.slowTimer = setTimeout(() => {
+      if (this.pc !== pc || this.state === 'connected') return;
+      if (!this.blockedHint) this.log('找到对方了，但直连不上：这个网络可能不让设备之间直接通信');
+      this.blockedHint = true;
+      this.setState('blocked');
+    }, BLOCKED_AFTER_MS);
   }
 
   private newPc(): RTCPeerConnection {

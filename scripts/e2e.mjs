@@ -327,10 +327,53 @@ await panel.reload();
 const phoneQueuedOk = await panel.waitForFunction(() => document.body.innerText.includes('手机攒着的一句话'), null, { timeout: 25000 }).then(() => true, () => false);
 check('手机网页关掉重开、电脑后来才开：照样收到手机攒着的', phoneQueuedOk, phoneRestored.trim());
 
+// 放到桌面的互传（和浏览器各存各的，没有配对暗号）：点「扫码配对」用摄像头扫电脑上的码
+// 测试里用一张画着电脑二维码的画布假装摄像头
+await panel.click('button:has-text("加一台手机")').catch(() => {});
+await panel.waitForSelector('.qr svg', { timeout: 5000 });
+const qrSvg = await panel.evaluate(() => document.querySelector('.qr svg').outerHTML);
+const homeCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+await homeCtx.addInitScript((svg) => {
+  navigator.mediaDevices.getUserMedia = async () => {
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 480;
+    const g = cv.getContext('2d');
+    const img = new Image();
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await img.decode();
+    const draw = () => { g.fillStyle = '#fff'; g.fillRect(0, 0, 640, 480); g.drawImage(img, 180, 100, 280, 280); };
+    draw(); setInterval(draw, 100);
+    return cv.captureStream(10);
+  };
+}, qrSvg);
+await phone.close(); // 现在电脑同一时间只连一台手机：浏览器里那个先关掉（iPhone 上两个也不会同时在前台）
+const home = await homeCtx.newPage();
+await home.goto('http://localhost:8080/');
+await home.click('button:has-text("扫码配对")');
+const scanOk = await home.waitForSelector('.status[data-link="connected"]', { timeout: 20000 }).then(() => true, () => false);
+check('桌面版：点「扫码配对」扫电脑上的码，连上电脑', scanOk, scanOk ? '' : (await home.textContent('main')).slice(0, 120));
+await homeCtx.close();
+
+// 公司网络不让设备直接通信：两边都要说清楚，而不是一直转圈
+const blockCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+await blockCtx.addInitScript(() => {
+  const Orig = window.RTCPeerConnection;
+  const srd = Orig.prototype.setRemoteDescription;
+  Orig.prototype.setRemoteDescription = function (d) { return srd.call(this, { type: d.type, sdp: d.sdp.replace(/a=candidate:.*\r\n/g, '') }); };
+  window.RTCPeerConnection = function (cfg) { return new Orig({ ...(cfg || {}), iceTransportPolicy: 'relay' }); };
+  window.RTCPeerConnection.prototype = Orig.prototype;
+});
+const blocked = await blockCtx.newPage();
+await blocked.goto(pairUrl);
+const phoneBlocked = await blocked.waitForSelector('.status[data-link="blocked"]', { timeout: 15000 }).then(() => true, () => false);
+const pcBlocked = await panel.waitForSelector('.status[data-link="blocked"]', { timeout: 10000 }).then(() => true, () => false);
+check('网络不让直连：手机和电脑都提示「这个网络不让直连」', phoneBlocked && pcBlocked,
+  `手机「${(await blocked.textContent('.status')).trim()}」 电脑「${(await panel.textContent('.status')).trim()}」`);
+await blockCtx.close();
+
 if (process.env.E2E_SHOTS) {
   await panel.setViewportSize({ width: 380, height: 900 });
   await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel.png'), fullPage: true });
-  await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone.png'), fullPage: true });
+  if (!phone.isClosed()) await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone.png'), fullPage: true });
 }
 
 console.log(failures ? `\n${failures} 项没通过` : '\n全部通过');

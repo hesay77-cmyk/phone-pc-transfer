@@ -4,6 +4,7 @@
     type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Session
   } from '@hutong/core';
   import PhoneImage from './PhoneImage.svelte';
+  import Scanner from './Scanner.svelte';
 
   /** 电脑发来的一条。老版本存的没有 kind，都是文字 */
   interface Got { id: string; kind?: 'text' | 'image'; text?: string; name?: string; size?: number; time: number }
@@ -28,6 +29,7 @@
   // （所以清单里故意不写 start_url：写了的话苹果会用它，暗号就丢了；看步骤时再临时换一份带暗号的清单）
   const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
   const inChrome = /CriOS|Chrome/.test(navigator.userAgent);
+  let scanning = $state(false);
   let homeOpen = $state(false);
   let homeHidden = $state(kv.get('homeTipHidden') === '1');
   const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
@@ -79,6 +81,14 @@
   const setSent = (id: string, p: Partial<Sent>) => { sent = sent.map((s) => (s.id === id ? { ...s, ...p } : s)); };
 
   async function start() {
+    await connectSession();
+    // 上次没发完的：列出来，连上后会自动补发
+    for (const it of session?.transfer.pending ?? []) track(it);
+    // 自动测试用：让测试脚本能摸到内部状态（正式构建里没有这一行的效果）
+    if (import.meta.env.VITE_E2E) (window as any).__hutong = session;
+  }
+
+  async function connectSession() {
     if (!secret) return;
     session = await startSession({
       role: 'phone', secret, device: device(), kv,
@@ -110,12 +120,19 @@
       }
     });
   }
-  void start().then(() => {
-    // 上次没发完的：列出来，连上后会自动补发
-    for (const it of session?.transfer.pending ?? []) track(it);
-    // 自动测试用：让测试脚本能摸到内部状态（正式构建里没有这一行的效果）
-    if (import.meta.env.VITE_E2E) (window as any).__hutong = session;
-  });
+  void start();
+
+  /** 扫码拿到新的配对暗号：换成它，重新连 */
+  async function adopt(newSecret: string) {
+    scanning = false;
+    kv.set('secret', newSecret);
+    if (newSecret === secret && session) return;
+    session?.close();
+    session = null;
+    secret = newSecret;
+    link = 'idle';
+    await start();
+  }
 
   // iPhone 切到别的 App、锁屏再回来：马上确认连接，断了就重连（在后台待得越久，越直接重连）
   let hiddenAt = 0;
@@ -172,6 +189,7 @@
     if (!secret) return { cls: 'bad', text: '还没配对' };
     if (link === 'connected') return { cls: 'ok', text: '已连上' + (pcName || '电脑') };
     if (link === 'offline') return { cls: 'bad', text: '电脑不在线' };
+    if (link === 'blocked') return { cls: 'bad', text: '连不上电脑：这个网络不让直连' };
     if (signal !== 'online') return { cls: 'wait', text: '正在连接网络…' };
     return { cls: 'wait', text: '正在连接电脑…' };
   });
@@ -186,19 +204,26 @@
   <header>
     <h1>互传</h1>
     <div class="status {status.cls}" data-link={link}><span class="dot"></span>{status.text}</div>
+    {#if link === 'blocked'}
+      <p class="hint">电脑找到了，但这个 Wi-Fi 不让手机和电脑直接连（有些公司或公共场所的 Wi-Fi 会这样）。手机和电脑换成同一个家里的 Wi-Fi 就能用。这边会一直自动重试。</p>
+    {/if}
     {#if link === 'offline'}
       <p class="hint">电脑上的 Chrome 开着吗？手机和电脑连的是同一个 Wi-Fi 吗？会一直自动重试。</p>
     {/if}
     {#if newer}<p class="hint bad">电脑上的插件版本比这个网页新，请刷新一下这个网页</p>{/if}
   </header>
 
-  {#if !secret && standalone}
-    <section>
-      <p class="big-hint">这个桌面图标还没配对。请在浏览器里打开互传网页（用相机扫电脑上的二维码），再按网页上「放到手机桌面」的步骤重新添加一次。</p>
-    </section>
+  {#if scanning}
+    <section><Scanner onSecret={adopt} onClose={() => (scanning = false)} /></section>
   {:else if !secret}
     <section>
-      <p class="big-hint">请用 iPhone 自带的相机，扫一下电脑上「互传」插件里的二维码。</p>
+      {#if standalone}
+        <p class="big-hint">第一次用，扫一下电脑上的二维码配对（只用扫这一次）。</p>
+      {:else}
+        <p class="big-hint">请用 iPhone 自带的相机，扫一下电脑上「互传」插件里的二维码。或者点下面的按钮在这里扫。</p>
+      {/if}
+      <button class="big" onclick={() => (scanning = true)}>扫码配对</button>
+      <p class="hint">电脑上没看到二维码？点开互传侧边栏，在最下面点「加一台手机 / 显示二维码」。</p>
     </section>
   {:else}
     {#if !standalone && !homeHidden}
@@ -217,8 +242,8 @@
             {/if}
             <li>往下滑，点「添加到主屏幕」。</li>
             <li>右上角点「添加」。</li>
+            <li>从桌面打开「互传」，如果提示配对，点「扫码配对」扫一下电脑上的码（只用扫这一次）。</li>
           </ol>
-          <p class="hint">以后从桌面上的「互传」图标打开，也会自动连上电脑。</p>
           <button class="btn" onclick={() => closeHomeTip(true)}>放好了</button>
           <button class="btn plain" onclick={() => closeHomeTip(false)}>先收起</button>
         {/if}
@@ -260,7 +285,10 @@
     </section>
   {/if}
 
-  <footer>互传 · 版本 {version}</footer>
+  <footer>
+    {#if secret && !scanning}<button class="link" onclick={() => (scanning = true)}>重新扫码配对</button> · {/if}
+    互传 · 版本 {version}
+  </footer>
 </main>
 
 <style>
@@ -290,5 +318,6 @@
   .meta { font-size: 12px; color: var(--muted); }
   .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 4px; font-size: 17px; }
   .text.code { font-size: 40px; font-weight: 700; letter-spacing: 6px; font-variant-numeric: tabular-nums; margin: 6px 0; }
+  .link { border: none; background: none; color: var(--muted); text-decoration: underline; font-size: 12px; padding: 0; }
   footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 10px; }
 </style>

@@ -75,6 +75,7 @@
     if (!s) return { cls: 'wait', text: '正在启动…' };
     if (s.link === 'connected') return { cls: 'ok', text: `已连上${s.phoneName ? ' ' + s.phoneName : '手机'}` };
     if (s.link === 'connecting') return { cls: 'wait', text: '手机正在连过来…' };
+    if (s.link === 'blocked') return { cls: 'bad', text: '手机找到了，但这个网络不让手机和电脑直接连' };
     if (s.signal !== 'online') return { cls: 'wait', text: '正在连接网络…' };
     return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开互传网页就会自动连上' : '还没配对手机' };
   });
@@ -179,6 +180,7 @@
     <h1>互传</h1>
     <div class="status {status.cls}" data-link={s?.link ?? ''}><span class="dot"></span>{status.text}</div>
     {#if s?.link === 'connected' && s.route}<div class="small">{s.route}，{s.connectMs} 毫秒连上</div>{/if}
+    {#if s?.link === 'blocked'}<div class="small">有些公司或公共场所的 Wi-Fi 会这样。手机和电脑换成同一个家里的 Wi-Fi 就能用；这边会一直自动重试。</div>{/if}
     {#if s?.newerPeer}<div class="small bad">手机那边的版本比插件新，请更新插件</div>{/if}
   </header>
 
