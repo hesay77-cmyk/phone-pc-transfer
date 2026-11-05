@@ -204,10 +204,11 @@ const before = await panel.locator('.item[data-kind="image"]').count();
 await phone.evaluate(() => { const l = window.__hutong.link; l.dc.onmessage = null; });
 const vis = (hidden) => phone.evaluate((h) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => h }); document.dispatchEvent(new Event('visibilitychange')); }, hidden);
 await vis(true); await sleep(200); await vis(false);
+const tResume = Date.now();
 await phone.setInputFiles('input[type=file]', { name: 'IMG_0002.png', mimeType: 'image/png', buffer: testPng(300, 200) });
 await panel.waitForFunction((n) => document.querySelectorAll('.item[data-kind="image"]').length > n, before, { timeout: 15000 });
 await phone.waitForFunction(() => document.querySelector('.sent')?.dataset.state === 'done', null, { timeout: 10000 });
-check('切回网页后自动重连，断线时发的照片送到', true, `电脑上共 ${await panel.locator('.item[data-kind="image"]').count()} 张`);
+check('切回网页后自动重连，断线时发的照片送到', true, `${Date.now() - tResume} 毫秒`);
 
 // 确认丢了：手机重发同一条，电脑只算一次
 await phone.evaluate(() => { const t = window.__hutong.transfer; t.__onAck = t.onAck; t.onAck = () => {}; });
