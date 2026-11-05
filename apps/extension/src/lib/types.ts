@@ -51,13 +51,15 @@ export type ToBg =
   | { to: 'bg'; type: 'badge'; text: string; color: string };
 
 /** 发到手机的结果 */
-export interface SendResult { ok: boolean; connected?: boolean; error?: string }
+export interface SendResult { ok: boolean; connected?: boolean; error?: string; /** 发的是什么，给用户看 */ what?: string }
 
 export type ToEngine =
   | { to: 'engine'; type: 'get-state' }
   | { to: 'engine'; type: 'send-text'; text: string }
   /** 网页上右键「把这张图发到手机」：引擎自己去下载这张图 */
   | { to: 'engine'; type: 'send-image-url'; url: string }
+  /** 把剪贴板里的东西（刚复制的文字，或刚截的图）发到手机：快捷键和侧边栏按钮都用它 */
+  | { to: 'engine'; type: 'send-clipboard' }
   /** 侧边栏里选的/粘贴的/拖进来的图：先放进小数据库，再告诉引擎 id */
   | { to: 'engine'; type: 'send-file'; fileId: string; name: string }
   | { to: 'engine'; type: 'reset-pairing' }

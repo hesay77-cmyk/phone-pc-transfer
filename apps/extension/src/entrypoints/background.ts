@@ -88,8 +88,23 @@ export default defineBackground(() => {
     const text = r.ok ? (r.connected ? '已发到手机' : '手机没打开互传网页，先存着，打开后自动送到') : (r.error || '没发出去');
     if (!(await toast(tab?.id, text, r.ok)) && !r.ok) notify({ to: 'bg', type: 'notify', kind: 'text', title: '没发到手机', message: text });
   }
-  // 自动测试用：测试脚本没法点真的右键菜单，直接调这个
-  if (import.meta.env.VITE_E2E) (globalThis as any).__menuClicked = menuClicked;
+  // ---------- 快捷键：把刚复制的内容发到手机（在任何软件里复制完按一下） ----------
+  browser.commands.onCommand.addListener((cmd, tab) => { if (cmd === 'send-clipboard') void sendClipboard(tab); });
+
+  async function sendClipboard(tab?: { id?: number }) {
+    await ensureEngine();
+    const r: SendResult = await browser.runtime.sendMessage({ to: 'engine', type: 'send-clipboard' } satisfies ToEngine)
+      .catch(() => ({ ok: false, error: '插件后台没响应，请再试一次' }));
+    const text = r.ok ? (r.connected ? `${r.what ?? ''}已发到手机` : `${r.what ?? ''}先存着，手机打开互传网页后自动送到`) : (r.error || '没发出去');
+    // Chrome 在前台：网页右下角闪提示；在别的软件里：用系统通知（被关了也没关系，手机上会收到）
+    const w = await browser.windows.getLastFocused().catch(() => null);
+    if (!(w?.focused && (await toast(tab?.id, text, r.ok)))) {
+      notify({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? '已发到手机' : '没发到手机', message: text });
+    }
+  }
+
+  // 自动测试用：测试脚本没法点真的右键菜单、按全局快捷键，直接调这些
+  if (import.meta.env.VITE_E2E) Object.assign(globalThis, { __menuClicked: menuClicked, __sendClipboard: sendClipboard });
 
   const toEngine = (m: { type: 'send-text'; text: string } | { type: 'send-image-url'; url: string }): Promise<SendResult> =>
     browser.runtime.sendMessage({ to: 'engine', ...m } satisfies ToEngine).catch(() => ({ ok: false, error: '插件后台没响应，请再试一次' }));

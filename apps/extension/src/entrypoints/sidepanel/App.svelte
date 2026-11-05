@@ -14,6 +14,13 @@
   let dragging = $state(false);
   let fileInput = $state<HTMLInputElement>();
   let notPinned = $state(false);
+  let box = $state<HTMLTextAreaElement>();
+  // 侧边栏一打开就能直接打字/粘贴
+  $effect(() => { box?.focus(); });
+
+  function onKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(); }
+  }
   let needImagePermission = $state(false);
 
   const engine = (m: ToEngine) => browser.runtime.sendMessage(m);
@@ -107,21 +114,30 @@
     if (files.length) { e.preventDefault(); void sendImages(files); }
   }
 
-  /** 按钮：把剪贴板里的图（刚截的图）发到手机 */
-  async function sendClipboardImage() {
+  /** 按钮：把刚复制的内容（文字或截图）发到手机。先让引擎读；读不到再用侧边栏自己读 */
+  async function sendClipboard() {
+    const r: SendResult = await engine({ to: 'engine', type: 'send-clipboard' }).catch(() => ({ ok: false, error: '读不到剪贴板' }));
+    if (r.ok || !r.error?.startsWith('读不到剪贴板')) { showResult(r, r.what ?? ''); return; }
     try {
       const files: File[] = [];
+      let text = '';
       for (const it of await navigator.clipboard.read()) {
         const t = it.types.find((x) => x.startsWith('image/'));
         if (t) files.push(new File([await it.getType(t)], shotName(), { type: t }));
+        else if (it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
       }
-      if (!files.length) { sendOk = false; sendTip = '剪贴板里没有图片。先截图（Win+Shift+S），再点这个按钮'; return; }
-      await sendImages(files);
+      if (files.length) { await sendImages(files); return; }
+      if (!text.trim()) { sendOk = false; sendTip = '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再点这个按钮'; return; }
+      showResult(await engine({ to: 'engine', type: 'send-text', text }));
     } catch {
       sendOk = false;
-      sendTip = '读不到剪贴板里的图。可以点一下上面的输入框，再按 Ctrl+V';
+      sendTip = '读不到剪贴板。可以把内容粘贴到上面的输入框里，再点「发到手机」';
     }
   }
+
+  // 快捷键（在 chrome://extensions/shortcuts 里可以改）
+  let shortcut = $state('');
+  void browser.commands.getAll().then((cs) => (shortcut = cs.find((c) => c.name === 'send-clipboard')?.shortcut ?? ''));
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -177,6 +193,24 @@
       </section>
     {/if}
 
+    <section class="send" class:dragging aria-label="发到手机"
+      ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
+      <h2>发到手机</h2>
+      <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder="输入或粘贴文字、代码、网址，按 Ctrl+Enter 发送"></textarea>
+      <div class="row">
+        <button class="primary" onclick={send}>发到手机</button>
+        <button onclick={sendClipboard}>发刚复制的</button>
+        <button onclick={() => fileInput?.click()}>选图片…</button>
+      </div>
+      <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
+      {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
+      <p class="hint">
+        在任何软件里复制了文字或截了图，点「发刚复制的」就行{#if shortcut}；更快：复制完直接按 <b>{shortcut}</b>，不用打开这里{/if}。
+        网页上选中文字、或在链接和图片上右键，也能「发到手机」。
+      </p>
+      {#if needImagePermission}<button onclick={allowImages}>允许发网页上的图</button>{/if}
+    </section>
+
     {#if s.everPaired && notPinned}
       <section class="tip">
         <b>把互传固定到右上角</b>：点 Chrome 右上角的拼图图标，再点「互传」旁边的图钉。这样手机发来东西时，图标上会出现数字提醒你。
@@ -185,7 +219,7 @@
     {/if}
 
     <section>
-      <h2>收到的</h2>
+      <h2>最近</h2>
       {#if s.items.length === 0}
         <p class="hint">手机发来的文字会自动复制好，直接 Ctrl+V；照片会自动存进「下载\互传」文件夹。</p>
       {/if}
@@ -208,20 +242,6 @@
       </div>
     </section>
 
-    <section class="send" class:dragging aria-label="发到手机"
-      ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
-      <h2>发到手机</h2>
-      <textarea rows="2" bind:value={out} placeholder="输入或粘贴文字、网址"></textarea>
-      <div class="row">
-        <button class="primary" onclick={send}>发到手机</button>
-        <button onclick={sendClipboardImage}>发刚截的图</button>
-        <button onclick={() => fileInput?.click()}>选图片…</button>
-      </div>
-      <input bind:this={fileInput} type="file" accept="image/*" multiple hidden onchange={onPick} />
-      {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
-      <p class="hint">截图（Win+Shift+S）后点「发刚截的图」，或在这里按 Ctrl+V。图片也可以直接拖到这里。在网页上选中文字、或在链接和图片上点右键，也能「发到手机」。</p>
-      {#if needImagePermission}<button onclick={allowImages}>允许发网页上的图</button>{/if}
-    </section>
 
     <footer>
       {#if s.everPaired && !showQr}<button class="link" onclick={() => (showQr = true)}>加一台手机 / 显示二维码</button> · {/if}

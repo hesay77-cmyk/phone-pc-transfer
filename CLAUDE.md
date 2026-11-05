@@ -14,7 +14,10 @@
 - 插件：连接和写剪贴板都在 offscreen 引擎（`apps/extension/src/lib/engine.ts`）里。offscreen 只能用 `chrome.runtime` 收发消息，不能用 storage、getManifest 等；需要的数据用 localStorage / IndexedDB。
 - Chrome 不允许后台页面往剪贴板放图片：照片自动存进「下载\互传」，复制靠点通知弹出的小窗口（`copyimg`）或侧边栏按钮。
 - 网页右键「发到手机」在后台（`background.ts` 的 `menuClicked`）：选中文字用 scripting 重新取（保留换行），网页上的图要可选权限 `<all_urls>`，只能在点菜单那一下 `permissions.request`；被拒或报错就让用户去侧边栏点「允许发网页上的图」。结果用网页右下角小提示（toast）告诉用户，不依赖 Windows 通知（很多人关了 Chrome 通知）。
+- 「发刚复制的」（侧边栏按钮）和全局快捷键 Ctrl+Shift+1（`send-clipboard`，Chrome 不在前台也能用）都走引擎的 `sendClipboard`：offscreen 里用 `execCommand('paste')` 读剪贴板（要 clipboardRead 权限），有图发图、没图发文字。
 - 插件图标角标由引擎管：蓝色数字 = 新收到没看的条数（侧边栏可见时清零），绿色 ✓ = 发到手机的都送到了。
+- 手机「放到桌面」：苹果桌面图标和浏览器存储分开，配对暗号靠网址带过去。所以 `manifest.webmanifest` 故意不写 start_url；看「怎么放」步骤时把 `#k=暗号` 临时放回网址、并换一份带暗号的 data: 清单。
+- 发文件（文档等）曦说暂时不需要，做了一半的插件端在分支 `feature/files-later`。
 - iPhone 网页切到别的 App 连接就断：手机回到前台要调用 `link.resume()`；发出去的东西没确认就留在待发队列，连上后自动补发，接收方按 id 去重。
 
 ## 改完必须

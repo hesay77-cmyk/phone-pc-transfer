@@ -20,7 +20,9 @@ export default defineConfig({
     ...(process.env.VITE_E2E ? { host_permissions: ['<all_urls>'] } : { optional_host_permissions: ['<all_urls>'] }),
     action: { default_title: '互传' },
     commands: {
-      _execute_action: { suggested_key: { default: 'Alt+Shift+V' }, description: '打开互传' }
+      _execute_action: { suggested_key: { default: 'Alt+Shift+V' }, description: '打开互传' },
+      // 全局快捷键：Chrome 不在前台（在 Word、记事本里）也能用。Chrome 只允许 Ctrl+Shift+数字 做全局键
+      'send-clipboard': { suggested_key: { default: 'Ctrl+Shift+1' }, description: '把刚复制的内容发到手机', global: true } as any
     }
   }
 });

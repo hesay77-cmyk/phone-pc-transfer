@@ -5,7 +5,7 @@ import {
   type DeviceInfo, type Incoming, type Session
 } from '@hutong/core';
 import { browser } from 'wxt/browser';
-import { copyText } from './clipboard';
+import { copyText, readClipboard } from './clipboard';
 import { deleteFile, getFile, photoName, pruneFiles, putFile, thumbnail } from './files';
 import type { EngineState, Item, SavedInfo, SendResult, ToBg, ToEngine, ToPanel } from './types';
 
@@ -45,6 +45,7 @@ export class Engine {
       if (msg.type === 'get-state') { reply(this.state); return; }
       if (msg.type === 'send-text') { reply(this.sendText(msg.text)); return; }
       if (msg.type === 'send-image-url') { void this.sendImageUrl(msg.url).then(reply); return true; }
+      if (msg.type === 'send-clipboard') { void this.sendClipboard().then(reply); return true; }
       if (msg.type === 'send-file') { void this.sendStoredFile(msg.fileId, msg.name).then(reply); return true; }
       if (msg.type === 'reset-pairing') { void this.resetPairing().then(() => reply(this.state)); return true; }
       if (msg.type === 'log') { this.log(msg.text); return; }
@@ -106,6 +107,23 @@ export class Engine {
     const out = this.session.transfer.sendText(text);
     this.addItem({ id: out.id, from: 'pc', kind: 'text', time: Date.now(), text, delivered: false });
     return { ok: true, connected: this.session.link.ready };
+  }
+
+  /** 剪贴板里有图（截图）就发图，否则发文字 */
+  private async sendClipboard(): Promise<SendResult> {
+    const c = readClipboard();
+    if (!c.ok) { this.log('读剪贴板失败'); return { ok: false, error: '读不到剪贴板。可以把内容粘贴到侧边栏的输入框里再发' }; }
+    const imgs = c.files.filter((f) => f.type.startsWith('image/'));
+    if (imgs.length) {
+      let r: SendResult = { ok: false };
+      const t = new Date().toLocaleTimeString().replace(/:/g, '-');
+      for (const f of imgs) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : `截图 ${t}.png`);
+      return { ...r, what: imgs.length > 1 ? `${imgs.length} 张图` : '截图' };
+    }
+    if (!c.text.trim()) return { ok: false, error: '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再发' };
+    const r = this.sendText(c.text);
+    const head = c.text.trim().replace(/\s+/g, ' ');
+    return { ...r, what: `「${head.length > 20 ? head.slice(0, 20) + '…' : head}」` };
   }
 
   /** 网页上的图：插件自己下载下来再发（需要用户点过「允许」读取网页图片） */

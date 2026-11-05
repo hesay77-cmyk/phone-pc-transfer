@@ -23,6 +23,37 @@
   }
   secret = fromHash || kv.get('secret');
 
+  // 放到手机桌面（主屏幕）：苹果的桌面图标和浏览器各存各的，配对暗号要跟着网址走。
+  // 所以看「怎么放」步骤时，把暗号临时放回网址里；手机桌面图标存下的就是带暗号的网址，从桌面打开也能直接连。
+  // （所以清单里故意不写 start_url：写了的话苹果会用它，暗号就丢了；看步骤时再临时换一份带暗号的清单）
+  const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+  const inChrome = /CriOS|Chrome/.test(navigator.userAgent);
+  let homeOpen = $state(false);
+  let homeHidden = $state(kv.get('homeTipHidden') === '1');
+  const manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+  const manifestHref = manifestLink?.getAttribute('href') ?? '';
+  function openHomeTip() {
+    homeOpen = true;
+    if (!secret) return;
+    history.replaceState(null, '', location.pathname + location.search + '#k=' + secret);
+    // 有的系统会照清单里的起始网址存图标：临时换一份带暗号的清单
+    if (manifestLink) {
+      const abs = (p: string) => new URL(p, location.href).href;
+      const man = {
+        name: '互传', short_name: '互传', display: 'standalone', background_color: '#ffffff', theme_color: '#2563eb',
+        start_url: location.href, scope: abs('./'),
+        icons: [{ src: abs('icon-192.png'), sizes: '192x192', type: 'image/png' }, { src: abs('icon-512.png'), sizes: '512x512', type: 'image/png' }]
+      };
+      manifestLink.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man));
+    }
+  }
+  function closeHomeTip(forever: boolean) {
+    homeOpen = false;
+    history.replaceState(null, '', location.pathname + location.search);
+    if (manifestLink) manifestLink.setAttribute('href', manifestHref);
+    if (forever) { kv.set('homeTipHidden', '1'); homeHidden = true; }
+  }
+
   let signal = $state<BusStatus>('connecting');
   let link = $state<LinkState>('idle');
   let pcName = $state('');
@@ -151,11 +182,38 @@
     {#if newer}<p class="hint bad">电脑上的插件版本比这个网页新，请刷新一下这个网页</p>{/if}
   </header>
 
-  {#if !secret}
+  {#if !secret && standalone}
+    <section>
+      <p class="big-hint">这个桌面图标还没配对。请在浏览器里打开互传网页（用相机扫电脑上的二维码），再按网页上「放到手机桌面」的步骤重新添加一次。</p>
+    </section>
+  {:else if !secret}
     <section>
       <p class="big-hint">请用 iPhone 自带的相机，扫一下电脑上「互传」插件里的二维码。</p>
     </section>
   {:else}
+    {#if !standalone && !homeHidden}
+      <section class="home-tip">
+        {#if !homeOpen}
+          <p><b>把互传放到手机桌面</b>，下次点图标就能用，不用再找网页。</p>
+          <button class="btn" onclick={openHomeTip}>怎么放？</button>
+          <button class="btn plain" onclick={() => closeHomeTip(true)}>不用了</button>
+        {:else}
+          <p><b>放到手机桌面：</b></p>
+          <ol>
+            {#if inChrome}
+              <li>点地址栏右边的「分享」按钮（方框带向上的箭头）。找不到就点右下角「…」，再点「分享」。</li>
+            {:else}
+              <li>点屏幕下方的「分享」按钮（方框带向上的箭头）。</li>
+            {/if}
+            <li>往下滑，点「添加到主屏幕」。</li>
+            <li>右上角点「添加」。</li>
+          </ol>
+          <p class="hint">以后从桌面上的「互传」图标打开，也会自动连上电脑。</p>
+          <button class="btn" onclick={() => closeHomeTip(true)}>放好了</button>
+          <button class="btn plain" onclick={() => closeHomeTip(false)}>先收起</button>
+        {/if}
+      </section>
+    {/if}
     <section>
       <button class="big" onclick={pasteAndSend}>粘贴并发送到电脑</button>
       <button class="big alt" onclick={() => fileInput?.click()}>发照片到电脑</button>
@@ -214,6 +272,10 @@
   .sent { font-size: 14px; color: var(--muted); margin: 0 0 6px; }
   textarea { margin-top: 6px; }
   .btn { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 10px; margin: 6px 6px 0 0; text-decoration: none; font-size: 15px; }
+  .home-tip { background: #eff6ff; border: none; border-radius: 14px; padding: 12px 14px; margin: 4px 0 6px; font-size: 15px; }
+  .home-tip p { margin: 0 0 6px; }
+  .home-tip ol { margin: 0 0 8px; padding-left: 22px; line-height: 1.6; }
+  .btn.plain { border-color: transparent; background: transparent; color: var(--muted); }
   .item { background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
   .meta { font-size: 12px; color: var(--muted); }
   .text { white-space: pre-wrap; word-break: break-all; margin: 4px 0 4px; font-size: 17px; }

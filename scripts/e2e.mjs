@@ -76,11 +76,24 @@ const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height:
 await phoneCtx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:8080' });
 let phone = await phoneCtx.newPage();
 phone.on('pageerror', (e) => console.log('[手机页面出错]', e.message));
+const phoneLog = [];
+const logPhone = (pg) => pg.on('console', (m) => phoneLog.push(new Date().toISOString().slice(17, 23) + ' ' + m.text()));
+logPhone(phone);
 const t0 = Date.now();
 await phone.goto(pairUrl);
 await phone.waitForSelector('.status[data-link="connected"]', { timeout: 20000 });
 check('手机扫码后连上电脑', true, `${Date.now() - t0} 毫秒（含打开网页）`);
 check('地址栏里的暗号被抹掉', !(await phone.evaluate(() => location.hash)));
+
+// 「放到手机桌面」：看步骤时暗号临时回到网址里（桌面图标存的就是它），收起后再抹掉
+await phone.click('button:has-text("怎么放")');
+const homeUrl = await phone.evaluate(() => ({ hash: location.hash, man: document.querySelector('link[rel="manifest"]').href }));
+const manStart = homeUrl.man.startsWith('data:') ? JSON.parse(decodeURIComponent(homeUrl.man.split(',')[1])).start_url : '';
+await phone.click('button:has-text("先收起")');
+const afterClose = await phone.evaluate(() => ({ hash: location.hash, man: document.querySelector('link[rel="manifest"]').getAttribute('href') }));
+check('放到桌面：看步骤时网址和清单都带暗号，收起后抹掉',
+  pairUrl.endsWith(homeUrl.hash) && manStart.endsWith(homeUrl.hash) && !afterClose.hash && afterClose.man === './manifest.webmanifest',
+  `${homeUrl.hash.slice(0, 8)}… → 「${afterClose.hash}」`);
 await panel.waitForSelector('.status[data-link="connected"]', { timeout: 5000 });
 check('电脑显示已连上手机', (await panel.textContent('.status')).includes('已连上'), (await panel.textContent('header')).trim().replace(/\s+/g, ' '));
 
@@ -153,9 +166,21 @@ await phone.waitForFunction((n) => document.querySelectorAll('.item[data-kind="i
   .then(() => check('截图后在侧边栏按 Ctrl+V：手机收到', true), () => check('截图后在侧边栏按 Ctrl+V：手机收到', false));
 nImg = await phoneImgs();
 await putShot(200, 320);
-await panel.click('button:has-text("发刚截的图")');
+await panel.click('button:has-text("发刚复制的")');
 await phone.waitForFunction((n) => document.querySelectorAll('.item[data-kind="image"] img').length > n, nImg, { timeout: 10000 })
-  .then(() => check('点「发刚截的图」：手机收到', true), async () => check('点「发刚截的图」：手机收到', false, await panel.textContent('.send')));
+  .then(() => check('截图后点「发刚复制的」：手机收到图', true), async () => check('截图后点「发刚复制的」：手机收到图', false, await panel.textContent('.send')));
+
+// 在别的软件里复制了一段代码：点「发刚复制的」，或者按快捷键（Chrome 不在前台也行）
+const code1 = 'function hi() {\n  return "你好";\n}';
+await panel.evaluate((t) => navigator.clipboard.writeText(t), code1);
+await panel.click('button:has-text("发刚复制的")');
+await phone.waitForFunction((t) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent === t), code1, { timeout: 5000 })
+  .then(() => check('复制代码后点「发刚复制的」：手机收到（换行保留）', true), async () => check('复制代码后点「发刚复制的」：手机收到（换行保留）', false, await panel.textContent('.send')));
+const code2 = 'SELECT * FROM t WHERE id = 42;';
+await panel.evaluate((t) => navigator.clipboard.writeText(t), code2);
+await (ctx.serviceWorkers()[0] ?? sw).evaluate(() => globalThis.__sendClipboard());
+await phone.waitForFunction((t) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent === t), code2, { timeout: 5000 })
+  .then(() => check('复制后按快捷键：手机收到', true), () => check('复制后按快捷键：手机收到', false));
 
 // 验证码大字显示
 await panel.fill('textarea', '384920');
@@ -207,8 +232,13 @@ await vis(true); await sleep(200); await vis(false);
 const tResume = Date.now();
 await phone.setInputFiles('input[type=file]', { name: 'IMG_0002.png', mimeType: 'image/png', buffer: testPng(300, 200) });
 await panel.waitForFunction((n) => document.querySelectorAll('.item[data-kind="image"]').length > n, before, { timeout: 15000 });
-await phone.waitForFunction(() => document.querySelector('.sent')?.dataset.state === 'done', null, { timeout: 10000 });
-check('切回网页后自动重连，断线时发的照片送到', true, `${Date.now() - tResume} 毫秒`);
+const resumeOk = await phone.waitForFunction(() => document.querySelector('.sent')?.dataset.state === 'done', null, { timeout: 10000 }).then(() => true, () => false);
+check('切回网页后自动重连，断线时发的照片送到', resumeOk, `${Date.now() - tResume} 毫秒`);
+if (!resumeOk) {
+  console.log('--- 手机日志 ---\n' + phoneLog.slice(-40).join('\n'));
+  console.log('--- 电脑日志 ---\n' + (await panel.textContent('footer pre')).split('\n').slice(0, 30).reverse().join('\n'));
+  console.log('手机待发：', await phone.evaluate(() => JSON.stringify(window.__hutong.transfer.pending.map((p) => p.id))));
+}
 
 // 确认丢了：手机重发同一条，电脑只算一次
 await phone.evaluate(() => { const t = window.__hutong.transfer; t.__onAck = t.onAck; t.onAck = () => {}; });
