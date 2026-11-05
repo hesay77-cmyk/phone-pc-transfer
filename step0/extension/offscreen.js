@@ -277,7 +277,7 @@ async function onData(m) {
     result('saveImg', item.saved.ok, item.saved.ok ? '已存到 ' + item.saved.path : item.saved.detail);
     result('imgTransfer', blob.size === meta.size, '收到 ' + kb(blob.size) + '（手机那边是 ' + kb(meta.size) + '），' + (meta.w || '?') + '×' + (meta.h || '?') + '，用时 ' + ms + ' 毫秒');
     result('clipImg', item.copy.ok, item.copy.summary + '。请在 AI 聊天框里按 Ctrl+V 确认');
-    notify(item.saved.ok ? '收到一张图片，已存进「下载\\互传」' : '收到一张图片', kb(blob.size) + '，点这里打开侧边栏', dataUrl);
+    notify(item.saved.ok ? '收到一张图片，已存进「下载\\互传」' : '收到一张图片', '点这里复制这张图，然后就能 Ctrl+V', dataUrl, item.id);
     push();
   } else if (m.t === 'hello-info') {
     log('手机信息：' + m.ua);
@@ -297,8 +297,8 @@ function addItem(item) {
   push();
 }
 
-function notify(title, message, image) {
-  chrome.runtime.sendMessage({ to: 'bg', type: 'notify', title, message, image }).catch(() => {});
+function notify(title, message, image, imageId) {
+  chrome.runtime.sendMessage({ to: 'bg', type: 'notify', title, message, image, imageId }).catch(() => {});
 }
 
 const kb = (n) => (n > 1048576 ? (n / 1048576).toFixed(2) + ' MB' : Math.round(n / 1024) + ' KB');
@@ -363,6 +363,11 @@ async function copyImage(blob, dataUrl) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.to !== 'offscreen') return;
   if (msg.type === 'get-state') { sendResponse(state); return; }
+  if (msg.type === 'get-image') {
+    const it = state.items.find((x) => x.kind === 'image' && (!msg.id || x.id === msg.id));
+    sendResponse(it ? { dataUrl: it.dataUrl, size: it.size, id: it.id } : null);
+    return;
+  }
   if (msg.type === 'result') { result(msg.key, msg.ok, msg.detail); return; }
   if (msg.type === 'send-text') {
     const it = { id: rand(8), from: 'pc', kind: 'text', text: msg.text, time: Date.now() };

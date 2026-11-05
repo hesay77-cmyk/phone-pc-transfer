@@ -44,10 +44,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const opt = msg.image
       ? { type: 'image', iconUrl: 'icon.png', title: msg.title, message: msg.message || '', imageUrl: msg.image }
       : { type: 'basic', iconUrl: 'icon.png', title: msg.title, message: msg.message || '' };
-    chrome.notifications.create('', opt, () => {
+    // 图片通知的编号带上图片 id，点它时用来复制这张图
+    const nid = msg.imageId ? 'img:' + msg.imageId : '';
+    chrome.notifications.create(nid, opt, () => {
       if (chrome.runtime.lastError && msg.image) {
         // 有的系统不支持带大图的通知，退回普通通知
-        chrome.notifications.create('', { type: 'basic', iconUrl: 'icon.png', title: msg.title, message: msg.message || '' });
+        chrome.notifications.create(nid, { type: 'basic', iconUrl: 'icon.png', title: msg.title, message: msg.message || '' });
       }
     });
   }
@@ -56,6 +58,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // 测试：点通知能不能直接打开侧边栏
 chrome.notifications.onClicked.addListener(async (id) => {
   chrome.notifications.clear(id);
+  if (id.startsWith('img:')) {
+    // 测试：点图片通知 → 弹一个小窗口（新窗口会拿到焦点，才允许往剪贴板放图片），复制完自己关掉
+    const w = 300, h = 150;
+    chrome.windows.create({ url: 'copyimg.html?id=' + encodeURIComponent(id.slice(4)), type: 'popup', width: w, height: h, focused: true });
+    return;
+  }
   try {
     const w = await chrome.windows.getLastFocused();
     await chrome.sidePanel.open({ windowId: w.id });
