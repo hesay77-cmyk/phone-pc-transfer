@@ -222,6 +222,15 @@ await panel.fill('textarea', '384920');
 await panel.click('button:has-text("发到手机")');
 await phone.waitForSelector('.text.code', { timeout: 5000 });
 check('验证码在手机上大字显示', (await phone.textContent('.text.code')) === '384920');
+const tabState = () => panel.evaluate(() => ({
+  on: document.querySelector('.tabs .on')?.className.match(/t-(phone|pc)/)?.[1],
+  from: [...new Set([...document.querySelectorAll('.item')].map((e) => e.dataset.from))].join(','),
+  dbg: document.querySelector('.tabs')?.innerText.replace(/\s+/g, ' ') + ' ls=' + localStorage.getItem('tab') + ' top=' + document.querySelector('.item .meta')?.innerText
+}));
+await panel.waitForSelector('.tabs .t-pc.on', { timeout: 3000 }).catch(() => {});
+const afterSend = await tabState();
+check('侧边栏分两栏：刚发到手机后显示「发到手机的」，只有电脑发出的', afterSend.on === 'pc' && afterSend.from === 'pc', JSON.stringify(afterSend));
+if (process.env.E2E_SHOTS) { await panel.setViewportSize({ width: 380, height: 1000 }); await panel.screenshot({ path: process.env.E2E_SHOTS + '/panel-pc.png' }); }
 
 // 网页上右键「发到手机」（测试脚本点不了真的右键菜单，直接调用插件里处理菜单的那段）
 const web = await ctx.newPage();
@@ -251,6 +260,10 @@ await panelVis('hidden');
 await phone.fill('textarea', '角标测试');
 await phone.getByRole('button', { name: '发送', exact: true }).click();
 await panel.waitForFunction(() => document.body.innerText.includes('角标测试'), null, { timeout: 5000 });
+await panel.waitForSelector('.tabs .t-phone.on', { timeout: 3000 }).catch(() => {});
+const afterGot = await tabState();
+check('侧边栏分两栏：手机发来新的就切到「手机发来的」，只有手机发来的', afterGot.on === 'phone' && afterGot.from === 'phone', JSON.stringify(afterGot));
+if (process.env.E2E_SHOTS) await panel.screenshot({ path: process.env.E2E_SHOTS + '/panel-phone.png' });
 await sleep(300);
 const badgeOn = await bgw().evaluate(() => chrome.action.getBadgeText({}));
 await panelVis('visible');

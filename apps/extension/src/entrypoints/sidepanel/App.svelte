@@ -33,8 +33,21 @@
   const bg = (m: ToBg) => browser.runtime.sendMessage(m);
 
   browser.runtime.onMessage.addListener((m: ToPanel) => {
-    if (m?.to === 'panel' && m.type === 'state') { s = m.state; markSeen(); }
+    if (m?.to === 'panel' && m.type === 'state') { s = m.state; followNewest(); markSeen(); }
   });
+
+  // 「最近」分两栏：手机发来的 / 发到手机的。来了新的（或刚发出去）就自动切到那一栏
+  let tab = $state<'phone' | 'pc'>(localStorage.getItem('tab') === 'pc' ? 'pc' : 'phone');
+  let newestId: string | undefined;
+  function showTab(t: 'phone' | 'pc') { tab = t; localStorage.setItem('tab', t); }
+  function followNewest() {
+    const top = s?.items[0];
+    if (newestId !== undefined && top && top.id !== newestId) showTab(top.from);
+    newestId = top?.id ?? '';
+  }
+  const fromPhone = $derived(s?.items.filter((it) => it.from === 'phone') ?? []);
+  const toPhone = $derived(s?.items.filter((it) => it.from === 'pc') ?? []);
+  const shown = $derived(tab === 'phone' ? fromPhone : toPhone);
 
   // 侧边栏开着就算看过了：清掉插件图标上的数字
   function markSeen() {
@@ -75,7 +88,7 @@
     await bg({ to: 'bg', type: 'ensure-engine' }).catch(() => {});
     for (let i = 0; i < 15; i++) {
       const st = await engine({ to: 'engine', type: 'get-state' }).catch(() => null);
-      if (st) { s = st; markSeen(); return; }
+      if (st) { s = st; followNewest(); markSeen(); return; }
       await new Promise((r) => setTimeout(r, 300));
     }
     failed = true;
@@ -250,15 +263,25 @@
     {/if}
 
     <section>
-      <h2>最近</h2>
-      {#if s.items.length === 0}
-        <p class="hint">手机发来的文字会自动复制好，直接 Ctrl+V；照片会自动存进「下载\互传」文件夹。</p>
+      <div class="tabs" role="tablist" aria-label="最近">
+        <button role="tab" class="t-phone" class:on={tab === 'phone'} aria-selected={tab === 'phone'} onclick={() => showTab('phone')}>
+          手机发来的<span class="n">{fromPhone.length}</span>
+        </button>
+        <button role="tab" class="t-pc" class:on={tab === 'pc'} aria-selected={tab === 'pc'} onclick={() => showTab('pc')}>
+          发到手机的<span class="n">{toPhone.length}</span>
+        </button>
+      </div>
+      {#if shown.length === 0}
+        <p class="hint">
+          {#if tab === 'phone'}手机发来的文字会自动复制好，直接 Ctrl+V；照片会自动存进「下载\互传」文件夹。
+          {:else}在上面打字、点「发刚复制的」、或在网页上右键「发到手机」，发出去的东西都在这里，能看到手机收到没有。{/if}
+        </p>
       {/if}
       <div class="items">
-        {#each s.items as it (it.id)}
+        {#each shown as it (it.id)}
           <div class="item" data-kind={it.kind} data-from={it.from}>
             <div class="meta">
-              {it.from === 'phone' ? '手机发来' : it.delivered ? '发到手机 · 手机已收到' : '发到手机 · 等手机打开网页'}
+              {it.from === 'phone' ? '手机发来' : it.delivered ? '发到手机 · 手机已收到 ✓' : '发到手机 · 等手机打开网页'}
               · {time(it.time)}{#if it.kind === 'image'} · {kb(it.size)}{/if}
               {#if it.kind === 'text' && it.from === 'phone' && it.copied} · 已复制{/if}
             </div>
@@ -296,7 +319,16 @@
   .bad { color: var(--bad); }
   .hint, .small { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
   .items { display: flex; flex-direction: column; gap: 8px; }
-  .item { background: var(--card); border-radius: 10px; padding: 8px 10px; }
+  .item { background: var(--card); border-radius: 10px; padding: 8px 10px; border-left: 4px solid transparent; }
+  .item[data-from="phone"] { border-left-color: var(--accent); }
+  .item[data-from="pc"] { border-left-color: var(--ok); }
+  .tabs { display: flex; gap: 0; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .tabs button { flex: 1; border: none; border-radius: 0; padding: 8px 4px; font-weight: 600; background: transparent; color: var(--muted); }
+  .tabs button + button { border-left: 1px solid var(--line); }
+  .tabs .t-phone.on { background: var(--accent); color: #fff; }
+  .tabs .t-pc.on { background: var(--ok); color: #fff; }
+  .tabs .n { display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 11.5px; line-height: 18px; background: rgba(127,127,127,.18); }
+  .tabs .on .n { background: rgba(255,255,255,.25); }
   .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
   .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; }
   textarea { margin-bottom: 6px; }
