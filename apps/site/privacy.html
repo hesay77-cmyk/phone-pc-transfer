@@ -77,7 +77,7 @@ footer a{text-decoration:none}
 
   <h2>内容怎么传过去</h2>
   <p>手机和电脑配对后，用浏览器自带的 WebRTC 技术<b>直接连接</b>，传输全程加密（DTLS）。文字、照片、视频和文件不经过我们或任何第三方的服务器。</p>
-  <p>两台设备第一次互相找到对方时，需要交换一小段连接信息（比如设备在网络里的地址）。这段信息用你们配对时生成的密钥（AES-GCM）加密后，经过一个「介绍人」服务器转交。目前介绍人使用 EMQX 提供的公共服务（<code>broker.emqx.io</code>）。它看不到你的文字和照片，也解不开连接信息，只能看到一个随机的频道名，以及连接它的网络地址（IP）。</p>
+  <p>两台设备第一次互相找到对方时，需要交换一小段连接信息（比如设备在网络里的地址）。这段信息用你们配对时生成的密钥（AES-GCM）加密后，经过一个「介绍人」服务器转交。目前介绍人使用 EMQX 提供的公共服务（<code>broker-cn.emqx.io</code>，连不上时用 <code>broker.emqx.io</code>）。它看不到你的文字和照片，也解不开连接信息，只能看到一个随机的频道名，以及连接它的网络地址（IP）。</p>
   <p>为了在不同网络环境下也能连上，设备会询问公共 STUN 服务器「我在外网看起来是哪个地址」（小米 <code>stun.miwifi.com</code>、Cloudflare、Google）。这些服务器只会看到你的网络地址，看不到任何内容。</p>
 
   <h2>存在你设备上的数据</h2>
@@ -136,7 +136,7 @@ footer a{text-decoration:none}
 
   <h2>How your content travels</h2>
   <p>Once paired, your phone and computer connect <b>directly</b> using WebRTC, which is built into the browser. The connection is encrypted end to end (DTLS). Text, photos, videos and files never pass through our servers or anyone else's.</p>
-  <p>To find each other, the two devices exchange a small piece of connection information, such as their network addresses. It is encrypted with a key created when you pair (AES-GCM) and passed along by a “signaling” relay. Today that relay is a public service run by EMQX (<code>broker.emqx.io</code>). It can't see your text or photos and can't decrypt the connection information. It only sees a random channel name and the IP address that connects to it.</p>
+  <p>To find each other, the two devices exchange a small piece of connection information, such as their network addresses. It is encrypted with a key created when you pair (AES-GCM) and passed along by a “signaling” relay. Today that relay is a public service run by EMQX (<code>broker-cn.emqx.io</code>, falling back to <code>broker.emqx.io</code>). It can't see your text or photos and can't decrypt the connection information. It only sees a random channel name and the IP address that connects to it.</p>
   <p>To connect across different networks, your devices ask public STUN servers (Xiaomi <code>stun.miwifi.com</code>, Cloudflare and Google) what their public address is. These servers only see your IP address, never any content.</p>
 
   <h2>Data stored on your devices</h2>
