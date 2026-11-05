@@ -70,4 +70,4 @@ export type ToEngine =
   | { to: 'engine'; type: 'seen' }
   | { to: 'engine'; type: 'log'; text: string };
 
-export type ToPanel = { to: 'panel'; type: 'state'; state: EngineState };
+export type ToPanel = { to: 'panel'; type: 'state'; state: EngineState } | { to: 'panel'; type: 'drag-file'; id: string };

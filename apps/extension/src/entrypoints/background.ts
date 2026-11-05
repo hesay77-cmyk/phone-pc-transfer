@@ -80,7 +80,7 @@ export default defineBackground(() => {
       r = await toEngine({ type: 'send-image-url', url: info.srcUrl ?? '' });
       if (!r.ok && !allowed) {
         void browser.storage.local.set({ needImagePermission: true });
-        r.error = '第一次发网页上的图，要先允许一下：打开互传侧边栏，点「允许发网页上的图」，再右键发一次';
+        r.error = '第一次发网页上的图，要先允许一下：打开互传侧边栏，点「允许」，再右键发一次';
       }
     } else {
       r = await toEngine({ type: 'send-text', text: info.pageUrl || tab?.url || '' });

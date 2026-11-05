@@ -38,6 +38,26 @@ createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     return res.end('<!doctype html><title>测试网页</title><p id="t">第一行<br>第二行</p><img id="pic" src="/e2e/pic.png">');
   }
+  // 模拟一个能收图片的网页：上传区、「选择文件」按钮、输入框、普通文字
+  if (p === '/e2e/drop.html') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end(`<!doctype html><title>收图测试</title>
+<div id="zone" style="height:80px;border:1px dashed">拖到这里上传</div>
+<label id="pick">选择文件<input id="inp" type="file" accept="image/*" hidden></label>
+<div id="ed" contenteditable="true" style="height:40px;border:1px solid">输入框</div>
+<p id="plain">普通文字</p>
+<script>
+  window.log = [];
+  const info = (f) => f ? f.arrayBuffer().then((b) => ({ name: f.name, type: f.type, size: b.byteLength, sum: new Uint8Array(b).reduce((a, x) => (a * 31 + x) >>> 0, 7) })) : null;
+  const zone = document.getElementById('zone');
+  zone.addEventListener('dragenter', (e) => log.push('zone-enter:' + [...e.dataTransfer.types].join('|')));
+  zone.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) e.preventDefault(); });
+  zone.addEventListener('drop', async (e) => { e.preventDefault(); log.push({ where: 'zone', file: await info(e.dataTransfer.files[0]) }); });
+  document.getElementById('inp').addEventListener('change', async (e) => log.push({ where: 'input', file: await info(e.target.files[0]) }));
+  document.getElementById('ed').addEventListener('paste', async (e) => { const f = e.clipboardData.files[0]; if (f) { e.preventDefault(); log.push({ where: 'paste', file: await info(f) }); } });
+  addEventListener('drop', (e) => { if (![...e.dataTransfer.types].includes('Files')) log.push('page-saw-url'); });
+</script>`);
+  }
   if (p === '/e2e/pic.png') { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(webPic()); }
   if (p.endsWith('/')) p += 'index.html';
   const f = join(mobileDir, p);
@@ -238,6 +258,52 @@ await sleep(500);
 const badgeOff = await bgw().evaluate(() => chrome.action.getBadgeText({}));
 check('插件图标上出现新消息数字，看过后清掉', /^\d+$/.test(badgeOn) && badgeOff === '', `「${badgeOn}」→「${badgeOff}」`);
 await web.close();
+
+// 侧边栏的照片拖进网页（测试脚本做不了真的跨页面拖拽：在侧边栏发「开始拖」，在网页上模拟照片拖进来）
+const drop = await ctx.newPage();
+await drop.goto('http://localhost:8080/e2e/drop.html');
+await drop.bringToFront();
+const want = await panel.evaluate(async () => {
+  const img = document.querySelector('.item[data-kind="image"][data-from="phone"] img');
+  const b = new Uint8Array(await (await fetch(img.src)).arrayBuffer());
+  return { size: b.length, sum: b.reduce((a, x) => (a * 31 + x) >>> 0, 7) };
+});
+async function dragTo(sel) {
+  const id = await panel.evaluate(() => {
+    const dt = new DataTransfer();
+    document.querySelector('.item[data-kind="image"][data-from="phone"] img').dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+    return dt.getData('application/x-hutong-photo');
+  });
+  await sleep(600);
+  const before = await drop.evaluate(() => log.length);
+  await drop.evaluate(async ([sel, id]) => {
+    const el = document.querySelector(sel);
+    const dt = new DataTransfer();
+    dt.setData('application/x-hutong-photo', id);
+    dt.setData('text/uri-list', 'blob:chrome-extension://x/y');
+    const fire = (t) => el.dispatchEvent(new DragEvent(t, { bubbles: true, cancelable: true, dataTransfer: dt, clientX: 20, clientY: 20 }));
+    fire('dragenter'); fire('dragover');
+    await new Promise((r) => setTimeout(r, 700));
+    fire('dragover'); fire('drop');
+  }, [sel, id]);
+  await sleep(800);
+  await panel.evaluate(() => document.querySelector('.item[data-kind="image"][data-from="phone"] img').dispatchEvent(new DragEvent('dragend', { bubbles: true })));
+  return drop.evaluate((n) => log.slice(n), before);
+}
+const same = (f) => f && f.size === want.size && f.sum === want.sum && f.type.startsWith('image/') && /\.(png|jpe?g)$/.test(f.name);
+let got = await dragTo('#zone');
+const z = got.find((x) => x.where === 'zone');
+check('照片拖进网页上传区：网页收到真文件，一字节不差', same(z?.file), JSON.stringify(got).slice(0, 200));
+check('拖着经过时上传区会亮（看得到文件）', got.some((x) => typeof x === 'string' && x.startsWith('zone-enter:') && x.includes('Files')));
+check('网页没收到打不开的内部地址', !got.includes('page-saw-url') && drop.url().startsWith('http://localhost:8080/e2e/drop.html'));
+got = await dragTo('#pick');
+check('照片拖到「选择文件」按钮上：放进去了', same(got.find((x) => x.where === 'input')?.file), JSON.stringify(got).slice(0, 200));
+got = await dragTo('#ed');
+check('照片拖进输入框：当作粘贴放进去了', same(got.find((x) => x.where === 'paste')?.file), JSON.stringify(got).slice(0, 200));
+got = await dragTo('#plain');
+const dropToast = await drop.evaluate(() => document.getElementById('hutong-toast')?.dataset.ok);
+check('拖到放不了图的地方：网页右下角说明怎么办，不会打开空白页', dropToast === 'false' && got.length === 0, `${dropToast} ${JSON.stringify(got)}`);
+await drop.close();
 
 // 切到别的 App 再回来，电脑那头其实早断了（模拟 iPhone 暂停网页）：要自动重连，并把这时发的照片送到
 const before = await panel.locator('.item[data-kind="image"]').count();

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { getFile, toPng } from '../../lib/files';
+  import { getFile, photoName, toPng } from '../../lib/files';
+  import { armPageDrop, disarmPageDropSoon, DRAG_TYPE } from '../../lib/pagedrop';
   import type { Item } from '../../lib/types';
-  let { item, onShow }: { item: Item; onShow: (id: number) => void } = $props();
+  let { item, onShow, onNeedPermission }: { item: Item; onShow: (id: number) => void; onNeedPermission: () => void } = $props();
 
   let url = $state('');
   let copyLabel = $state('复制这张图');
@@ -11,6 +12,16 @@
     void getFile(id).then((b) => { if (b && id === item.id) url = made = URL.createObjectURL(b); });
     return () => { if (made) URL.revokeObjectURL(made); };
   });
+
+  // 拖进网页：开始拖的时候让网页准备好接照片（见 lib/pagedrop.ts）
+  function dragStart(e: DragEvent) {
+    e.dataTransfer?.setData(DRAG_TYPE, item.id);
+    // 文件名和「下载\互传」里存的那张一样
+    const saved = item.saved?.path?.split(/[\\/]/).pop();
+    const name = saved && /\.\w{3,4}$/.test(saved) ? saved : photoName(item.mime || 'image/jpeg', false, new Date(item.time));
+    void armPageDrop({ id: item.id, name }).then((r) => { if (r === 'no-permission') onNeedPermission(); });
+  }
+  const dragEnd = () => disarmPageDropSoon();
 
   async function copy() {
     try {
@@ -25,7 +36,7 @@
 </script>
 
 {#if url}
-  <img src={url} alt={item.from === 'phone' ? '手机发来的照片' : '发到手机的图片'} draggable="true" title="可以直接拖进网页" />
+  <img src={url} alt={item.from === 'phone' ? '手机发来的照片' : '发到手机的图片'} draggable="true" title="可以直接拖进网页" ondragstart={dragStart} ondragend={dragEnd} />
 {:else}
   <div class="gone">照片已经不在了（只保留最近 30 张）</div>
 {/if}

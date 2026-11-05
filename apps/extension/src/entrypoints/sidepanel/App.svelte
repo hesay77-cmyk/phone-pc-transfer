@@ -1,6 +1,7 @@
 <script lang="ts">
   import { browser } from 'wxt/browser';
   import { putFile } from '../../lib/files';
+  import { answerDragFile } from '../../lib/pagedrop';
   import type { EngineState, Item, SendResult, ToBg, ToEngine, ToPanel } from '../../lib/types';
   import ImageItem from './ImageItem.svelte';
   import Qr from './Qr.svelte';
@@ -27,6 +28,7 @@
   }
   let needImagePermission = $state(false);
 
+  answerDragFile();
   const engine = (m: ToEngine) => browser.runtime.sendMessage(m);
   const bg = (m: ToBg) => browser.runtime.sendMessage(m);
 
@@ -50,15 +52,24 @@
   void checkPinned();
   setInterval(checkPinned, 5000);
 
-  void browser.storage.local.get('needImagePermission').then((r) => (needImagePermission = !!r.needImagePermission));
+  // 「在网页上读取和更改数据」的权限：右键发网页上的图、把照片拖进网页都要。没给过才提示
+  void browser.storage.local.get('needImagePermission').then(async (r) => {
+    const has = await browser.permissions.contains({ origins: ['<all_urls>'] }).catch(() => false);
+    needImagePermission = !!r.needImagePermission && !has;
+    if (has && r.needImagePermission) void browser.storage.local.remove('needImagePermission');
+  });
+  function needPermission() {
+    needImagePermission = true;
+    void browser.storage.local.set({ needImagePermission: true });
+  }
   async function allowImages() {
     if (await browser.permissions.request({ origins: ['<all_urls>'] })) {
       needImagePermission = false;
       void browser.storage.local.remove('needImagePermission');
-      sendOk = true;
-      sendTip = '好了，现在可以在网页的图片上右键「把这张图发到手机」';
+      permTip = '好了。现在可以把照片直接拖进网页，也能在网页的图片上右键发到手机';
     }
   }
+  let permTip = $state('');
 
   async function load() {
     await bg({ to: 'bg', type: 'ensure-engine' }).catch(() => {});
@@ -218,8 +229,18 @@
         在任何软件里复制了文字或截了图，点「发刚复制的」就行{#if shortcut}；更快：复制完直接按 <b>{shortcut}</b>，不用打开这里{/if}。
         网页上选中文字、或在链接和图片上右键，也能「发到手机」。
       </p>
-      {#if needImagePermission}<button onclick={allowImages}>允许发网页上的图</button>{/if}
     </section>
+
+    {#if needImagePermission || permTip}
+      <section class="tip perm">
+        {#if needImagePermission}
+          <b>先允许一次</b>：要把照片直接拖进网页、或在网页的图片上右键发到手机，需要你点下面的「允许」，Chrome 会再问一次，选「允许」。
+          <div><button class="primary" onclick={allowImages}>允许</button></div>
+        {:else}
+          {permTip} <button class="link" onclick={() => (permTip = '')}>知道了</button>
+        {/if}
+      </section>
+    {/if}
 
     {#if s.everPaired && notPinned}
       <section class="tip">
@@ -245,7 +266,7 @@
               <div class="text">{it.text}</div>
               <button onclick={(e) => copyText(it, e)}>复制</button>
             {:else}
-              <ImageItem item={it} onShow={showFile} />
+              <ImageItem item={it} onShow={showFile} onNeedPermission={needPermission} />
             {/if}
           </div>
         {/each}
@@ -286,6 +307,7 @@
   .result { padding: 8px 10px; border-radius: 8px; font-size: 13.5px; margin: 4px 0 8px; background: #fef3c7; color: #78350f; }
   .result.ok { background: #dcfce7; color: #166534; }
   .send.dragging { outline: 2px dashed #2563eb; outline-offset: 2px; border-radius: 8px; }
+  .perm div { margin-top: 8px; }
   .tip { background: #fef3c7; color: #78350f; border-radius: 10px; padding: 10px 12px; font-size: 13px; border: none; margin: 8px 0; }
   footer { border-top: 1px solid var(--line); padding-top: 10px; color: var(--muted); font-size: 12px; }
   pre { white-space: pre-wrap; font-size: 11.5px; max-height: 260px; overflow: auto; }
