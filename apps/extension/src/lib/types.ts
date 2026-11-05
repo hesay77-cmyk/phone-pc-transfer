@@ -36,6 +36,8 @@ export interface EngineState {
   everPaired: boolean;
   items: Item[];
   pendingToPhone: number;
+  /** 电脑上复制的文字自动发到手机 */
+  autoSend: boolean;
   /** 新收到、还没打开侧边栏看过的条数 */
   unseen: number;
   newerPeer: boolean;
@@ -60,6 +62,7 @@ export type ToEngine =
   | { to: 'engine'; type: 'send-image-url'; url: string }
   /** 把剪贴板里的东西（刚复制的文字，或刚截的图）发到手机：快捷键和侧边栏按钮都用它 */
   | { to: 'engine'; type: 'send-clipboard' }
+  | { to: 'engine'; type: 'set-auto-send'; on: boolean }
   /** 侧边栏里选的/粘贴的/拖进来的图：先放进小数据库，再告诉引擎 id */
   | { to: 'engine'; type: 'send-file'; fileId: string; name: string }
   | { to: 'engine'; type: 'reset-pairing' }

@@ -18,6 +18,10 @@
   // 侧边栏一打开就能直接打字/粘贴
   $effect(() => { box?.focus(); });
 
+  async function setAuto(on: boolean) {
+    s = await engine({ to: 'engine', type: 'set-auto-send', on });
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(); }
   }
@@ -196,6 +200,10 @@
     <section class="send" class:dragging aria-label="发到手机"
       ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
       <h2>发到手机</h2>
+      <label class="auto" class:on={s.autoSend}>
+        <input type="checkbox" checked={s.autoSend} onchange={(e) => setAuto((e.target as HTMLInputElement).checked)} />
+        <span><b>复制就发</b>：在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上互传网页开着时）</span>
+      </label>
       <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder="输入或粘贴文字、代码、网址，按 Ctrl+Enter 发送"></textarea>
       <div class="row">
         <button class="primary" onclick={send}>发到手机</button>
@@ -269,6 +277,9 @@
   .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
   .text { white-space: pre-wrap; word-break: break-all; font-size: 13.5px; margin-bottom: 6px; }
   textarea { margin-bottom: 6px; }
+  .auto { display: flex; gap: 8px; align-items: flex-start; background: var(--card); border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; font-size: 13px; cursor: pointer; }
+  .auto.on { background: #dcfce7; color: #166534; }
+  .auto input { margin-top: 2px; width: 16px; height: 16px; flex: none; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
   .result { padding: 8px 10px; border-radius: 8px; font-size: 13.5px; margin: 4px 0 8px; background: #fef3c7; color: #78350f; }
   .result.ok { background: #dcfce7; color: #166534; }

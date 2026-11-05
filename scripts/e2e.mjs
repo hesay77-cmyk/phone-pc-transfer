@@ -182,6 +182,21 @@ await (ctx.serviceWorkers()[0] ?? sw).evaluate(() => globalThis.__sendClipboard(
 await phone.waitForFunction((t) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent === t), code2, { timeout: 5000 })
   .then(() => check('复制后按快捷键：手机收到', true), () => check('复制后按快捷键：手机收到', false));
 
+// 「复制就发」：只按 Ctrl+C 就到手机；手机发来的字（自动进了剪贴板）不会又被发回手机
+await panel.check('.auto input');
+await sleep(1000);
+const auto1 = '复制就发 ' + Date.now();
+await panel.evaluate((t) => navigator.clipboard.writeText(t), auto1);
+await phone.waitForFunction((t) => [...document.querySelectorAll('.item .text')].some((e) => e.textContent === t), auto1, { timeout: 5000 })
+  .then(() => check('打开「复制就发」后只复制：手机收到', true), () => check('打开「复制就发」后只复制：手机收到', false));
+await phone.fill('textarea', '手机发的不该弹回来');
+await phone.getByRole('button', { name: '发送', exact: true }).click();
+await panel.waitForFunction(() => document.body.innerText.includes('手机发的不该弹回来'), null, { timeout: 5000 });
+await sleep(2000);
+const bounced = await phone.evaluate(() => [...document.querySelectorAll('.item .text')].filter((e) => e.textContent === '手机发的不该弹回来').length);
+check('手机发来的字不会被自动发回手机', bounced === 0, `弹回 ${bounced} 次`);
+await panel.uncheck('.auto input');
+
 // 验证码大字显示
 await panel.fill('textarea', '384920');
 await panel.click('button:has-text("发到手机")');

@@ -22,7 +22,7 @@ export async function copyText(text: string): Promise<{ ok: boolean; how: string
  * 读剪贴板（在引擎里用，Chrome 不在前台时也行）：同样用老办法触发一次「粘贴」，从粘贴事件里拿文字和图片。
  * 需要插件有 clipboardRead 权限。
  */
-export function readClipboard(): { ok: boolean; text: string; files: File[] } {
+export function readClipboard(withFiles = true): { ok: boolean; text: string; files: File[] } {
   const box = document.createElement('div');
   box.contentEditable = 'true';
   document.body.appendChild(box);
@@ -32,6 +32,7 @@ export function readClipboard(): { ok: boolean; text: string; files: File[] } {
   const onPaste = (e: ClipboardEvent) => {
     e.preventDefault();
     text = e.clipboardData?.getData('text/plain') ?? '';
+    if (!withFiles) return;
     files = Array.from(e.clipboardData?.items ?? [])
       .filter((i) => i.kind === 'file')
       .map((i) => i.getAsFile())

@@ -34,6 +34,7 @@ export class Engine {
       items: loadItems(),
       pendingToPhone: 0,
       unseen: Number(kv.get('unseen') || 0),
+      autoSend: kv.get('autoSend') === '1',
       newerPeer: false,
       log: []
     };
@@ -46,12 +47,14 @@ export class Engine {
       if (msg.type === 'send-text') { reply(this.sendText(msg.text)); return; }
       if (msg.type === 'send-image-url') { void this.sendImageUrl(msg.url).then(reply); return true; }
       if (msg.type === 'send-clipboard') { void this.sendClipboard().then(reply); return true; }
+      if (msg.type === 'set-auto-send') { this.setAutoSend(msg.on); reply(this.state); return; }
       if (msg.type === 'send-file') { void this.sendStoredFile(msg.fileId, msg.name).then(reply); return true; }
       if (msg.type === 'reset-pairing') { void this.resetPairing().then(() => reply(this.state)); return true; }
       if (msg.type === 'log') { this.log(msg.text); return; }
       if (msg.type === 'seen') { this.setUnseen(0); return; }
     });
     this.badge();
+    this.setAutoSend(this.state.autoSend);
     await this.connect();
   }
 
@@ -107,6 +110,31 @@ export class Engine {
     const out = this.session.transfer.sendText(text);
     this.addItem({ id: out.id, from: 'pc', kind: 'text', time: Date.now(), text, delivered: false });
     return { ok: true, connected: this.session.link.ready };
+  }
+
+  // ---------- 复制就自动发：每隔一会儿看一眼剪贴板，文字变了、手机连着，就发过去 ----------
+  private lastClip = '';
+  private clipTimer: ReturnType<typeof setInterval> | undefined;
+
+  private setAutoSend(on: boolean) {
+    this.state.autoSend = on;
+    kv.set('autoSend', on ? '1' : '0');
+    clearInterval(this.clipTimer);
+    if (on) {
+      this.lastClip = readClipboard(false).text; // 打开开关时剪贴板里原有的不发
+      this.clipTimer = setInterval(() => this.watchClipboard(), 700);
+    }
+    this.push();
+  }
+
+  private watchClipboard() {
+    const c = readClipboard(false);
+    if (!c.ok || c.text === this.lastClip) return;
+    this.lastClip = c.text;
+    // 手机网页没开着就不发（免得攒一堆），也不补发
+    if (!c.text.trim() || !this.session?.link.ready) return;
+    this.sendText(c.text);
+    this.log(`复制就发：${c.text.length} 个字`);
   }
 
   /** 剪贴板里有图（截图）就发图，否则发文字 */
@@ -165,6 +193,7 @@ export class Engine {
   private async onReceived(it: Incoming) {
     if (it.kind === 'text') {
       const r = await copyText(it.text);
+      if (r.ok) this.lastClip = it.text; // 这是手机发来的，别再自动发回去
       this.log(`收到文字（${it.text.length} 字），自动复制${r.ok ? '成功' : '失败：' + r.how}`);
       this.addItem({ id: it.id, from: 'phone', kind: 'text', time: Date.now(), text: it.text, copied: r.ok });
       this.bg({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? '已复制手机发来的文字' : '收到手机发来的文字',
