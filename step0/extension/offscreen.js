@@ -253,13 +253,24 @@ async function onData(m) {
     addItem(item);
     item.copy = await copyImage(blob, dataUrl);
     log('收到图片 ' + kb(blob.size) + '，' + (meta.w || '?') + '×' + (meta.h || '?') + '，传输用时 ' + ms + ' 毫秒；自动复制：' + item.copy.summary);
+    item.saved = await chrome.runtime.sendMessage({ to: 'bg', type: 'save-image', url: dataUrl, filename: photoName(blob.type), asciiName: photoName(blob.type, true) })
+      .catch((e) => ({ ok: false, detail: '存不进去：' + e.message }));
+    log(item.saved.ok ? '已存到电脑：' + item.saved.path : '自动保存失败：' + item.saved.detail);
+    result('saveImg', item.saved.ok, item.saved.ok ? '已存到 ' + item.saved.path : item.saved.detail);
     result('imgTransfer', blob.size === meta.size, '收到 ' + kb(blob.size) + '（手机那边是 ' + kb(meta.size) + '），' + (meta.w || '?') + '×' + (meta.h || '?') + '，用时 ' + ms + ' 毫秒');
-    result('clipImg', item.copy.ok, item.copy.summary + '。请在聊天框或识图页按 Ctrl+V 确认');
-    notify('收到一张图片', kb(blob.size) + '，点这里打开侧边栏', dataUrl);
+    result('clipImg', item.copy.ok, item.copy.summary + '。请在 AI 聊天框里按 Ctrl+V 确认');
+    notify(item.saved.ok ? '收到一张图片，已存进「下载\\互传」' : '收到一张图片', kb(blob.size) + '，点这里打开侧边栏', dataUrl);
     push();
   } else if (m.t === 'hello-info') {
     log('手机信息：' + m.ua);
   }
+}
+
+function photoName(mime, ascii) {
+  const d = new Date(), p = (n) => String(n).padStart(2, '0');
+  const ext = { 'image/png': 'png', 'image/heic': 'heic', 'image/gif': 'gif', 'image/webp': 'webp' }[mime] || 'jpg';
+  const day = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`, time = `${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  return ascii ? `phone-photo-${day}-${time}.${ext}` : `手机照片 ${day} ${time}.${ext}`;
 }
 
 function addItem(item) {

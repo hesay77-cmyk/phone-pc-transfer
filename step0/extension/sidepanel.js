@@ -11,8 +11,11 @@ const CHECKS = [
   { key: 'clipText', name: '你在终端里时，文字也能自动进剪贴板',
     how: '先点一下终端窗口（让 Chrome 不在最前面），再用手机发一段文字，然后在终端里按 Ctrl+V。',
     ask: [['clipTextUser', true, '终端里能粘贴出来'], ['clipTextUser', false, '粘贴不出来']] },
-  { key: 'clipImg', name: '图片也能自动进剪贴板',
-    how: '手机发一张图，然后在微信 / QQ 聊天框里按 Ctrl+V。',
+  { key: 'saveImg', name: '收到的图自动存进电脑',
+    how: '手机发一张图过来，点图下面的「打开所在文件夹」，看照片是不是已经在「下载 → 互传」文件夹里。',
+    ask: [['saveImgUser', true, '照片在文件夹里'], ['saveImgUser', false, '没找到']] },
+  { key: 'clipImg', name: '图片也能直接粘进 AI 聊天框',
+    how: '手机发一张图，然后在 Claude、ChatGPT 这类 AI 的聊天框里按 Ctrl+V（看能不能粘出来就行，不用发）。',
     ask: [['clipImgUser', true, '能粘贴出图片'], ['clipImgUser', false, '粘贴不出来']] },
   { key: 'dragUser', name: '把图从这里拖进识图网站',
     how: '打开 <a href="https://images.google.com" target="_blank">Google 图片</a> 或 <a href="https://graph.baidu.com" target="_blank">百度识图</a>，把下面「收到的东西」里的图拖过去。',
@@ -81,7 +84,7 @@ function render() {
     return `<li><div class="name">${esc(c.name)}</div><div class="small">${c.how}</div><div class="res">${res}</div>${btns}</li>`;
   }).join('');
 
-  const key = S.items.map((i) => i.id + (i.acked ? '+' : '')).join(',');
+  const key = S.items.map((i) => i.id + (i.acked ? '+' : '') + (i.saved ? 's' : '')).join(',');
   if (key !== lastItemsKey) {
     lastItemsKey = key;
     $('items').innerHTML = S.items.length ? '' : '<p class="small">还没收到东西</p>';
@@ -128,6 +131,22 @@ function renderItem(it) {
       }
     };
     d.appendChild(b);
+    if (it.saved) {
+      const st = document.createElement('div');
+      st.className = 'small';
+      if (it.saved.ok) {
+        st.textContent = '已存到：' + it.saved.path;
+        const f = document.createElement('button');
+        f.textContent = '打开所在文件夹';
+        f.style.marginLeft = '6px';
+        f.onclick = () => chrome.runtime.sendMessage({ to: 'bg', type: 'show-file', downloadId: it.saved.id });
+        d.appendChild(f);
+      } else {
+        st.className = 'small bad';
+        st.textContent = '没能自动保存：' + it.saved.detail;
+      }
+      d.appendChild(st);
+    }
   }
   return d;
 }

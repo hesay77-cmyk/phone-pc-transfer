@@ -31,6 +31,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     ensureOffscreen().then(() => sendResponse({ ok: true }));
     return true;
   }
+  if (msg.type === 'save-image') {
+    saveImage(msg.url, msg.filename, msg.asciiName).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'show-file') {
+    // 打开资源管理器，并选中这张图
+    try { chrome.downloads.show(msg.downloadId); } catch { chrome.downloads.showDefaultFolder(); }
+    return;
+  }
   if (msg.type === 'notify') {
     const opt = msg.image
       ? { type: 'image', iconUrl: 'icon.png', title: msg.title, message: msg.message || '', imageUrl: msg.image }
@@ -55,3 +64,42 @@ chrome.notifications.onClicked.addListener(async (id) => {
     report('notifOpen', false, '点通知打不开侧边栏：' + e.message);
   }
 });
+
+// 收到的图自动存进电脑：Chrome 的「下载」文件夹里的「互传」文件夹
+async function saveImage(url, filename, asciiName) {
+  const opt = { url, conflictAction: 'uniquify', saveAs: false };
+  try {
+    return await waitDownload(await chrome.downloads.download({ ...opt, filename: '互传/' + filename }), 20000);
+  } catch (e) {
+    // 个别系统不认中文文件名，退回英文名再试一次
+    try {
+      return await waitDownload(await chrome.downloads.download({ ...opt, filename: 'hutong/' + asciiName }), 20000);
+    } catch (e2) {
+      return { ok: false, detail: '存不进去：' + e.message + ' / ' + e2.message };
+    }
+  }
+}
+function waitDownload(id, ms) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = async (r) => {
+      if (done) return;
+      done = true;
+      clearTimeout(tm);
+      chrome.downloads.onChanged.removeListener(on);
+      if (r.ok) {
+        const [it] = await chrome.downloads.search({ id });
+        r.path = it ? it.filename : '';
+      }
+      resolve({ id, ...r });
+    };
+    const tm = setTimeout(() => finish({ ok: false, detail: '20 秒还没存完' }), ms);
+    const check = (st, err) => {
+      if (st === 'complete') finish({ ok: true });
+      if (st === 'interrupted') finish({ ok: false, detail: '保存被中断：' + (err || '未知原因') });
+    };
+    const on = (d) => { if (d.id === id && d.state) check(d.state.current, d.error && d.error.current); };
+    chrome.downloads.onChanged.addListener(on);
+    chrome.downloads.search({ id }).then(([it]) => { if (it) check(it.state, it.error); });
+  });
+}
