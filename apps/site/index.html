@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Tapaste · 手机电脑互传</title>
-<meta name="description" content="手机和电脑之间最简单的连通。文字、照片点一下就到，不用装 App，不经过服务器。">
+<title>Tapaste · 点一下，就到另一边</title>
+<meta name="description" content="点一下，就到另一边。手机和电脑之间互传文字和照片，不用数据线，不用登录，手机不用装 App。">
 <meta name="theme-color" content="#07080c">
 <link rel="icon" href="icon.png">
 <link rel="stylesheet" href="fonts/fonts.css">
@@ -49,7 +49,7 @@ nav .links a:hover{color:var(--fg);background:rgba(255,255,255,.06)}
 nav .links a.cta{background:var(--fg);color:var(--bg);font-weight:500}
 
 /* 首屏 */
-.hero{min-height:100vh;display:flex;align-items:center;padding:110px 0 60px;position:relative}
+.hero{min-height:100vh;display:flex;align-items:center;padding:100px 0 60px;position:relative}
 .hero>.w{width:100%}
 .hero .copy{max-width:560px}
 .chip{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:6px 14px 6px 6px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(8px)}
@@ -132,7 +132,63 @@ details p{margin:12px 0 0;color:var(--muted);line-height:1.85;font-size:15px;fon
 footer{border-top:1px solid var(--line);padding:30px 0 40px;color:var(--muted);font-size:13px}
 footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
+
+/* ---------- 首屏：亲手点一下 ---------- */
+.hero .w{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,600px);gap:40px;align-items:center}
+.demo-wrap{position:relative}
+.demo{position:relative;width:600px;height:460px;transform-origin:top left}
+.hint{position:absolute;left:0;top:0;display:flex;align-items:center;gap:10px;font-size:13px;color:#c9ccd8;font-weight:300;transition:opacity .3s}
+.hint .pulse{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 0 rgba(227,255,107,.6);animation:pl 1.8s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 10px rgba(227,255,107,0)}100%{box-shadow:0 0 0 0 rgba(227,255,107,0)}}
+.ph{position:absolute;left:0;bottom:24px;width:188px;height:380px;border-radius:34px;padding:16px 12px 14px;border:1px solid rgba(255,255,255,.16);
+  background:linear-gradient(180deg,rgba(22,25,36,.92),rgba(12,14,20,.92));box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);display:flex;flex-direction:column;gap:8px}
+.ph-top{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted);padding:2px 4px 8px}
+.ph-top i{width:6px;height:6px;border-radius:50%;background:#58e08a;box-shadow:0 0 8px #58e08a}
+.it{appearance:none;font:inherit;color:var(--fg);text-align:left;cursor:pointer;display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border-radius:13px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;font-weight:300;transition:border-color .25s,background .25s,transform .2s}
+.it:hover{background:rgba(255,255,255,.06)}
+.it.on{border-color:rgba(124,139,255,.75);background:rgba(108,124,255,.14)}
+.it .ic{flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:10px;color:#b7bfff;background:rgba(108,124,255,.16)}
+.it .pic{flex:none;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#ffb36b,#ff6b8b)}
+.send{appearance:none;margin-top:auto;height:44px;border-radius:14px;border:0;cursor:pointer;font:inherit;font-size:13.5px;font-weight:450;color:var(--bg);background:var(--fg);
+  position:relative;transition:transform .15s}
+.send::after{content:"";position:absolute;inset:-5px;border-radius:18px;border:1px solid rgba(227,255,107,.55);animation:ring 2s ease-out infinite;pointer-events:none}
+.demo.used .send::after{animation:none;opacity:0}
+.send:active{transform:scale(.95)}
+@keyframes ring{0%{opacity:.9;transform:scale(.96)}100%{opacity:0;transform:scale(1.12)}}
+.pc{position:absolute;right:20px;bottom:24px;width:360px}
+.scr{height:236px;border-radius:14px 14px 4px 4px;border:1px solid rgba(255,255,255,.16);background:linear-gradient(160deg,rgba(26,30,48,.94),rgba(12,14,20,.94));
+  position:relative;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.scr .bar{display:flex;gap:5px;padding:10px 12px}
+.scr .bar i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.14)}
+.fold{position:absolute;left:14px;top:34px;width:146px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:8px}
+.fold .ft{font-size:10px;color:var(--muted);margin-bottom:7px}
+.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;min-height:40px}
+.fg div{aspect-ratio:1;border-radius:5px}
+.fg:empty::before{content:"空";grid-column:1/-1;font-size:10px;color:rgba(255,255,255,.18);align-self:center;text-align:center}
+.page{position:absolute;right:12px;top:34px;width:176px;padding:10px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.page i{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.1)}
+.selt{font-size:10.5px;font-weight:300;padding:2px 4px;border-radius:4px;background:rgba(108,124,255,.35);color:#fff}
+.back{appearance:none;font:inherit;font-size:10.5px;cursor:pointer;color:var(--bg);background:var(--lime);border:0;border-radius:999px;padding:5px 10px;margin-top:2px;transition:transform .15s}
+.back:active{transform:scale(.94)}
+.it.got{border-color:rgba(227,255,107,.6);background:rgba(227,255,107,.08);cursor:default}
+.it.got .ic{background:rgba(227,255,107,.16);color:var(--lime)}
+.toasts{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;width:200px}
+.toast{max-width:100%;font-size:11px;font-weight:300;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line);backdrop-filter:blur(10px);display:flex;gap:7px;align-items:center}
+.toast b{font-weight:400;color:var(--lime);flex:none}
+.toast span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.base{height:12px;margin:0 -24px;border-radius:0 0 12px 12px;background:linear-gradient(rgba(255,255,255,.2),rgba(255,255,255,.06))}
+.lbl{position:absolute;bottom:0;font-size:11px;letter-spacing:2px;color:var(--muted)}
+.fx{position:absolute;inset:0;pointer-events:none}
+.fly{position:absolute;left:0;top:0;will-change:transform}
+.spark{position:absolute;width:4px;height:4px;margin:-2px;border-radius:50%;background:#fff;box-shadow:0 0 8px 2px rgba(124,139,255,.9);animation:spk .7s ease-out forwards}
+@keyframes spk{to{opacity:0;transform:scale(.2)}}
+.land{position:absolute;width:10px;height:10px;margin:-5px;border-radius:50%;border:1px solid var(--lime);animation:lnd .7s ease-out forwards}
+@keyframes lnd{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(9)}}
+
 @media (max-width:900px){
+  .hero .w{grid-template-columns:minmax(0,1fr);gap:28px}
+  .demo-wrap{order:-1}
   nav .links a:not(.cta){display:none}
   .hero{align-items:flex-end;padding-bottom:90px}
   .cap-wrap{align-items:flex-end;padding-bottom:110px}
@@ -146,6 +202,13 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .ctas .btn{flex:1 1 100%}
   .cap p{font-size:15px}
   .scroll{display:none}
+  .demo{width:490px}
+  .fold{left:auto;right:12px}
+  .page{right:auto;left:66px;width:124px}
+  .ph{z-index:2}
+  .pc{right:0}
+  .hint{font-size:16px}
+  .lbl{display:none}
   .thumbs div{width:52px;height:52px;border-radius:12px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -165,72 +228,88 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 <main>
 <header class="hero"><div class="w">
   <div class="copy">
-    <div class="chip"><b>NEW</b>手机电脑互传 · 同一 Wi-Fi 直连</div>
-    <h1><span class="l">手机和电脑，</span><span class="l shine">一点就通。</span></h1>
-    <p class="zh">手机和电脑之间，最简单的那条路。</p>
-    <p class="desc">文字、照片、链接，点一下就到另一边。不用装 App，不用登录，不用数据线，也不经过任何服务器。</p>
-    <div class="ctas"><a class="btn light" href="#download">下载电脑插件</a><a class="btn glass" href="#story">往下看看</a></div>
-    <div class="meta">Chrome、Edge 都能用 · 手机用浏览器扫码配对</div>
+    <h1><span class="l">点一下，</span><span class="l shine">就到另一边。</span></h1>
+    <p class="zh">手机和电脑之间互传文字和照片。</p>
+    <p class="desc">不用数据线，不用登录，手机不用装 App。</p>
+    <div class="ctas"><a class="btn light" href="#download">下载电脑插件</a><a class="btn glass" href="#how">看看怎么用</a></div>
+    <div class="meta">电脑：Chrome 或 Edge　·　手机：自带浏览器，扫码就行</div>
   </div>
+  <div class="demo-wrap" id="demoWrap"><div class="demo" id="demo">
+    <div class="hint" id="hint"><span class="pulse"></span><span id="hintT">点一下「发到电脑」试试</span></div>
+    <div class="ph" id="ph">
+      <div class="ph-top"><i></i>已连上电脑</div>
+      <button class="it on" data-k="text" data-v="取件码 8-2-4017"><span class="ic">字</span>取件码 8-2-4017</button>
+      <button class="it" data-k="photo"><span class="pic"></span>刚拍的照片</button>
+      <button class="it" data-k="text" data-v="文三路 90 号 3 幢 502"><span class="ic">字</span>文三路 90 号</button>
+      <button class="send" id="send">发到电脑</button>
+    </div>
+    <div class="pc" id="pc"><div class="scr"><div class="bar"><i></i><i></i><i></i></div>
+      <div class="fold"><div class="ft">下载 / 互传</div><div class="fg" id="fg"></div></div>
+      <div class="page"><i style="width:70%"></i><i style="width:90%"></i><span class="selt" id="selt">明早 9 点开会</span><button class="back" id="back">右键 · 发到手机</button></div>
+      <div class="toasts" id="toasts"></div></div><div class="base"></div></div>
+    <div class="lbl" style="left:80px">手机</div><div class="lbl" style="right:186px">电脑</div>
+    <div class="fx" id="fx"></div>
+  </div></div>
 </div>
 <div class="scroll" aria-hidden="true">SCROLL<i></i></div>
 </header>
 
 <section class="story" id="story" style="padding:0">
   <div class="cap-wrap"><div class="w" style="width:100%"><div class="caps" id="caps">
-    <div class="cap"><div class="k">01 / 手机上</div><h2>点一下</h2><p>地址、取件码、一段聊天、一张照片。选好，点「发到电脑」。</p></div>
-    <div class="cap"><div class="k">02 / 路上</div><h2>直接过去</h2><p>同一个 Wi-Fi 下，手机把它直接交给电脑。不绕路，不经过任何服务器。</p></div>
-    <div class="cap"><div class="k">03 / 电脑上</div><h2>已经在电脑上了</h2><p>字已经复制好，照片已经存进「下载」文件夹。电脑那边什么都不用点。</p></div>
-    <div class="cap"><div class="k">04 / 以后</div><h2>一直连着</h2><p>只配对一次。以后打开就连上，电脑上的东西也能一点发回手机。</p></div>
+    <div class="cap"><div class="k">01 / 在手机上</div><h2>选好，点一下</h2><p>一个取件码、一个地址、一张刚拍的照片。点「发到电脑」。</p></div>
+    <div class="cap"><div class="k">02 / 路上</div><h2>直接过去</h2><p>同一个 Wi-Fi 下，手机把它亲手交给电脑。不绕路，也不留在别处。</p></div>
+    <div class="cap"><div class="k">03 / 在电脑上</div><h2>已经在那了</h2><p>文字已经复制好，照片已经存进「下载」文件夹。电脑上不用再点什么。</p></div>
+    <div class="cap"><div class="k">04 / 以后</div><h2>一直连着</h2><p>只扫一次码。以后打开就连上，电脑上的东西也能一点发回手机。</p></div>
     <div class="prog" id="prog"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
   </div></div></div>
 </section>
 
 <div class="solid">
 <section id="features"><div class="w">
-  <div class="head rv"><div class="eyebrow">能做什么</div><h2 class="big">只做一件事，把它做顺。</h2><p>手机和电脑之间来回送东西。打开就能用，用完不用管。</p></div>
+  <div class="head rv"><div class="eyebrow">能做什么</div><h2 class="big">那些每天都有的小事。</h2><p>以前要发给自己、插数据线、登网盘的，现在点一下。</p></div>
   <div class="bento">
-    <div class="card wide rv"><div class="vis"><div class="thumbs"><div class="t1"></div><div class="t2"></div><div class="t3"></div><div class="t4"></div></div><div class="path">下载 / 互传</div></div><h3>照片原图，直接存好</h3><p>手机照片原图送到电脑，自动存进「下载」文件夹。还能从侧边栏直接拖进网页、聊天框。</p></div>
-    <div class="card rv"><div class="vis"><div class="bubble">取件码 8-2-4017</div></div><h3>文字，到了就能用</h3><p>手机发来的字自动复制好，在电脑上直接用。</p></div>
-    <div class="card rv"><div class="vis"><div class="swap">⇄</div></div><h3>电脑也能发手机</h3><p>网页上选中字或图片，右键「发到手机」。</p></div>
-    <div class="card wide rv"><div class="vis"><div class="lan"><span>手机</span><b></b><span>电脑</span></div></div><h3>不经过服务器</h3><p>同一个 Wi-Fi 下，手机直接连电脑。你传的东西不会上传到任何地方，配对暗号藏在二维码里。</p></div>
+    <div class="card wide rv"><div class="vis"><div class="thumbs"><div class="t1"></div><div class="t2"></div><div class="t3"></div><div class="t4"></div></div><div class="path">下载 / 互传</div></div><h3>原图，直接存好</h3><p>刚拍的照片、截图，原图送到电脑，自己进「下载」文件夹。也能从侧边栏直接拖进网页。</p></div>
+    <div class="card rv"><div class="vis"><div class="bubble">取件码 8-2-4017</div></div><h3>到了就能用</h3><p>取件码、地址、一段聊天，到电脑上已经复制好，放到哪里都行。</p></div>
+    <div class="card rv"><div class="vis"><div class="swap">⇄</div></div><h3>电脑也能发手机</h3><p>网页上的字和图，右键「发到手机」。别的软件里的一大段字，复制一下就到手机。</p></div>
+    <div class="card wide rv"><div class="vis"><div class="lan"><span>手机</span><b></b><span>电脑</span></div></div><h3>只在你家里走</h3><p>东西只在你的手机和电脑之间直接传，不上传，也不存在任何服务器上。不用注册，不用登录。</p></div>
   </div>
 </div></section>
 
 <section id="how"><div class="w">
-  <div class="head rv"><div class="eyebrow">怎么开始</div><h2 class="big">三步，只做一次。</h2><p>配对好以后，打开手机网页，它自己就连上电脑。</p></div>
+  <div class="head rv"><div class="eyebrow">怎么开始</div><h2 class="big">第一次，一分钟。</h2><p>装插件不到一分钟，扫码连上只要几秒。以后打开就自己连上。</p></div>
   <div class="track">
-    <div class="node rv"><div class="n">01</div><div class="where">在电脑上</div><h3>装上插件</h3><p>Chrome 或 Edge 装好 Tapaste，点右上角图标，侧边栏里出现一个二维码。</p></div>
-    <div class="node rv"><div class="n">02</div><div class="where">在手机上</div><h3>扫一下二维码</h3><p>用相机扫码打开网页，配对就好了。「添加到主屏幕」以后一点就开。</p></div>
-    <div class="node rv"><div class="n">03</div><div class="where">手机和电脑</div><h3>点一下就到</h3><p>手机上选好文字或照片，点「发到电脑」。字复制好，照片进文件夹。</p></div>
+    <div class="node rv"><div class="n">01</div><div class="where">在电脑上</div><h3>装上插件</h3><p>装好后点浏览器右上角的 Tapaste 图标，旁边出现一个二维码。</p></div>
+    <div class="node rv"><div class="n">02</div><div class="where">在手机上</div><h3>扫一下</h3><p>用手机相机扫码，打开的网页就是你的 Tapaste。放到桌面，以后一点就开。</p></div>
+    <div class="node rv"><div class="n">03</div><div class="where">两边</div><h3>点一下就到</h3><p>手机和电脑连同一个 Wi-Fi，选好文字或照片，点一下。</p></div>
   </div>
 </div></section>
 
 <section id="download"><div class="w">
-  <div class="head rv"><div class="eyebrow">下载</div><h2 class="big">选你用的浏览器</h2><p>国内不用梯子也能装。手机不用下载，扫电脑上的二维码就行。</p></div>
+  <div class="head rv"><div class="eyebrow">下载</div><h2 class="big">装到你的浏览器。</h2><p>只有电脑要装。手机什么都不用下载，扫码就行。</p></div>
   <div class="dl">
-    <div class="d rv"><span class="tag">国内推荐</span><h3>Chrome 安装包</h3><p>下载安装包，照着图文步骤 2 分钟装好，不用打开 Chrome 商店。</p><a class="btn light" aria-disabled="true">下载安装包 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">国内推荐</span><h3>Chrome 安装包</h3><p>下载后照着图文步骤装好，大约两分钟，不用打开 Chrome 商店。</p><a class="btn light" aria-disabled="true">下载安装包 <span class="soon">快好了</span></a></div>
     <div class="d rv"><span class="tag">Windows 自带</span><h3>Microsoft Edge</h3><p>从微软商店一键安装，以后自动更新。</p><a class="btn glass" aria-disabled="true">去 Edge 商店 <span class="soon">快好了</span></a></div>
-    <div class="d rv"><span class="tag">能上 Google</span><h3>Chrome 商店</h3><p>能打开 Chrome 商店的话，从这里装最省事，以后自动更新。</p><a class="btn glass" aria-disabled="true">去 Chrome 商店 <span class="soon">快好了</span></a></div>
+    <div class="d rv"><span class="tag">能上 Google 的话</span><h3>Chrome 商店</h3><p>从这里装最省事，以后自动更新。</p><a class="btn glass" aria-disabled="true">去 Chrome 商店 <span class="soon">快好了</span></a></div>
   </div>
 </div></section>
 
 <section id="faq" style="padding-top:20px"><div class="w faq">
-  <div class="rv"><div class="eyebrow">常见问题</div><h2 class="big">还想知道的</h2></div>
+  <div class="rv"><div class="eyebrow">常见问题</div><h2 class="big">可能你会问</h2></div>
   <div>
-    <details><summary>手机要装 App 吗？</summary><p>不用。手机上就是一个网页，扫码打开就能用。想用得顺手，可以把它「添加到主屏幕」，像 App 一样一点就开。</p></details>
-    <details><summary>我传的东西安全吗？</summary><p>手机和电脑在同一个 Wi-Fi 下直接连，内容不经过任何服务器。配对用的暗号藏在二维码里，别人不扫你的码就连不上。</p></details>
-    <details><summary>手机和电脑不在同一个 Wi-Fi 能用吗？</summary><p>现在需要连同一个 Wi-Fi，比如家里或办公室。不同网络之间互传，后面会加上。</p></details>
-    <details><summary>支持哪些手机和电脑？</summary><p>手机：iPhone 和安卓都行，用浏览器打开。电脑：Windows 上的 Chrome 或 Edge。</p></details>
-    <details><summary>手机锁屏了，发的东西会丢吗？</summary><p>不会。没送到的会先留着，两边再连上时自动补发。</p></details>
+    <details><summary>手机要装 App 吗？</summary><p>不用。手机扫码打开的是一个网页，iPhone 自带的 Safari 就行。放到桌面以后，用起来和 App 一样。</p></details>
+    <details><summary>我传的东西，别人看得到吗？</summary><p>看不到。内容只在你的手机和电脑之间直接传。我们的服务器只帮两边「打个招呼」，看不到你传了什么。</p></details>
+    <details><summary>一定要同一个 Wi-Fi 吗？</summary><p>现在是。有些公司和公共 Wi-Fi 不让设备之间直接连，遇到这种情况，两边都会告诉你。</p></details>
+    <details><summary>照片会被压缩吗？</summary><p>不会，送到电脑上的是原图。</p></details>
+    <details><summary>手机锁屏或切到别的 App，会断吗？</summary><p>会暂时断开。回到网页就自己连上，没发出去的会自动补发。</p></details>
+    <details><summary>可以连几台手机？</summary><p>一台电脑同一时间连一台手机。换手机的话，用新手机再扫一次码。</p></details>
   </div>
 </div></section>
 
 <div class="end"><div class="w">
-  <h2 class="rv"><span class="shine">一点就通。</span></h2>
+  <h2 class="rv"><span class="shine">点一下，就到。</span></h2>
   <div class="ctas rv"><a class="btn light" href="#download">下载电脑插件</a></div>
 </div></div>
-<footer><div class="w"><span>Tapaste · 手机电脑互传</span><span>手机和电脑，一点就通。</span></div></footer>
+<footer><div class="w"><span>Tapaste · 手机和电脑之间，最近的那条路。</span><span>© 2026 Tapaste</span></div></footer>
 </div>
 </main>
 
@@ -242,8 +321,78 @@ footer .w{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 var $=function(s){return document.querySelector(s)},$$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
 var caps=$$('.cap'),bars=$$('#prog b');
-var navEl=$('nav');addEventListener('scroll',function(){navEl.classList.toggle('solid',scrollY>innerHeight*.6)},{passive:true});
+var navEl=$('nav');
+/* ---------- 首屏：亲手点一下，东西飞进电脑 ---------- */
+(function(){
+  var wrap=$('#demoWrap'),demo=$('#demo'),fx=$('#fx'),send=$('#send'),hintT=$('#hintT'),fg=$('#fg'),toasts=$('#toasts');
+  if(!demo)return;
+  var items=$$('.ph .it'),sel=0,sent=0,busy=false;
+  var photos=['linear-gradient(135deg,#ffb36b,#ff6b8b)','linear-gradient(135deg,#6bc5ff,#5a7cff)','linear-gradient(135deg,#9be38f,#3fb37f)','linear-gradient(135deg,#d7a6ff,#7b6bff)','linear-gradient(135deg,#ffe08a,#ff9f45)','linear-gradient(135deg,#7ef0e0,#3aa0d8)'];
+  var pi=0;
+  function fit(){var s=Math.min(1,wrap.clientWidth/demo.offsetWidth);demo.style.transform='scale('+s+')';wrap.style.height=(460*s)+'px';return s}
+  fit();addEventListener('resize',fit);
+  function pick(i){sel=i;items.forEach(function(b,k){b.classList.toggle('on',k===i)})}
+  items.forEach(function(b,i){b.addEventListener('click',function(){pick(i)})});
+  /* 相对 demo 的坐标（demo 可能被缩放） */
+  function at(el,fx_,fy_){var d=demo.getBoundingClientRect(),r=el.getBoundingClientRect(),s=d.width/demo.offsetWidth;
+    return {x:(r.left-d.left+r.width*(fx_==null?.5:fx_))/s,y:(r.top-d.top+r.height*(fy_==null?.5:fy_))/s}}
+  function spark(x,y){var e=document.createElement('i');e.className='spark';e.style.left=x+'px';e.style.top=y+'px';fx.appendChild(e);setTimeout(function(){e.remove()},720)}
+  function ring(x,y){var e=document.createElement('i');e.className='land';e.style.left=x+'px';e.style.top=y+'px';fx.appendChild(e);setTimeout(function(){e.remove()},720)}
+  function toast(text){var t=document.createElement('div');t.className='toast';t.innerHTML='<b>✓ 已复制</b><span></span>';t.lastChild.textContent=text;
+    toasts.appendChild(t);while(toasts.children.length>2)toasts.firstChild.remove();
+    if(window.gsap)gsap.from(t,{y:14,opacity:0,filter:'blur(6px)',duration:.6,ease:'expo.out'});return t}
+  var hints=['到了。再点一个试试','照片会自己进「下载」文件夹','也可以反过来：点电脑上的「发到手机」'];
+  var back=$('#back'),selt=$('#selt'),ph=$('#ph'),got=null;
+  back.addEventListener('click',function(){
+    if(busy)return;busy=true;demo.classList.add('used');
+    var from=at(selt,.5),to=at(items[0],.5,.5);
+    var fly=document.createElement('div');fly.className='fly';
+    fly.innerHTML='<div class="toast" style="margin:-15px 0 0 -60px;white-space:nowrap;background:rgba(227,255,107,.18)"></div>';fly.firstChild.textContent=selt.textContent;
+    fx.appendChild(fly);
+    var cx=(from.x+to.x)/2,cy=Math.min(from.y,to.y)-140,o={t:0},last=0;
+    function step(){var t=o.t,u=1-t,x=u*u*from.x+2*u*t*cx+t*t*to.x,y=u*u*from.y+2*u*t*cy+t*t*to.y;
+      fly.style.transform='translate('+x+'px,'+y+'px)';fly.style.opacity=t>.92?(1-t)/.08:1;
+      if(t-last>.025){spark(x+(Math.random()-.5)*10,y+(Math.random()-.5)*10);last=t}}
+    var done=function(){fx.removeChild(fly);ring(to.x,to.y+20);
+      if(!got){got=document.createElement('div');got.className='it got';got.innerHTML='<span class="ic">收</span><span></span>';ph.insertBefore(got,items[0]);}
+      got.lastChild.textContent=selt.textContent;
+      if(window.gsap)gsap.from(got,{y:-10,opacity:0,filter:'blur(6px)',duration:.6,ease:'expo.out'});
+      hintT.textContent='手机上收到了。两边都能发';busy=false};
+    if(window.gsap&&!reduce)gsap.to(o,{t:1,duration:.95,ease:'power2.inOut',onUpdate:step,onComplete:done});else{o.t=1;step();done()}
+  });
+  send.addEventListener('click',function(){
+    if(busy)return;busy=true;demo.classList.add('used');
+    var it=items[sel],kind=it.dataset.k,from=at(it,.15),photo=kind==='photo';
+    var bg=photo?photos[pi++%photos.length]:null;
+    /* 落点：照片进文件夹的下一个格子，文字落到右下角 */
+    var to=photo?(function(){var n=fg.children.length%6,c=n%3,r=Math.floor(n/3);var f=at(fg,0,0);return {x:f.x+c*45+20,y:f.y+r*45+20}})():at(toasts,.7,1);
+    if(!photo)to.y-=18;
+    var fly=document.createElement('div');fly.className='fly';
+    fly.innerHTML=photo?'<div style="width:40px;height:40px;border-radius:9px;margin:-20px 0 0 -20px;box-shadow:0 10px 30px rgba(0,0,0,.5)"></div>'
+      :'<div class="toast" style="margin:-15px 0 0 -10px;white-space:nowrap;background:rgba(108,124,255,.3)"></div>';
+    if(photo)fly.firstChild.style.background=bg;else fly.firstChild.textContent=it.dataset.v;
+    fx.appendChild(fly);
+    var cx=(from.x+to.x)/2,cy=Math.min(from.y,to.y)-150,o={t:0},last=0;
+    function step(){var t=o.t,u=1-t,x=u*u*from.x+2*u*t*cx+t*t*to.x,y=u*u*from.y+2*u*t*cy+t*t*to.y,sc=1-.35*Math.sin(t*Math.PI)*.5;
+      fly.style.transform='translate('+x+'px,'+y+'px) scale('+(photo?1-.3*t:1-.15*t)+')';fly.style.opacity=t>.92?(1-t)/.08:1;
+      if(t-last>.025){spark(x+(Math.random()-.5)*10,y+(Math.random()-.5)*10);last=t}}
+    it.animate([{transform:'scale(1)'},{transform:'scale(.94)'},{transform:'scale(1)'}],{duration:260});
+    var done=function(){fly.remove();ring(to.x,to.y);
+      if(photo){var d=document.createElement('div');d.style.background=bg;if(fg.children.length>=6)fg.firstChild.remove();fg.appendChild(d);
+        if(window.gsap)gsap.from(d,{scale:.3,opacity:0,duration:.6,ease:'back.out(2.2)'});}
+      else toast(it.dataset.v);
+      hintT.textContent=hints[Math.min(sent,hints.length-1)];sent++;
+      pick((sel+1)%items.length);busy=false};
+    if(window.gsap&&!reduce)gsap.to(o,{t:1,duration:.95,ease:'power2.inOut',onUpdate:step,onComplete:done});
+    else{o.t=1;step();done()}
+  });
+})();
+addEventListener('scroll',function(){navEl.classList.toggle('solid',scrollY>innerHeight*.6)},{passive:true});
 
+/* 卡片点一下，里面的东西再来一遍 */
+$$('.card').forEach(function(c){c.style.cursor='pointer';c.addEventListener('click',function(){if(!window.gsap||reduce)return;
+  var els=c.querySelectorAll('.thumbs div,.bubble,.swap,.lan span,.lan b,.path');
+  gsap.fromTo(els,{y:-24,opacity:0,scale:.7},{y:0,opacity:1,scale:1,stagger:.07,duration:.8,ease:'back.out(2)',overwrite:true})})});
 /* 卡片跟随鼠标的光 */
 $$('.card').forEach(function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();c.style.setProperty('--x',(e.clientX-r.left)+'px');c.style.setProperty('--y',(e.clientY-r.top)+'px')})});
 
@@ -296,7 +445,7 @@ function resize(){var w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam
 resize();addEventListener('resize',resize);
 
 /* 状态：intro 0→1 从星尘聚成手机；story 0→3 手机→弧线→电脑→键 */
-var st={intro:reduce?1:0,story:0},mx=0,my=0,tmx=0,tmy=0;
+var st={intro:reduce?1:0,story:0,glow:reduce?1:.5},mx=0,my=0,tmx=0,tmy=0;
 addEventListener('pointermove',function(e){tmx=(e.clientX/innerWidth-.5);tmy=(e.clientY/innerHeight-.5)});
 function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
 var clock=0;
@@ -315,7 +464,7 @@ function frame(){
     var ie=ease(Math.min(1,Math.max(0,intro*1.3-r*.3)));
     p[i3]=scatter[i3]+(x-scatter[i3])*ie+w;p[i3+1]=scatter[i3+1]+(y-scatter[i3+1])*ie+w;p[i3+2]=scatter[i3+2]+(z-scatter[i3+2])*ie;
   }
-  geo.attributes.position.needsUpdate=true;
+  geo.attributes.position.needsUpdate=true;mat.opacity=st.glow;
   group.rotation.y=-.35+mx*.5+Math.sin(clock*.35)*.06;group.rotation.x=my*.3;
   renderer.render(scene,camera);
   if(!reduce)requestAnimationFrame(frame);
@@ -325,9 +474,10 @@ if(reduce){caps.forEach(function(c,i){c.style.opacity=i===0?1:0});return}
 
 /* ---------- 动效 ---------- */
 gsap.registerPlugin(ScrollTrigger);
-gsap.to(st,{intro:1,duration:3.2,ease:'power2.out',delay:.2});
+gsap.to(st,{intro:1,ease:'none',scrollTrigger:{trigger:'#story',start:'top 95%',end:'top 5%',scrub:1}});
+gsap.to(st,{glow:1,ease:'none',scrollTrigger:{trigger:'#story',start:'top 95%',end:'top 5%',scrub:1}});
 var tl=gsap.timeline({defaults:{ease:'power2.out'}});
-tl.from('.chip',{y:20,opacity:0,filter:'blur(10px)',duration:1.1},.3)
+tl.from('.demo-wrap',{y:30,opacity:0,filter:'blur(12px)',duration:1.4},.3)
   .from('h1 .l',{y:40,opacity:0,filter:'blur(16px)',duration:1.4,stagger:.15,ease:'expo.out'},.45)
   .from(['.zh','.desc','.ctas','.meta'],{y:24,opacity:0,filter:'blur(8px)',duration:1.1,stagger:.1},.9)
   .from('.scroll',{opacity:0,duration:1},1.6);
@@ -345,7 +495,7 @@ caps.forEach(function(c,i){
 stTl.to({},{duration:.01},3);
 /* 故事结束后光点淡下去，让内容清楚 */
 gsap.to(canvas,{opacity:.18,ease:'none',scrollTrigger:{trigger:'.solid',start:'top 90%',end:'top 20%',scrub:true}});
-gsap.to('.hero .copy',{opacity:0,y:-60,filter:'blur(8px)',ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom 30%',scrub:true}});
+gsap.to(['.hero .copy','.demo-wrap'],{opacity:0,y:-60,filter:'blur(8px)',ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom 30%',scrub:true}});
 
 /* 内容浮现 */
 ScrollTrigger.batch('.rv',{start:'top 88%',once:true,onEnter:function(els){gsap.from(els,{y:40,opacity:0,filter:'blur(10px)',duration:1.1,ease:'expo.out',stagger:.08})}});
