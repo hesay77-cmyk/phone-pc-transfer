@@ -1,0 +1,6 @@
+{
+  "extName": { "message": "Tapaste" },
+  "extDescription": { "message": "Send text, photos, videos and files between your phone and computer. One tap, direct over your Wi-Fi, never through a server." },
+  "cmdOpen": { "message": "Open Tapaste" },
+  "cmdSendClipboard": { "message": "Send what I just copied to phone" }
+}

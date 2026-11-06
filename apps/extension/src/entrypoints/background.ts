@@ -2,6 +2,7 @@
 
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
+import { t } from '../lib/i18n';
 import type { SavedInfo, SendResult, ToBg, ToEngine } from '../lib/types';
 
 export default defineBackground(() => {
@@ -13,7 +14,7 @@ export default defineBackground(() => {
       await browser.offscreen.createDocument({
         url: ENGINE,
         reasons: ['WEB_RTC', 'CLIPBOARD'],
-        justification: '保持和手机的直连，并把手机发来的文字放进剪贴板'
+        justification: 'Keep the direct connection to the phone open and put text received from the phone on the clipboard'
       });
     } catch (e) {
       if (!String(e).includes('single offscreen')) console.warn('开引擎失败', e);
@@ -52,10 +53,10 @@ export default defineBackground(() => {
 
   // ---------- 网页上右键「发到手机」 ----------
   const MENUS: { id: string; title: string; contexts: ['selection' | 'link' | 'image' | 'page'] }[] = [
-    { id: 'sel', title: '把选中的文字发到手机', contexts: ['selection'] },
-    { id: 'link', title: '把这个链接发到手机', contexts: ['link'] },
-    { id: 'img', title: '把这张图发到手机', contexts: ['image'] },
-    { id: 'page', title: '把这个网页的网址发到手机', contexts: ['page'] }
+    { id: 'sel', title: t.menuSel, contexts: ['selection'] },
+    { id: 'link', title: t.menuLink, contexts: ['link'] },
+    { id: 'img', title: t.menuImg, contexts: ['image'] },
+    { id: 'page', title: t.menuPage, contexts: ['page'] }
   ];
   function makeMenus() {
     void browser.contextMenus.removeAll().then(() => { for (const m of MENUS) browser.contextMenus.create(m); });
@@ -80,13 +81,13 @@ export default defineBackground(() => {
       r = await toEngine({ type: 'send-image-url', url: info.srcUrl ?? '' });
       if (!r.ok && !allowed) {
         void browser.storage.local.set({ needImagePermission: true });
-        r.error = '第一次发网页上的图，要先允许一下：打开互传侧边栏，点「允许」，再右键发一次';
+        r.error = t.imgPermFirst;
       }
     } else {
       r = await toEngine({ type: 'send-text', text: info.pageUrl || tab?.url || '' });
     }
-    const text = r.ok ? (r.connected ? '已发到手机' : '手机没打开互传网页，先存着，打开后自动送到') : (r.error || '没发出去');
-    if (!(await toast(tab?.id, text, r.ok)) && !r.ok) notify({ to: 'bg', type: 'notify', kind: 'text', title: '没发到手机', message: text });
+    const text = r.ok ? (r.connected ? t.sentToPhone : t.queuedMenu) : (r.error || t.notSent);
+    if (!(await toast(tab?.id, text, r.ok)) && !r.ok) notify({ to: 'bg', type: 'notify', kind: 'text', title: t.notSentTitle, message: text });
   }
   // ---------- 快捷键：把刚复制的内容发到手机（在任何软件里复制完按一下） ----------
   browser.commands.onCommand.addListener((cmd, tab) => { if (cmd === 'send-clipboard') void sendClipboard(tab); });
@@ -94,12 +95,12 @@ export default defineBackground(() => {
   async function sendClipboard(tab?: { id?: number }) {
     await ensureEngine();
     const r: SendResult = await browser.runtime.sendMessage({ to: 'engine', type: 'send-clipboard' } satisfies ToEngine)
-      .catch(() => ({ ok: false, error: '插件后台没响应，请再试一次' }));
-    const text = r.ok ? (r.connected ? `${r.what ?? ''}已发到手机` : `${r.what ?? ''}先存着，手机打开互传网页后自动送到`) : (r.error || '没发出去');
+      .catch(() => ({ ok: false, error: t.noResponse }));
+    const text = r.ok ? (r.connected ? t.sentOk(r.what ?? '').replace(/^✓ /, '') : t.queued(r.what ?? '')) : (r.error || t.notSent);
     // Chrome 在前台：网页右下角闪提示；在别的软件里：用系统通知（被关了也没关系，手机上会收到）
     const w = await browser.windows.getLastFocused().catch(() => null);
     if (!(w?.focused && (await toast(tab?.id, text, r.ok)))) {
-      notify({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? '已发到手机' : '没发到手机', message: text });
+      notify({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? t.sentToPhone : t.notSentTitle, message: text });
     }
   }
 
@@ -107,7 +108,7 @@ export default defineBackground(() => {
   if (import.meta.env.VITE_E2E) Object.assign(globalThis, { __menuClicked: menuClicked, __sendClipboard: sendClipboard });
 
   const toEngine = (m: { type: 'send-text'; text: string } | { type: 'send-image-url'; url: string }): Promise<SendResult> =>
-    browser.runtime.sendMessage({ to: 'engine', ...m } satisfies ToEngine).catch(() => ({ ok: false, error: '插件后台没响应，请再试一次' }));
+    browser.runtime.sendMessage({ to: 'engine', ...m } satisfies ToEngine).catch(() => ({ ok: false, error: t.noResponse }));
 
   /** 网页里选中的字（带换行；Chrome 直接给的会把换行吃掉） */
   async function selectedText(tabId?: number, frameId?: number): Promise<string> {
@@ -177,16 +178,16 @@ export default defineBackground(() => {
     } catch { /* 打不开就算了 */ }
   });
 
-  /** 存进 Chrome 的下载文件夹里的「互传」；个别系统不认中文文件名，就退回英文名 */
+  /** 存进 Chrome 的下载文件夹里的「Tapaste」；个别系统不认中文文件名，就退回英文文件名 */
   async function saveFile(url: string, filename: string, fallbackName: string): Promise<SavedInfo> {
     const opt = { url, conflictAction: 'uniquify' as const, saveAs: false };
     try {
-      return await waitDownload(await browser.downloads.download({ ...opt, filename: '互传/' + filename }));
+      return await waitDownload(await browser.downloads.download({ ...opt, filename: 'Tapaste/' + filename }));
     } catch (e) {
       try {
-        return await waitDownload(await browser.downloads.download({ ...opt, filename: 'hutong/' + fallbackName }));
+        return await waitDownload(await browser.downloads.download({ ...opt, filename: 'Tapaste/' + fallbackName }));
       } catch (e2) {
-        return { ok: false, detail: `存不进去：${(e as Error).message} / ${(e2 as Error).message}` };
+        return { ok: false, detail: t.saveFailed((e as Error).message, (e2 as Error).message) };
       }
     }
   }
@@ -202,11 +203,11 @@ export default defineBackground(() => {
         if (r.ok) { const [it] = await browser.downloads.search({ id }); r.path = it?.filename; }
         resolve({ downloadId: id, ...r });
       };
-      const tm = setTimeout(() => void finish({ ok: false, detail: '20 秒还没存完' }), ms);
+      const tm = setTimeout(() => void finish({ ok: false, detail: t.saveSlow }), ms);
       const check = (st?: string, err?: string, danger?: string) => {
         if (st === 'complete') void finish({ ok: true });
-        else if (st === 'interrupted') void finish({ ok: false, detail: '保存被中断：' + (err || '未知原因') });
-        else if (danger && !['safe', 'accepted'].includes(danger)) void finish({ ok: false, detail: `Chrome 拦下了这次保存（${danger}）` });
+        else if (st === 'interrupted') void finish({ ok: false, detail: t.saveInterrupted(err ?? '') });
+        else if (danger && !['safe', 'accepted'].includes(danger)) void finish({ ok: false, detail: t.saveBlocked(danger) });
       };
       const look = () => browser.downloads.search({ id }).then(([it]) => it && check(it.state, it.error, it.danger));
       const on = (d: { id: number }) => { if (d.id === id) void look(); };

@@ -10,7 +10,7 @@ export interface SavedInfo { ok: boolean; path?: string; downloadId?: number; de
 export interface Item {
   id: string;
   from: 'phone' | 'pc';
-  kind: 'text' | 'image';
+  kind: 'text' | 'image' | 'file';
   time: number;
   text?: string;
   size?: number;
@@ -27,6 +27,8 @@ export interface Item {
   dropped?: 'cancelled' | 'expired' | 'failed';
   /** 文字太长，记录里只存了开头 */
   cut?: boolean;
+  /** 电脑发出去的：正在发，发到百分之几（不存） */
+  pct?: number;
 }
 
 export interface EngineState {
@@ -49,6 +51,8 @@ export interface EngineState {
   newPhone?: string;
   /** 「复制就发」跳过了一条像密码的内容（时间），提醒用户 */
   skippedSecretAt?: number;
+  /** 正在收手机发来的照片或文件 */
+  receiving?: { id: string; name: string; size: number; got: number; done: boolean };
   log: string[];
 }
 
@@ -61,7 +65,7 @@ export type ToBg =
   | { to: 'bg'; type: 'badge'; text: string; color: string };
 
 /** 发到手机的结果 */
-export interface SendResult { ok: boolean; connected?: boolean; error?: string; /** 发的是什么，给用户看 */ what?: string }
+export interface SendResult { ok: boolean; connected?: boolean; error?: string; /** 引擎读不到剪贴板：侧边栏自己再读一次 */ code?: 'no-clipboard'; /** 发的是什么，给用户看 */ what?: string }
 
 export type ToEngine =
   | { to: 'engine'; type: 'get-state' }
@@ -70,6 +74,8 @@ export type ToEngine =
   | { to: 'engine'; type: 'cancel'; id: string }
   /** 清空侧边栏里的记录（还没送到的留着） */
   | { to: 'engine'; type: 'clear-items' }
+  /** 删掉一条记录（还没送到的顺便不发了） */
+  | { to: 'engine'; type: 'delete-item'; id: string }
   /** 关掉「新手机连上了」「跳过了像密码的」这类提醒 */
   | { to: 'engine'; type: 'dismiss'; what: 'newPhone' | 'skippedSecret' }
   /** 网页上右键「把这张图发到手机」：引擎自己去下载这张图 */
@@ -77,7 +83,7 @@ export type ToEngine =
   /** 把剪贴板里的东西（刚复制的文字，或刚截的图）发到手机：快捷键和侧边栏按钮都用它 */
   | { to: 'engine'; type: 'send-clipboard' }
   | { to: 'engine'; type: 'set-auto-send'; on: boolean }
-  /** 侧边栏里选的/粘贴的/拖进来的图：先放进小数据库，再告诉引擎 id */
+  /** 侧边栏里选的/粘贴的/拖进来的图或文件：先放进小数据库，再告诉引擎 id */
   | { to: 'engine'; type: 'send-file'; fileId: string; name: string }
   | { to: 'engine'; type: 'reset-pairing' }
   /** 侧边栏开着、看过了：清掉图标上的数字 */

@@ -1,12 +1,34 @@
+/* 照 iPhone 自带 App 的样子：系统字体、分组卡片、毛玻璃顶栏、品牌色当强调色 */
 :root {
-  --bg: #fff; --fg: #1f1f1f; --muted: #6b6b6b; --line: #e6e6e6; --card: #f4f4f5;
-  --ok: #1a7f37; --bad: #cf222e; --wait: #9a6700; --accent: #2563eb;
+  --bg: #f2f2f7; --card: #ffffff; --fill: rgba(118, 118, 128, .12); --fill2: rgba(118, 118, 128, .08);
+  --label: #000000; --label2: rgba(60, 60, 67, .6); --label3: rgba(60, 60, 67, .3); --sep: rgba(60, 60, 67, .16);
+  --tint: #5856d6; --tint-soft: rgba(88, 86, 214, .12);
+  --green: #34c759; --green-text: #248a3d; --green-soft: rgba(52, 199, 89, .14);
+  --orange: #ff9500; --orange-text: #c93400; --orange-soft: rgba(255, 149, 0, .14);
+  --red: #ff3b30; --red-soft: rgba(255, 59, 48, .12);
+  --bar: rgba(242, 242, 247, .72);
+  --grad: linear-gradient(140deg, #6366f1 0%, #8b5cf6 100%);
+  --blob-o: .55;
+  --ease: cubic-bezier(.2, .8, .2, 1);
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #111214; --fg: #ececec; --muted: #9a9a9a; --line: #2f3033; --card: #1d1e21; --ok: #4ac26b; --bad: #ff7b72; --wait: #d29922; --accent: #6ea8fe; }
+  :root {
+    --bg: #000000; --card: #1c1c1e; --fill: rgba(118, 118, 128, .24); --fill2: rgba(118, 118, 128, .16);
+    --label: #ffffff; --label2: rgba(235, 235, 245, .6); --label3: rgba(235, 235, 245, .3); --sep: rgba(84, 84, 88, .55);
+    --tint: #7d7aff; --tint-soft: rgba(94, 92, 230, .24);
+    --green: #30d158; --green-text: #30d158; --green-soft: rgba(48, 209, 88, .16);
+    --orange: #ff9f0a; --orange-text: #ffb340; --orange-soft: rgba(255, 159, 10, .16);
+    --red: #ff453a; --red-soft: rgba(255, 69, 58, .16);
+    --bar: rgba(18, 18, 20, .72);
+    --blob-o: .22;
+  }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang SC", system-ui, sans-serif; }
-button { font: inherit; }
-textarea { width: 100%; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--label); font: 17px/1.42 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", system-ui, sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -.01em; }
+button { font: inherit; color: inherit; -webkit-user-select: none; user-select: none; }
+textarea { font: inherit; color: var(--label); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

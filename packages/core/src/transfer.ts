@@ -25,6 +25,9 @@ export type Incoming =
   | { id: string; kind: 'text'; createdAt: number; text: string }
   | { id: string; kind: 'file'; createdAt: number; meta: FileMeta; blob: Blob; ms: number };
 
+/** 正在收的文件：给界面显示进度 */
+export interface Receiving { id: string; meta: FileMeta; got: number; /** 收齐了，正在交给界面 */ done: boolean }
+
 export interface TransferEvents {
   /** 对方确认收到了 */
   delivered?(item: OutItem, info: { waitedForLink: boolean; resent: boolean }): void;
@@ -34,6 +37,8 @@ export interface TransferEvents {
   received?(item: Incoming): void;
   /** 发送进度 0~1 */
   progress?(item: OutItem, ratio: number): void;
+  /** 接收进度：开始收、收了一部分、收齐了；null = 这个没收成（等对方重发） */
+  receiving?(r: Receiving | null): void;
   /** 待发队列有变化 */
   queue?(pending: number): void;
   log?(s: string): void;
@@ -42,6 +47,10 @@ export interface TransferEvents {
 interface Pending { item: OutItem; inflight: boolean; tries: number; fails: number; waited: boolean; timer?: ReturnType<typeof setTimeout> }
 
 const ACK_TIMEOUT_MS = 8000;
+/** 接收进度最多多久报一次 */
+const RX_REPORT_MS = 200;
+/** 发文件时一次从文件里读多少 */
+const READ_WINDOW = 1024 * 1024;
 /** 超过一天还没送到的，不再自动补发（免得很久以后突然冒出来） */
 export const OUTBOX_EXPIRE_MS = 24 * 3600 * 1000;
 /** 文字超过这么多字节就按文件分块送（直连一条消息最多 256KB，留足余量） */
@@ -54,6 +63,8 @@ export class Transfer {
   private seen: SeenIds;
   private rx: { id: string; createdAt: number; meta: FileMeta; parts: ArrayBuffer[]; got: number; t0: number; skip: boolean } | null = null;
   private lastReconnect = 0;
+  private rxReported = 0;
+  private rxTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private pipe: Pipe, kv: KV, private ev: TransferEvents = {}, private chunkSize = 16 * 1024, private store?: OutboxStore) {
     this.seen = new SeenIds(kv, 'seen-ids');
@@ -112,17 +123,22 @@ export class Transfer {
         this.seen.add(m.id);
         this.ev.received?.({ id: m.id, kind: 'text', createdAt: m.createdAt, text: m.text });
         return true;
-      case 'file-start':
+      case 'file-start': {
+        const old = this.rx;
         this.rx = { id: m.id, createdAt: m.createdAt, meta: m.meta, parts: [], got: 0, t0: Date.now(), skip: this.seen.has(m.id) };
+        if (old && old.id !== m.id) this.rxGone(old);
+        this.reportRx(true);
         return true;
+      }
       case 'file-end': {
         const rx = this.rx;
         this.rx = null;
-        if (!rx || rx.id !== m.id) return true; // 中途断过，等对方重发
+        if (!rx || rx.id !== m.id) { if (rx) this.rxGone(rx); return true; } // 中途断过，等对方重发
         if (rx.skip) { this.ack(m.id); this.log('对方重发了一个已经收到的文件，忽略'); return true; }
-        if (rx.got !== rx.meta.size) { this.log(`文件不完整（${rx.got}/${rx.meta.size}），等对方重发`); return true; }
+        if (rx.got !== rx.meta.size) { this.rxGone(rx); this.log(`文件不完整（${rx.got}/${rx.meta.size}），等对方重发`); return true; }
         this.ack(m.id);
         this.seen.add(m.id);
+        if (!rx.meta.asText) this.ev.receiving?.({ id: rx.id, meta: rx.meta, got: rx.got, done: true });
         if (rx.meta.asText) {
           // 很长的文字：拼回来还是文字
           const all = new Uint8Array(rx.got);
@@ -143,8 +159,32 @@ export class Transfer {
   /** 交给它处理通道上收到的二进制块 */
   handleBinary(b: ArrayBuffer) {
     if (!this.rx || this.rx.skip) return;
+    // 比说好的大小还多：不对劲，整个丢掉（不回确认，对方会重发，发不成就算失败）
+    if (this.rx.got + b.byteLength > this.rx.meta.size) { this.rxGone(this.rx); this.rx = null; this.log('收到的数据比说好的多，丢掉这个文件'); return; }
     this.rx.parts.push(b);
     this.rx.got += b.byteLength;
+    this.reportRx(false);
+  }
+
+  /** 告诉界面收到哪了（长文字不报，一下就收完了） */
+  private reportRx(force: boolean) {
+    const rx = this.rx;
+    if (!rx || rx.skip || rx.meta.asText || !this.ev.receiving) return;
+    const now = Date.now();
+    if (!force && now - this.rxReported < RX_REPORT_MS) {
+      // 这次先不报，过一会儿补报一次（不然数据停了，界面会一直停在旧的进度上）
+      this.rxTimer ??= setTimeout(() => { this.rxTimer = undefined; this.reportRx(true); }, RX_REPORT_MS - (now - this.rxReported));
+      return;
+    }
+    clearTimeout(this.rxTimer);
+    this.rxTimer = undefined;
+    this.rxReported = now;
+    this.ev.receiving({ id: rx.id, meta: rx.meta, got: rx.got, done: false });
+  }
+
+  /** 收了一半的不要了（等对方重发） */
+  private rxGone(rx: { skip: boolean; meta: FileMeta }) {
+    if (!rx.skip && !rx.meta.asText) this.ev.receiving?.(null);
   }
 
   /** 把待发的往外送。通道没准备好就等，准备好了再调一次。 */
@@ -244,11 +284,15 @@ export class Transfer {
 
   private async sendFileNow(item: Extract<OutItem, { kind: 'file' }>): Promise<boolean> {
     if (!this.pipe.send({ t: 'file-start', id: item.id, createdAt: item.createdAt, meta: item.meta })) return false;
-    const buf = await item.blob.arrayBuffer();
-    for (let off = 0; off < buf.byteLength; off += this.chunkSize) {
-      await this.pipe.waitDrain();
-      if (!this.pipe.sendBinary(buf.slice(off, off + this.chunkSize))) return false;
-      this.ev.progress?.(item, Math.min(1, (off + this.chunkSize) / buf.byteLength));
+    // 一次读 1MB 再切块发：大文件不用整个读进内存
+    const size = item.blob.size;
+    for (let base = 0; base < size; base += READ_WINDOW) {
+      const buf = await item.blob.slice(base, base + READ_WINDOW).arrayBuffer();
+      for (let off = 0; off < buf.byteLength; off += this.chunkSize) {
+        await this.pipe.waitDrain();
+        if (!this.pipe.sendBinary(buf.slice(off, off + this.chunkSize))) return false;
+      }
+      this.ev.progress?.(item, Math.min(1, (base + buf.byteLength) / size));
     }
     return this.pipe.send({ t: 'file-end', id: item.id });
   }

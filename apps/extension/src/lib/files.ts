@@ -1,5 +1,6 @@
 // 收到的照片存在插件自己的小数据库里（引擎、侧边栏、复制小窗口都能读），只留最近 30 张。
 import { BlobStore } from '@hutong/core';
+import { t } from './i18n';
 
 const store = new BlobStore('hutong', 'files', 30);
 export const putFile = (id: string, blob: Blob) => store.put(id, blob);
@@ -35,5 +36,5 @@ export function photoName(mime: string, ascii = false, d = new Date()): string {
   const ext = ({ 'image/png': 'png', 'image/heic': 'heic', 'image/gif': 'gif', 'image/webp': 'webp' } as Record<string, string>)[mime] || 'jpg';
   const day = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   const time = `${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
-  return ascii ? `phone-photo-${day}-${time}.${ext}` : `手机照片 ${day} ${time}.${ext}`;
+  return ascii ? `phone-photo-${day}-${time}.${ext}` : `${t.phonePhoto} ${day} ${time}.${ext}`;
 }

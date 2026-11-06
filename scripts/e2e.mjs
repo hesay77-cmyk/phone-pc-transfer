@@ -79,9 +79,14 @@ function testPng(w = 900, h = 700) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-const ctx = await chromium.launchPersistentContext(join(work, 'profile'), {
-  headless: false, args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`]
+// 界面跟随系统语言：主流程按中文系统测（最后再用英文系统测一遍）
+const scale = process.env.E2E_SHOTS ? { deviceScaleFactor: 2 } : {};
+const extBrowser = (dir, lang) => chromium.launchPersistentContext(join(work, dir), {
+  // Linux 上 Chrome 的界面语言看 LANGUAGE（插件的 chrome.i18n 跟它走），网页里的 navigator.language 看 locale
+  headless: false, locale: lang, env: { ...process.env, LANGUAGE: lang.replace('-', '_'), LANG: lang.replace('-', '_') + '.UTF-8' },
+  args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`, `--lang=${lang}`], ...scale
 });
+const ctx = await extBrowser('profile', 'zh-CN');
 let [sw] = ctx.serviceWorkers();
 if (!sw) sw = await ctx.waitForEvent('serviceworker');
 const extId = new URL(sw.url()).host;
@@ -90,9 +95,11 @@ await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
 await panel.waitForSelector('.qr[data-url]', { timeout: 20000 });
 const pairUrl = await panel.getAttribute('.qr', 'data-url');
 check('插件显示配对二维码', /^http:\/\/localhost:8080\/#k=[A-Za-z0-9_-]{43}$/.test(pairUrl), pairUrl);
+const zhDesc = await panel.evaluate(() => chrome.i18n.getMessage('extDescription'));
+check('中文系统：插件介绍是中文', zhDesc.startsWith('手机和电脑之间互传文字、照片、视频和文件'), zhDesc.slice(0, 30));
 
 const phoneBrowser = await chromium.launch({ headless: false });
-const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN', ...scale });
 await phoneCtx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:8080' });
 let phone = await phoneCtx.newPage();
 phone.on('pageerror', (e) => console.log('[手机页面出错]', e.message));
@@ -170,6 +177,117 @@ const phoneImgOk = await phone.evaluate(async (n) => {
 }, pcPng.length);
 check('电脑发图片到手机：手机显示，一字节不差', phoneImgOk);
 check('手机上有「存到相册」', await phone.isVisible('text=存到相册'));
+
+// 发文件（文档、压缩包等，不是照片）：两边都能发、能收，一字节不差
+const fakeFile = (n, seed) => { const b = Buffer.alloc(n); for (let i = 0; i < n; i++) b[i] = (i * seed + (i >> 8)) & 255; return b; };
+const sum = (b) => b.reduce((a, x) => (a * 31 + x) >>> 0, 7);
+const pdf = fakeFile(300 * 1024 + 123, 7);
+await phone.setInputFiles('input[type=file]', { name: '报价单 2026.pdf', mimeType: 'application/pdf', buffer: pdf });
+await panel.click('.tabs .t-phone').catch(() => {});
+const pcFile = panel.locator('.item[data-kind="file"][data-from="phone"]', { hasText: '报价单 2026.pdf' });
+const pcGotFile = await pcFile.waitFor({ timeout: 15000 }).then(() => true, () => false);
+await panel.waitForFunction(() => document.querySelector('.item[data-kind="file"]')?.innerText.includes('打开所在文件夹'), null, { timeout: 10000 }).catch(() => {});
+check('手机发文件：电脑收到并显示文件名', pcGotFile);
+const fileText = pcGotFile ? await pcFile.innerText() : '';
+check('文件自动存进下载文件夹', fileText.includes('打开所在文件夹'), fileText.includes('没能自动保存') ? fileText : '');
+const dl = await (ctx.serviceWorkers()[0] ?? sw).evaluate(async () => {
+  const [d] = await chrome.downloads.search({ orderBy: ['-startTime'], limit: 1 });
+  return d ? { name: d.filename.split(/[\\/]/).pop(), size: d.fileSize || d.bytesReceived, state: d.state } : null;
+}).catch((e) => ({ err: String(e) }));
+// （测试里 Chrome 的下载被测试工具接管，存下的名字是一串乱码，所以只核对大小）
+check('存下来的文件大小一字节不差', dl?.size === pdf.length && dl?.state === 'complete', JSON.stringify(dl));
+check('手机上显示「电脑已收到」', await phone.waitForFunction(() => document.querySelector('.sent')?.dataset.state === 'done' && document.querySelector('.sent').textContent.includes('报价单'), null, { timeout: 5000 }).then(() => true, () => false),
+  await phone.evaluate(() => document.querySelector('.sent')?.textContent ?? ''));
+const docx = fakeFile(180 * 1024 + 5, 13);
+await panel.setInputFiles('.send input[type=file]', { name: '会议纪要.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: docx });
+const phFile = phone.locator('.item[data-kind="file"]', { hasText: '会议纪要.docx' });
+const phGotFile = await phFile.waitFor({ timeout: 15000 }).then(() => true, () => false);
+check('电脑发文件：手机收到并显示文件名', phGotFile);
+const phFileOk = phGotFile && await phone.evaluate(async ([n, want]) => {
+  const a = [...document.querySelectorAll('.item[data-kind="file"]')].find((e) => e.textContent.includes('会议纪要.docx'))?.querySelector('a[download]');
+  if (!a) return false;
+  const b = new Uint8Array(await (await fetch(a.href)).arrayBuffer());
+  return b.length === n && b.reduce((s, x) => (s * 31 + x) >>> 0, 7) === want;
+}, [docx.length, sum(docx)]);
+check('手机收到的文件一字节不差，有「存到手机」', phFileOk && await phFile.locator('text=存到手机').isVisible());
+await panel.click('.tabs .t-pc').catch(() => {});
+const pcSentFile = panel.locator('.item[data-kind="file"][data-from="pc"]', { hasText: '会议纪要.docx' });
+check('侧边栏里发出去的文件显示「已送到」', await pcSentFile.waitFor({ timeout: 5000 }).then(() => pcSentFile.innerText()).then((t) => !t.includes('等手机'), () => false));
+// 大文件（像曦传的视频）：收的一方要看得到「正在接收」和进度，发的一方看得到「发送中 x%」
+const watch = (page, sel) => page.evaluate((sel) => {
+  window.__seen = [];
+  const note = () => { for (const e of document.querySelectorAll(sel)) { const t = e.innerText.replace(/\s+/g, ' ').trim(); if (t && window.__seen.at(-1) !== t) window.__seen.push(t); } };
+  window.__mo?.disconnect();
+  window.__mo = new MutationObserver(note);
+  window.__mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+}, sel);
+const seen = (page) => page.evaluate(() => { window.__mo?.disconnect(); return window.__seen; });
+const midPct = (list) => list.some((t) => { const m = t.match(/(\d+)%/); return m && +m[1] > 0 && +m[1] < 100; });
+const bigPc = fakeFile(12 * 1024 * 1024 + 77, 3);
+await watch(phone, '.recv'); await watch(panel, '.item[data-from="pc"] .st');
+await panel.setInputFiles('.send input[type=file]', { name: '旅行视频.mp4', mimeType: 'video/mp4', buffer: bigPc });
+const bigGot = await phone.locator('.item[data-kind="file"]', { hasText: '旅行视频.mp4' }).waitFor({ timeout: 60000 }).then(() => true, () => false);
+await phone.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+const phRecv = await seen(phone), pcSend = await seen(panel);
+check('电脑发 12MB 视频：手机收到', bigGot);
+check('手机接收时显示「正在接收」和进度，收完就消失', phRecv.some((t) => t.includes('正在接收') && t.includes('旅行视频.mp4')) && midPct(phRecv) && !(await phone.isVisible('.recv')),
+  phRecv.slice(0, 3).concat(phRecv.slice(-2)).join(' | '));
+check('电脑发送时显示「发送中 x%」', pcSend.some((t) => t.startsWith('发送中')) && midPct(pcSend), pcSend.slice(0, 4).join(' | '));
+const bigPhone = fakeFile(12 * 1024 * 1024 + 31, 5);
+await watch(panel, '.recv'); await watch(phone, '.sent');
+await phone.setInputFiles('input[type=file]', { name: '录屏.mov', mimeType: 'video/quicktime', buffer: bigPhone });
+await panel.click('.tabs .t-phone').catch(() => {});
+const bigBack = await panel.locator('.item[data-kind="file"][data-from="phone"]', { hasText: '录屏.mov' }).waitFor({ timeout: 60000 }).then(() => true, () => false);
+await panel.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+const pcRecv = await seen(panel), phSend = await seen(phone);
+if (process.env.E2E_SHOTS) {
+  // 截「正在接收」的样子：两边各假装收了一半（真传太快截不到），截完发个不完整的结尾让它消失
+  await phone.evaluate(async () => {
+    const t = window.__hutong.transfer;
+    t.handle({ v: 1, t: 'file-start', id: 'shot-rx', createdAt: Date.now(), meta: { name: '旅行视频.mp4', mime: 'video/mp4', size: 54 * 1048576 } });
+    await new Promise((r) => setTimeout(r, 250));
+    t.handleBinary(new ArrayBuffer(23 * 1048576));
+  });
+  await phone.waitForTimeout(500);
+  await phone.evaluate(() => document.querySelector('.got')?.scrollIntoView({ block: 'start' }));
+  await phone.waitForTimeout(400);
+  await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-recv.png') });
+  await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-recv-dark.png') }); await phone.emulateMedia({ colorScheme: null });
+  await phone.evaluate(() => window.__hutong.transfer.handle({ v: 1, t: 'file-end', id: 'shot-rx' }));
+  await phone.evaluate(async () => {
+    const l = window.__hutong.link;
+    l.send({ t: 'file-start', id: 'shot-tx', createdAt: Date.now(), meta: { name: '录屏 2026-11-05.mov', mime: 'video/quicktime', size: 2.5 * 1048576 } });
+    for (let i = 0; i < 64; i++) { await l.waitDrain(); l.sendBinary(new ArrayBuffer(16384)); }
+  });
+  await panel.waitForTimeout(800);
+  await panel.evaluate(() => scrollTo(0, 0));
+  await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-recv.png') });
+  await phone.evaluate(() => window.__hutong.link.send({ t: 'file-end', id: 'shot-tx' }));
+  await panel.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+  await phone.waitForSelector('.recv', { state: 'detached', timeout: 5000 }).catch(() => {});
+}
+check('手机发 12MB 视频：电脑收到', bigBack);
+check('电脑接收时显示「正在接收」和进度，收完就消失', pcRecv.some((t) => t.includes('正在接收') && t.includes('录屏.mov')) && midPct(pcRecv) && !(await panel.isVisible('.recv')),
+  pcRecv.slice(0, 3).concat(pcRecv.slice(-2)).join(' | '));
+check('手机发送时显示「发送中 x%」', phSend.some((t) => t.includes('发送中')) && midPct(phSend), phSend.slice(0, 3).join(' | '));
+
+await panel.click('.tabs .t-phone').catch(() => {});
+if (process.env.E2E_SHOTS) {
+  await phone.evaluate(() => document.querySelector('.list')?.scrollIntoView({ block: 'start' })); await phone.waitForTimeout(500);
+  await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-files.png') });
+  await panel.waitForTimeout(400); await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-files.png') });
+}
+
+// 手机上点小垃圾桶：这一条删掉，刷新也不回来
+const nGot = await phone.locator('.item').count();
+await phFile.locator('.del').click();
+await phone.waitForFunction((n) => document.querySelectorAll('.item').length === n - 1, nGot, { timeout: 3000 }).catch(() => {});
+const gotSaved = await phone.evaluate(() => localStorage.getItem('hutong:phone:got') ?? '');
+check('手机删掉一条「电脑发来的」', (await phone.locator('.item').count()) === nGot - 1 && !gotSaved.includes('会议纪要'));
+const nSent = await phone.locator('.sent').count();
+await phone.locator('.sent').first().locator('.del').click();
+await phone.waitForFunction((n) => document.querySelectorAll('.sent').length === n - 1, nSent, { timeout: 3000 }).catch(() => {});
+check('手机删掉一条「发出去的」', (await phone.locator('.sent').count()) === nSent - 1);
 
 // 截图后：在侧边栏按 Ctrl+V（不用先点输入框），或点「发刚截的图」
 const putShot = (w, h) => panel.evaluate(async ([w, h]) => {
@@ -257,7 +375,11 @@ const tabState = () => panel.evaluate(() => ({
 await panel.waitForSelector('.tabs .t-pc.on', { timeout: 3000 }).catch(() => {});
 const afterSend = await tabState();
 check('侧边栏分两栏：刚发到手机后显示「发到手机的」，只有电脑发出的', afterSend.on === 'pc' && afterSend.from === 'pc', JSON.stringify(afterSend));
-if (process.env.E2E_SHOTS) { await panel.setViewportSize({ width: 380, height: 1000 }); await panel.screenshot({ path: process.env.E2E_SHOTS + '/panel-pc.png' }); }
+if (process.env.E2E_SHOTS) {
+  await panel.setViewportSize({ width: 380, height: 1000 }); await panel.screenshot({ path: process.env.E2E_SHOTS + '/panel-pc.png' });
+  await phone.screenshot({ path: process.env.E2E_SHOTS + '/phone-mid.png' });
+  await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: process.env.E2E_SHOTS + '/phone-mid-dark.png' }); await phone.emulateMedia({ colorScheme: null });
+}
 
 // 网页上右键「发到手机」（测试脚本点不了真的右键菜单，直接调用插件里处理菜单的那段）
 const web = await ctx.newPage();
@@ -474,7 +596,7 @@ check('手机网页关掉重开、电脑后来才开：照样收到手机攒着�
 await panel.click('button:has-text("换一台手机")').catch(() => {});
 await panel.waitForSelector('.qr svg', { timeout: 5000 });
 const qrSvg = await panel.evaluate(() => document.querySelector('.qr svg').outerHTML);
-const homeCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+const homeCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
 await homeCtx.addInitScript((svg) => {
   navigator.mediaDevices.getUserMedia = async () => {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 480;
@@ -507,8 +629,18 @@ check('取消了的不会送到后来连上的手机', !(await home.evaluate(() 
 check('电脑上提醒「有一台新手机连上了」', await panel.evaluate(() => document.body.innerText.includes('有一台新手机连上了')));
 await homeCtx.close();
 
+// 侧边栏点小垃圾桶：这一条删掉，重新打开侧边栏也不回来
+await panel.click('.tabs .t-pc').catch(() => {});
+await wrong.locator('.del').click({ timeout: 5000 }).catch(() => {});
+await panel.waitForTimeout(600);
+const goneNow = (await wrong.count()) === 0;
+await panel.reload();
+await panel.click('.tabs .t-pc', { timeout: 10000 }).catch(() => {});
+await panel.waitForSelector('.item', { timeout: 10000 }).catch(() => {});
+check('侧边栏删掉一条，重新打开也不回来', goneNow && (await wrong.count()) === 0, `点完=${goneNow}`);
+
 // 公司网络不让设备直接通信：两边都要说清楚，而不是一直转圈
-const blockCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+const blockCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
 await blockCtx.addInitScript(() => {
   const Orig = window.RTCPeerConnection;
   const srd = Orig.prototype.setRemoteDescription;
@@ -528,7 +660,48 @@ if (process.env.E2E_SHOTS) {
   await panel.setViewportSize({ width: 380, height: 900 });
   await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel.png'), fullPage: true });
   if (!phone.isClosed()) await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone.png'), fullPage: true });
+  await panel.emulateMedia({ colorScheme: 'dark' });
+  await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-dark.png'), fullPage: true });
+  if (!phone.isClosed()) { await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-dark.png'), fullPage: true }); }
 }
+
+// 英文系统：插件和手机网页都显示英文（2026-11-06 曦要中英双语，跟随系统：中文系统中文，其他都英文）
+const enPhoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'en-US', ...scale });
+await enPhoneCtx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:8080' });
+const enHello = await enPhoneCtx.newPage();
+await enHello.goto('http://localhost:8080/');
+await enHello.waitForSelector('.hello', { timeout: 10000 }).catch(() => {});
+check('英文手机：第一次打开是英文', (await enHello.textContent('main')).includes('Scan to pair') && (await enHello.evaluate(() => document.documentElement.lang)) === 'en',
+  (await enHello.textContent('.hello')).trim().replace(/\s+/g, ' ').slice(0, 80));
+if (process.env.E2E_SHOTS) await enHello.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-en-hello.png') });
+await enHello.close();
+const enPhone = await enPhoneCtx.newPage();
+await enPhone.goto(pairUrl);
+const enOk = await enPhone.waitForSelector('.status[data-link="connected"]', { timeout: 20000 }).then(() => true, () => false);
+const enMain = enOk ? (await enPhone.textContent('main')).replace(/\s+/g, ' ') : '';
+check('英文手机：连上后界面是英文', enOk && enMain.includes('Paste & send to computer') && enMain.includes('Connected to') && enMain.includes('From computer') && !/[\u4e00-\u9fff]{2}/.test(enMain.replace(/Windows 电脑|电脑/g, '')),
+  enMain.slice(0, 120));
+if (enOk) {
+  await enPhone.fill('textarea', 'hello from an English phone');
+  await enPhone.getByRole('button', { name: 'Send', exact: true }).click();
+}
+check('英文手机：照样能发到电脑', await panel.waitForFunction(() => document.body.innerText.includes('hello from an English phone'), null, { timeout: 8000 }).then(() => true, () => false));
+if (process.env.E2E_SHOTS) await enPhone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-en.png') });
+await enPhoneCtx.close();
+
+const enCtx = await extBrowser('profile-en', 'en-US');
+let [enSw] = enCtx.serviceWorkers();
+if (!enSw) enSw = await enCtx.waitForEvent('serviceworker');
+const enPanel = await enCtx.newPage();
+await enPanel.goto(`chrome-extension://${new URL(enSw.url()).host}/sidepanel.html`);
+await enPanel.waitForSelector('.qr[data-url]', { timeout: 20000 }).catch(() => {});
+const enPanelText = (await enPanel.textContent('main')).replace(/\s+/g, ' ');
+check('英文系统：侧边栏是英文', ['Step 1: scan with your iPhone', 'Send to phone', 'Send what I just copied', 'Send on copy', 'From phone', 'To phone'].every((x) => enPanelText.includes(x))
+  && !/[\u4e00-\u9fff]/.test(enPanelText), enPanelText.slice(0, 120));
+const enDesc = await enPanel.evaluate(() => chrome.i18n.getMessage('extDescription'));
+check('英文系统：插件介绍是英文', enDesc === 'Send text, photos, videos and files between your phone and computer. One tap, direct over your Wi-Fi, never through a server.', enDesc);
+if (process.env.E2E_SHOTS) { await enPanel.setViewportSize({ width: 380, height: 900 }); await enPanel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-en.png'), fullPage: true }); }
+await enCtx.close();
 
 console.log(failures ? `\n${failures} 项没通过` : '\n全部通过');
 await ctx.close();

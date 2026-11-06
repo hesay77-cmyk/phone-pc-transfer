@@ -100,6 +100,48 @@ describe('发一条 / 收一条', () => {
     }
   });
 
+  it('收到的数据比说好的大小还多：整个丢掉，不确认', async () => {
+    const { b, received } = pair();
+    const msg = (body: MsgBody) => { const d = decode(encode(body)); if (!d.ok) throw new Error('bad'); return d.msg; };
+    const start = msg({ t: 'file-start', id: 'big', createdAt: 1, meta: { name: 'x.jpg', mime: 'image/jpeg', size: 10 } } as MsgBody);
+    b.handle(start);
+    b.handleBinary(new Uint8Array(8).buffer);
+    b.handleBinary(new Uint8Array(8).buffer);
+    b.handle(msg({ t: 'file-end', id: 'big' } as MsgBody));
+    for (let i = 0; i < 5; i++) await flush();
+    expect(received).toHaveLength(0);
+    // 同一个文件老老实实重发一次：能收到
+    b.handle(start);
+    b.handleBinary(new Uint8Array(10).buffer);
+    b.handle(msg({ t: 'file-end', id: 'big' } as MsgBody));
+    for (let i = 0; i < 5; i++) await flush();
+    expect(received).toHaveLength(1);
+  });
+
+  it('收文件时告诉界面进度：开始、收齐；没收成的告诉界面不用等了', async () => {
+    const pa = new FakePipe(), pb = new FakePipe();
+    const seen: Array<string> = [];
+    const a = new Transfer(pa, memoryKV(), {}, 1000);
+    const b = new Transfer(pb, memoryKV(), { receiving: (r) => seen.push(r ? `${r.meta.name}:${r.got}/${r.meta.size}${r.done ? ':done' : ''}` : 'gone') }, 1000);
+    pa.other = pb; pb.other = pa; pa.target = b; pb.target = a;
+    a.sendFile(new Blob([new Uint8Array(5000)], { type: 'application/pdf' }), { name: 'a.pdf' });
+    for (let i = 0; i < 30; i++) await flush();
+    expect(seen[0]).toBe('a.pdf:0/5000');
+    expect(seen.at(-1)).toBe('a.pdf:5000/5000:done');
+    // 很长的文字按文件送，但不显示进度
+    seen.length = 0;
+    a.sendText('长'.repeat(20000));
+    for (let i = 0; i < 60; i++) await flush();
+    expect(seen).toEqual([]);
+    // 中途丢了一块：收不齐，告诉界面
+    let dropOne = true;
+    pa.drop = (m) => { if (m instanceof ArrayBuffer && dropOne) { dropOne = false; return true; } return false; };
+    a.sendFile(new Blob([new Uint8Array(3000)], { type: 'application/zip' }), { name: 'b.zip' });
+    for (let i = 0; i < 30; i++) await flush();
+    expect(seen[0]).toBe('b.zip:0/3000');
+    expect(seen.at(-1)).toBe('gone');
+  });
+
   it('图片中途丢了一块：不确认、不交给界面，重连后整张重发', async () => {
     const { a, pa, received, delivered } = pair();
     let dropped = false;

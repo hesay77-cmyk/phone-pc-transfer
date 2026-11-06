@@ -235,7 +235,7 @@ export class PeerLink {
     const dc = pc.createDataChannel('data', { ordered: true });
     this.bindChannel(dc, pc);
     await pc.setLocalDescription(await pc.createOffer());
-    await waitIce(pc, 2500);
+    await waitIce(pc, 2500, this.opts.iceServers.length > 0);
     if (this.pc !== pc) return;
     void this.signal.send({ type: 'offer', sid, sdp: pc.localDescription!.sdp });
     this.guard(pc);
@@ -252,7 +252,7 @@ export class PeerLink {
     try {
       await pc.setRemoteDescription({ type: 'offer', sdp });
       await pc.setLocalDescription(await pc.createAnswer());
-      await waitIce(pc, 2500);
+      await waitIce(pc, 2500, this.opts.iceServers.length > 0);
     } catch (e) {
       this.log('回应电脑出错：' + (e as Error).message);
       return;
@@ -346,19 +346,41 @@ const LONG_HIDDEN_MS = 15000;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
-/** 等收集连接地址：拿到本机地址（host）后 300 毫秒就够了，最多等 maxMs */
-export function waitIce(pc: RTCPeerConnection, maxMs: number): Promise<void> {
+/**
+ * 等收集连接地址：拿到本机地址（host）后 300 毫秒就够了，最多等 maxMs。
+ * 配了 STUN 时再等一下外网地址（srflx）：它通常 100 毫秒内就到；
+ * STUN 连不上（没外网、被拦）最多多等 SRFLX_WAIT_MS，同一个 Wi-Fi 照样能连。
+ */
+export function waitIce(pc: RTCPeerConnection, maxMs: number, wantSrflx = false): Promise<void> {
   return new Promise((res) => {
     if (pc.iceGatheringState === 'complete') return res();
-    let early: ReturnType<typeof setTimeout> | undefined;
-    const done = () => { clearTimeout(tm); clearTimeout(early); res(); };
-    const tm = setTimeout(done, maxMs);
+    let hostSeen = false, hostWaited = false, srflx = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let finished = false;
+    const done = () => { if (finished) return; finished = true; timers.forEach(clearTimeout); res(); };
+    timers.push(setTimeout(done, maxMs));
     pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') done(); });
     pc.addEventListener('icecandidate', (e) => {
-      if (!early && e.candidate && / typ host/.test(e.candidate.candidate)) early = setTimeout(done, 300);
+      if (!e.candidate) return done();
+      const c = e.candidate.candidate;
+      if (/ typ srflx/.test(c) && !srflx) {
+        srflx = true;
+        if (hostWaited) timers.push(setTimeout(done, 50));
+      }
+      if (/ typ host/.test(c) && !hostSeen) {
+        hostSeen = true;
+        timers.push(setTimeout(() => {
+          hostWaited = true;
+          if (!wantSrflx || srflx) done();
+          else timers.push(setTimeout(done, SRFLX_WAIT_MS - 300));
+        }, 300));
+      }
     });
   });
 }
+
+/** 配了 STUN 但外网地址迟迟不来：从拿到本机地址算起最多等这么久 */
+const SRFLX_WAIT_MS = 1000;
 
 export function isPrivateIp(a?: string | null): boolean {
   return !!a && (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fe80:|fd|fc)/i.test(a) || a.endsWith('.local'));

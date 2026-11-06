@@ -1,0 +1,6 @@
+{
+  "extName": { "message": "Tapaste" },
+  "extDescription": { "message": "手机和电脑之间互传文字、照片、视频和文件。点一下就到另一边，同一个 Wi-Fi 直连，内容不经过服务器。" },
+  "cmdOpen": { "message": "打开 Tapaste" },
+  "cmdSendClipboard": { "message": "把刚复制的内容发到手机" }
+}

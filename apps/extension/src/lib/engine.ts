@@ -1,16 +1,20 @@
 // 引擎：在看不见的小页面里一直开着。连手机、收东西、写剪贴板、存照片、发通知。
 
 import {
-  BlobStore, CONFIG, localKV, looksLikePassword, persistentOutbox, newSecret, pairingUrl, randomId, startSession, trimForHistory,
+  asciiFileName, BlobStore, CONFIG, isShowableImage, localKV, looksLikePassword, persistentOutbox, newSecret, pairingUrl, randomId, safeFileName,
+  sizeText, startSession, trimForHistory,
   type DeviceInfo, type Incoming, type Session
 } from '@hutong/core';
 import { browser } from 'wxt/browser';
 import { copyText, readClipboard } from './clipboard';
 import { deleteFile, getFile, photoName, pruneFiles, putFile, thumbnail } from './files';
+import { t } from './i18n';
 import type { EngineState, Item, SavedInfo, SendResult, ToBg, ToEngine, ToPanel } from './types';
 
 const kv = localKV('hutong:pc:');
 const MAX_ITEMS = 30;
+/** 正在收的照片或文件半天没动静，就先不显示进度（对方重发时会再出来） */
+const RX_STALE_MS = 30_000;
 
 function loadItems(): Item[] {
   try { return JSON.parse(kv.get('items') || '[]'); } catch { return []; }
@@ -20,6 +24,7 @@ export class Engine {
   private session: Session | null = null;
   private state: EngineState;
   private pushTimer: ReturnType<typeof setTimeout> | undefined;
+  private rxStale: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     let secret = kv.get('secret');
@@ -47,6 +52,7 @@ export class Engine {
       if (msg.type === 'send-text') { reply(this.sendText(msg.text)); return; }
       if (msg.type === 'cancel') { if (!this.session?.transfer.cancel(msg.id)) this.patch(msg.id, { dropped: 'cancelled' }); reply(this.state); return; }
       if (msg.type === 'clear-items') { this.clearItems(); reply(this.state); return; }
+      if (msg.type === 'delete-item') { this.deleteItem(msg.id); reply(this.state); return; }
       if (msg.type === 'dismiss') {
         if (msg.what === 'newPhone') this.state.newPhone = undefined; else this.state.skippedSecretAt = undefined;
         this.push(); reply(this.state); return;
@@ -67,7 +73,7 @@ export class Engine {
   private device(): DeviceInfo {
     let id = kv.get('deviceId');
     if (!id) { id = randomId(); kv.set('deviceId', id); }
-    return { id, role: 'pc', name: /Windows/.test(navigator.userAgent) ? 'Windows 电脑' : '电脑', app: this.state.version };
+    return { id, role: 'pc', name: t.pcName(/Windows/.test(navigator.userAgent)), app: this.state.version };
   }
 
   private async connect() {
@@ -88,6 +94,8 @@ export class Engine {
           if (s === 'connected' && info) this.log(`连上手机：${info.route}，${info.connectMs} 毫秒`);
           if (s === 'connected' && !this.state.everPaired) { this.state.everPaired = true; kv.set('everPaired', '1'); }
           if (s === 'connected') this.sendPendingClip();
+          // 断了：发了一半的进度作废（连上后从头重发）
+          if (s !== 'connected') for (const it of this.state.items) if (it.pct !== undefined) it.pct = undefined;
           this.push();
         },
         peer: (d) => {
@@ -104,8 +112,22 @@ export class Engine {
         },
         newerPeer: () => { this.state.newerPeer = true; this.push(); },
         received: (it) => void this.onReceived(it),
-        delivered: (it) => { this.patch(it.id, { delivered: true }); },
-        dropped: (it, why) => { this.patch(it.id, { dropped: why }); },
+        delivered: (it) => { this.patch(it.id, { delivered: true, pct: undefined }); },
+        dropped: (it, why) => { this.patch(it.id, { dropped: why, pct: undefined }); },
+        // 发送进度只给界面看，不存
+        progress: (out, r) => {
+          const it = this.state.items.find((x) => x.id === out.id);
+          if (!it || it.delivered) return;
+          it.pct = Math.floor(r * 100);
+          this.push();
+        },
+        receiving: (r) => {
+          this.state.receiving = r ? { id: r.id, name: r.meta.name, size: r.meta.size, got: r.got, done: r.done } : undefined;
+          // 半天没动静（手机那边不发了、或断了很久）：先不显示，对方重发时会再出来
+          clearTimeout(this.rxStale);
+          if (r) this.rxStale = setTimeout(() => { this.state.receiving = undefined; this.push(); }, RX_STALE_MS);
+          this.push();
+        },
         queue: (n) => {
           if (!n && this.state.pendingToPhone) this.flashOk(); // 攒着的全送到手机了
           this.state.pendingToPhone = n;
@@ -132,7 +154,7 @@ export class Engine {
   }
 
   private sendText(text: string): SendResult {
-    if (!this.session || !text.trim()) return { ok: false, error: '没有可发的文字' };
+    if (!this.session || !text.trim()) return { ok: false, error: t.noText };
     const out = this.session.transfer.sendText(text);
     this.addItem({ id: out.id, from: 'pc', kind: 'text', time: Date.now(), text, delivered: false });
     return { ok: true, connected: this.session.link.ready };
@@ -181,15 +203,17 @@ export class Engine {
   /** 剪贴板里有图（截图）就发图，否则发文字 */
   private async sendClipboard(): Promise<SendResult> {
     const c = readClipboard();
-    if (!c.ok) { this.log('读剪贴板失败'); return { ok: false, error: '读不到剪贴板。可以把内容粘贴到侧边栏的输入框里再发' }; }
-    const imgs = c.files.filter((f) => f.type.startsWith('image/'));
-    if (imgs.length) {
+    if (!c.ok) { this.log('读剪贴板失败'); return { ok: false, code: 'no-clipboard', error: t.clipUnreadable }; }
+    // 截的图，或者在文件夹里复制的文件
+    if (c.files.length) {
       let r: SendResult = { ok: false };
-      const t = new Date().toLocaleTimeString().replace(/:/g, '-');
-      for (const f of imgs) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : `截图 ${t}.png`);
-      return { ...r, what: imgs.length > 1 ? `${imgs.length} 张图` : '截图' };
+      const time = new Date().toLocaleTimeString().replace(/:/g, '-');
+      for (const f of c.files) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : t.shotName(time));
+      const allImg = c.files.every((f) => f.type.startsWith('image/'));
+      const n = c.files.length;
+      return { ...r, what: allImg ? (n > 1 ? t.whatImages(n) : t.whatShot) : (n > 1 ? t.whatFiles(n) : t.whatQuoted(c.files[0]!.name)) };
     }
-    if (!c.text.trim()) return { ok: false, error: '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再发' };
+    if (!c.text.trim()) return { ok: false, error: t.clipEmpty };
     const r = this.sendText(c.text);
     const head = c.text.trim().replace(/\s+/g, ' ');
     return { ...r, what: `「${head.length > 20 ? head.slice(0, 20) + '…' : head}」` };
@@ -204,31 +228,42 @@ export class Engine {
       blob = await r.blob();
     } catch (e) {
       this.log(`下载网页图片失败（${String(e)}）：${url.slice(0, 120)}`);
-      return { ok: false, error: '这张图下载不下来。可以先把图存到电脑，再拖进侧边栏发送' };
+      return { ok: false, error: t.imgDownloadFail };
     }
-    const name = decodeURIComponent(url.startsWith('data:') ? '' : (new URL(url).pathname.split('/').pop() ?? '')) || '图片';
+    const name = decodeURIComponent(url.startsWith('data:') ? '' : (new URL(url).pathname.split('/').pop() ?? '')) || t.imageName;
     return this.sendBlob(blob, name);
   }
 
-  /** 侧边栏放进小数据库的图 */
+  /** 侧边栏放进小数据库的图片或文件 */
   private async sendStoredFile(fileId: string, name: string): Promise<SendResult> {
     const blob = await getFile(fileId);
     void deleteFile(fileId);
-    if (!blob) return { ok: false, error: '图片没读到，请再试一次' };
+    if (!blob) return { ok: false, error: t.fileNotRead };
     return this.sendBlob(blob, name);
   }
 
+  /** 发图片或文件到手机。能直接显示的图片当照片发（侧边栏、手机上都能看到图），别的当文件 */
   private async sendBlob(blob: Blob, name: string): Promise<SendResult> {
-    if (!this.session) return { ok: false, error: '插件还没准备好，请稍等再试' };
+    if (!this.session) return { ok: false, error: t.notReady };
+    if (blob.size > CONFIG.maxFileBytes) {
+      return { ok: false, error: t.tooBig(name, sizeText(blob.size), sizeText(CONFIG.maxFileBytes)) };
+    }
     let w: number | undefined, h: number | undefined;
-    try { const b = await createImageBitmap(blob); w = b.width; h = b.height; b.close(); }
-    catch { if (!blob.type.startsWith('image/')) return { ok: false, error: '这不是图片' }; }
+    let isImg = isShowableImage(blob.type);
+    // 有的网站给图片标的类型不对：能当图片打开的就当图片
+    if (isImg || !blob.type || blob.type === 'application/octet-stream') {
+      try {
+        const b = await createImageBitmap(blob);
+        w = b.width; h = b.height; b.close();
+        if (!isImg) { blob = new Blob([blob], { type: 'image/png' }); isImg = true; }
+      } catch { /* 不是图片，或读不到尺寸 */ }
+    }
     const out = this.session.transfer.sendFile(blob, { name, w, h });
-    await putFile(out.id, blob);
-    this.addItem({ id: out.id, from: 'pc', kind: 'image', time: Date.now(), size: blob.size, w, h, mime: blob.type, name, delivered: false });
-    this.log(`发图片到手机：${name}，${kb(blob.size)}`);
-    void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
-    return { ok: true, connected: this.session.link.ready };
+    if (isImg) await putFile(out.id, blob);
+    this.addItem({ id: out.id, from: 'pc', kind: isImg ? 'image' : 'file', time: Date.now(), size: blob.size, w, h, mime: blob.type, name, delivered: false });
+    this.log(`发${isImg ? '图片' : '文件'}到手机：${name}，${kb(blob.size)}`);
+    if (isImg) void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    return { ok: true, connected: this.session.link.ready, what: isImg ? t.whatImage : t.whatFile };
   }
 
   private async onReceived(it: Incoming) {
@@ -237,26 +272,35 @@ export class Engine {
       if (r.ok) this.lastClip = it.text; // 这是手机发来的，别再自动发回去
       this.log(`收到文字（${it.text.length} 字），自动复制${r.ok ? '成功' : '失败：' + r.how}`);
       this.addItem({ id: it.id, from: 'phone', kind: 'text', time: Date.now(), text: it.text, copied: r.ok });
-      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? '已复制手机发来的文字' : '收到手机发来的文字',
+      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? t.nTextCopied : t.nTextGot,
         message: it.text.slice(0, 100) });
       return;
     }
     const { blob, meta } = it;
-    this.log(`收到照片 ${kb(blob.size)}，${meta.w ?? '?'}×${meta.h ?? '?'}，用时 ${it.ms} 毫秒`);
-    await putFile(it.id, blob);
-    this.addItem({ id: it.id, from: 'phone', kind: 'image', time: Date.now(), size: blob.size, w: meta.w, h: meta.h, mime: blob.type });
-    // 自动存进电脑：「下载\互传」
+    const isImg = isShowableImage(blob.type || meta.mime);
+    const what = isImg ? '照片' : `文件「${meta.name}」`;
+    this.log(`收到${what} ${kb(blob.size)}，用时 ${it.ms} 毫秒`);
+    if (isImg) await putFile(it.id, blob).catch((e) => this.log('照片放进小数据库失败：' + String(e)));
+    this.addItem({ id: it.id, from: 'phone', kind: isImg ? 'image' : 'file', time: Date.now(), size: blob.size,
+      w: meta.w, h: meta.h, mime: blob.type || meta.mime, name: meta.name });
+    // 自动存进电脑：「下载\Tapaste」
     const url = URL.createObjectURL(blob);
     const saved: SavedInfo = await this.bg({ to: 'bg', type: 'save-file', url,
-      filename: photoName(blob.type), fallbackName: photoName(blob.type, true) })
+      filename: isImg ? photoName(blob.type) : safeFileName(meta.name),
+      fallbackName: isImg ? photoName(blob.type, true) : asciiFileName(meta.name, 'phone-file') })
       .catch((e: Error) => ({ ok: false, detail: e.message }));
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    this.log(saved.ok ? '照片已存到：' + saved.path : '照片没存上：' + saved.detail);
+    this.log(saved.ok ? `${what}已存到：` + saved.path : `${what}没存上：` + saved.detail);
     this.patch(it.id, { saved });
-    this.bg({ to: 'bg', type: 'notify', kind: 'image', itemId: it.id,
-      title: saved.ok ? '收到一张照片，已存进「下载\\互传」' : '收到一张照片',
-      message: '点这里复制，然后就能 Ctrl+V', imageUrl: await thumbnail(blob) });
-    void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    if (isImg) {
+      this.bg({ to: 'bg', type: 'notify', kind: 'image', itemId: it.id,
+        title: saved.ok ? t.nPhotoSaved : t.nPhotoGot,
+        message: t.nPhotoClick, imageUrl: await thumbnail(blob) });
+      void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
+    } else {
+      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: saved.ok ? t.nFileSaved : t.nFileGot,
+        message: `${meta.name}（${sizeText(blob.size)}）` });
+    }
   }
 
   // ---------- 插件图标上的角标：新收到几条（蓝色数字）；发到手机送到了闪一下绿色 ✓ ----------
@@ -287,6 +331,7 @@ export class Engine {
   private early = new Map<string, Partial<Item>>();
 
   private addItem(item: Item) {
+    if (this.state.receiving?.id === item.id) this.state.receiving = undefined;
     const e = this.early.get(item.id);
     if (e) { Object.assign(item, e); this.early.delete(item.id); }
     if (item.from === 'phone') this.setUnseen(this.state.unseen + 1);
@@ -309,11 +354,24 @@ export class Engine {
 
   /** 存记录：太长的文字只存开头，免得本机存储满了整个记录都存不上 */
   private saveItems() {
-    kv.set('items', JSON.stringify(this.state.items.map((it) => {
+    kv.set('items', JSON.stringify(this.state.items.map(({ pct: _pct, ...it }) => {
       if (it.kind !== 'text' || !it.text) return it;
       const t = trimForHistory(it.text);
       return t.cut ? { ...it, text: t.text, cut: true } : it;
     })));
+  }
+
+  /** 删掉一条（侧边栏每条右上角的小垃圾桶）。还没送到手机的顺便不发了；存进「下载\Tapaste」的照片文件不动 */
+  private deleteItem(id: string) {
+    const it = this.state.items.find((x) => x.id === id);
+    if (!it) return;
+    if (it.from === 'pc' && !it.delivered && !it.dropped) this.session?.transfer.cancel(id);
+    this.state.items = this.state.items.filter((x) => x.id !== id);
+    this.early.delete(id);
+    this.saveItems();
+    if (it.kind === 'image') void deleteFile(id);
+    this.log('删了一条记录');
+    this.push();
   }
 
   /** 清空记录：还没送到手机的留着（它们还在待发） */

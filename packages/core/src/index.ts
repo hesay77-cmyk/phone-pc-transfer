@@ -9,3 +9,5 @@ export * from './session';
 export * from './blobstore';
 export * from './outbox';
 export * from './text';
+export * from './files';
+export * from './lang';

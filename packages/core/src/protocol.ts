@@ -2,6 +2,8 @@
 // 每条消息带协议版本号 v：老版本遇到看不懂的新消息不会崩，只会提示升级。
 
 export const PROTOCOL_VERSION = 1;
+/** 收文件时认的最大大小（比能发的上限 CONFIG.maxFileBytes 宽，以后调大发送上限时旧版本也能收；只防对方乱报大小） */
+export const MAX_FILE_BYTES = 1024 * 1024 * 1024;
 
 export type Role = 'pc' | 'phone';
 
@@ -73,7 +75,7 @@ function validShape(m: any): boolean {
     case 'text':
       return str(m.id) && typeof m.text === 'string' && typeof m.createdAt === 'number';
     case 'file-start':
-      return str(m.id) && !!m.meta && typeof m.meta.size === 'number' && m.meta.size >= 0 && typeof m.meta.mime === 'string';
+      return str(m.id) && !!m.meta && typeof m.meta.size === 'number' && m.meta.size >= 0 && m.meta.size <= MAX_FILE_BYTES && typeof m.meta.mime === 'string';
     case 'file-end':
     case 'ack':
       return str(m.id);

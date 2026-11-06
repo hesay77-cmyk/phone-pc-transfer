@@ -7,6 +7,12 @@ const env: Record<string, string | undefined> =
 const list = (v: string | undefined, fallback: string[]) =>
   v ? v.split(',').map((s) => s.trim()).filter(Boolean) : fallback;
 
+function stunServers(v: string | undefined): RTCIceServer[] {
+  if (v === 'none') return [];
+  const urls = list(v, ['stun:stun.miwifi.com:3478', 'stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302']);
+  return urls.length ? [{ urls }] : [];
+}
+
 export const CONFIG = {
   /** 手机网页的网址，二维码里放的就是它（加上 #k=暗号） */
   phoneUrl: env.VITE_PHONE_URL || 'https://hesay77-cmyk.github.io/phone-pc-transfer/app/',
@@ -17,8 +23,15 @@ export const CONFIG = {
     urls: list(env.VITE_SIGNAL_URLS, ['wss://broker-cn.emqx.io:8084/mqtt', 'wss://broker.emqx.io:8084/mqtt']),
     topicPrefix: env.VITE_SIGNAL_PREFIX || 'hutong/v1/'
   },
-  /** 同一个 Wi-Fi 直连不需要 STUN；以后做跨网络再加 */
-  iceServers: [] as RTCIceServer[],
-  /** 图片分块大小 */
-  chunkSize: 16 * 1024
+  /**
+   * 公共 STUN（只告诉设备「你在外网看起来是哪个地址」，内容不经过它，不花钱）。
+   * 有了它，访客网络、2.4G/5G 分开、路由器拦了本机名字这些家里网络也有机会连上；
+   * 副作用：手机用流量、电脑在家时，有些网络也能直接连上（2026-11-05 曦定：加上）。
+   * 第一个在国内，第二、三个在国外（谷歌的国内连不上，不影响别的）。VITE_STUN_URLS=none 关掉。
+   */
+  iceServers: stunServers(env.VITE_STUN_URLS),
+  /** 图片/文件分块大小 */
+  chunkSize: 16 * 1024,
+  /** 一次能发的文件最大多大（收的一方要把整个文件放在内存里，手机上太大会卡死） */
+  maxFileBytes: 100 * 1024 * 1024
 };

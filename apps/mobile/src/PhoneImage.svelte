@@ -1,12 +1,13 @@
 <script lang="ts">
   // 电脑发来的图：显示出来，能存到相册、能复制
   import type { BlobStore } from '@hutong/core';
+  import { L } from './i18n';
   let { id, name, store }: { id: string; name: string; store: BlobStore } = $props();
 
   let url = $state('');
   let gone = $state(false);
-  let saveLabel = $state('存到相册');
-  let copyLabel = $state('复制');
+  let saveLabel = $state(L.saveToPhotos);
+  let copyLabel = $state(L.copy);
   let tip = $state('');
   // 先读好：iPhone 要求点按钮的那一刻就调用分享/复制，中间不能再等读数据
   let blob: Blob | null = null;
@@ -30,7 +31,7 @@
       await navigator.share({ files: [f] });
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      tip = '长按上面的图片，选「存储到照片」或「保存图片」';
+      tip = L.saveTipImage;
     }
   }
 
@@ -39,10 +40,10 @@
     try {
       // 苹果只认 PNG：先转一下（放在 Promise 里，按钮按下那一刻就占住剪贴板）
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': toPng(blob) })]);
-      copyLabel = '已复制';
+      copyLabel = L.copied;
     } catch {
-      copyLabel = '复制失败';
-      tip = '长按上面的图片，选「拷贝」';
+      copyLabel = L.copyFailed;
+      tip = L.copyTipImage;
     }
   }
 
@@ -57,16 +58,20 @@
 </script>
 
 {#if url}
-  <img src={url} alt="电脑发来的图片" />
-  <button class="btn" onclick={save}>{saveLabel}</button>
-  <button class="btn" onclick={copy}>{copyLabel}</button>
+  <img src={url} alt={L.altImage} />
+  <div class="btns">
+    <button class="btn" onclick={save}>{saveLabel}</button>
+    <button class="btn" onclick={copy}>{copyLabel}</button>
+  </div>
   {#if tip}<p class="tip">{tip}</p>{/if}
 {:else if gone}
-  <p class="tip">图片已经不在了（只保留最近 20 张）</p>
+  <p class="tip">{L.imageGone}</p>
 {/if}
 
 <style>
-  img { display: block; max-width: 100%; max-height: 60vh; border-radius: 10px; margin: 6px 0 2px; -webkit-touch-callout: default; }
-  .btn { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); background: var(--bg, #fff); color: var(--fg); border-radius: 10px; margin: 6px 6px 0 0; font-size: 15px; }
-  .tip { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+  img { display: block; max-width: 100%; max-height: 60vh; border-radius: 14px; margin: 8px 0 12px; -webkit-touch-callout: default; box-shadow: 0 0 0 .5px var(--sep); }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; height: 34px; padding: 0 16px; border: none; border-radius: 17px; background: var(--tint-soft); color: var(--tint); font-size: 15px; font-weight: 600; cursor: pointer; transition: transform .25s var(--ease), opacity .2s; }
+  .btn:active { transform: scale(.94); opacity: .8; }
+  .tip { font-size: 14px; color: var(--label2); margin: 10px 0 0; }
 </style>
