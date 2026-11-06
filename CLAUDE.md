@@ -43,5 +43,5 @@
 
 ## 改完必须
 - `npm test` 和 `npm run check` 通过；动了连接/传输逻辑要跑 `xvfb-run -a npm run e2e`。
-- 手机网页改了要 `npm run build` 并提交 `app/`。手机网页正式地址是曦的服务器 `https://hidaydream.com/tapaste/app/`（`sh scripts/deploy-site.sh` 会把 `app/` 一起传上去，由曦电脑上的 Claude 运行）；GitHub Pages（main 根目录，约 10 分钟缓存）那份也保留，0.5.0 及以前的插件二维码还指向它。
+- 手机网页改了要 `npm run build` 并提交 `app/`。正式地址是 https://hidaydream.com/tapaste/app/（插件 0.5.1 起二维码指向这里，`config.ts` 的 `phoneUrl`；`sh scripts/deploy-site.sh` 把 `app/` 一起传到曦的服务器（曦电脑上的 Claude 运行），改完要告诉官网线程）。GitHub Pages 那份（main 根目录发布，约 10 分钟缓存）保留，老版本插件配过对的手机还在用。
 - 插件改了要升 `apps/extension/package.json` 的 version，手机网页改了升 `apps/mobile/package.json` 的 version，方便曦确认是新版。
