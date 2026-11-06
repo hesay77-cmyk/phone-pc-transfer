@@ -14,8 +14,11 @@ function stunServers(v: string | undefined): RTCIceServer[] {
 }
 
 export const CONFIG = {
-  /** 手机网页的网址，二维码里放的就是它（加上 #k=暗号） */
-  phoneUrl: env.VITE_PHONE_URL || 'https://hesay77-cmyk.github.io/phone-pc-transfer/app/',
+  /**
+   * 手机网页的网址，二维码里放的就是它（加上 #k=暗号）。
+   * 0.5.1 起放在曦自己的服务器（官网线程部署）；GitHub Pages 那份保留，老版本插件配过对的手机还在用。
+   */
+  phoneUrl: env.VITE_PHONE_URL || 'https://hidaydream.com/tapaste/app/',
   /** 「介绍人」：只帮两台设备交换连接信息，内容不经过它 */
   signal: {
     /** 现阶段借用公共 MQTT（mqtt）；以后换成自己的服务器（ws，地址形如 wss://域名/signal），只改这里 */
