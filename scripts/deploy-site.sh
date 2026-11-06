@@ -1,5 +1,7 @@
 #!/bin/sh
-# 把官网页 apps/site 挂到 https://hidaydream.com/tapaste/（曦的腾讯云香港服务器）。
+# 把官网页 apps/site 挂到 https://hidaydream.com/tapaste/（曦的腾讯云香港服务器），
+# 手机网页（仓库根目录 app/，npm run build 的结果）挂到 https://hidaydream.com/tapaste/app/。
+# GitHub Pages 上那份手机网页继续保留（旧版插件的二维码还指向它）。
 # 在曦电脑上运行：双击「挂官网.bat」，或 cd E:/ai/phone-pc-transfer && sh scripts/deploy-site.sh
 # 只动 /var/lib/tapaste/public 和 nginx 里新增的 /tapaste/ 两条 location（带 expires -1，浏览器每次检查新版）；
 # 改 nginx 前先备份，nginx -t 不通过就还原。重复运行只会更新页面文件。
@@ -17,11 +19,18 @@ done
 echo "== 上传页面 =="
 ssh $OPTS $HOST 'rm -rf /tmp/tapaste-upload && mkdir -p /tmp/tapaste-upload'
 scp -r $OPTS apps/site/*.html apps/site/*.png apps/site/vendor apps/site/fonts $( [ -d apps/site/downloads ] && echo apps/site/downloads ) $HOST:/tmp/tapaste-upload/
+[ -f app/index.html ] && scp -r $OPTS app $HOST:/tmp/tapaste-upload/
 
 echo "== 服务器上安装 =="
 ssh $OPTS $HOST 'sudo bash -s' <<'REMOTE'
 set -e
 mkdir -p /var/lib/tapaste/public
+# 手机网页整份替换（换成新文件夹再改名，换的那一下不会出现半新半旧）
+if [ -d /tmp/tapaste-upload/app ]; then
+  rm -rf /var/lib/tapaste/public/app.new && mv /tmp/tapaste-upload/app /var/lib/tapaste/public/app.new
+  rm -rf /var/lib/tapaste/public/app.old; [ -d /var/lib/tapaste/public/app ] && mv /var/lib/tapaste/public/app /var/lib/tapaste/public/app.old
+  mv /var/lib/tapaste/public/app.new /var/lib/tapaste/public/app && rm -rf /var/lib/tapaste/public/app.old
+fi
 cp -r /tmp/tapaste-upload/* /var/lib/tapaste/public/
 chmod -R a+rX /var/lib/tapaste
 rm -rf /tmp/tapaste-upload
@@ -50,8 +59,10 @@ REMOTE
 
 echo "== 改动后检查 =="
 sleep 1
-for u in https://hidaydream.com/tapaste/ https://hidaydream.com/tapaste/icon.png https://hidaydream.com/ https://hidaydream.com/xiaotidazuo/; do
+for u in https://hidaydream.com/tapaste/ https://hidaydream.com/tapaste/icon.png https://hidaydream.com/tapaste/app/ https://hidaydream.com/tapaste/app/open.html https://hidaydream.com/ https://hidaydream.com/xiaotidazuo/; do
   echo "$u $(curl -s -o /dev/null -w '%{http_code}' "$u")"
 done
 curl -s https://hidaydream.com/tapaste/ | grep -q Tapaste && echo "页面内容正确" || echo "页面内容不对"
+JS=$(curl -s https://hidaydream.com/tapaste/app/ | grep -o 'assets/index-[^"]*\.js' | head -1)
+[ -n "$JS" ] && echo "手机网页 $JS $(curl -s -o /dev/null -w '%{http_code}' "https://hidaydream.com/tapaste/app/$JS")" || echo "手机网页不对"
 curl -sI https://hidaydream.com/tapaste/ | grep -i '^cache-control' || echo "（没有 Cache-Control）"
