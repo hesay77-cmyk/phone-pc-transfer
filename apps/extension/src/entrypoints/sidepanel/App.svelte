@@ -1,14 +1,17 @@
 <script lang="ts">
+  import { localDeviceName } from '@hutong/core';
   import { flip } from 'svelte/animate';
   import { fade, slide } from 'svelte/transition';
   import { browser } from 'wxt/browser';
   import { putFile } from '../../lib/files';
   import { servePageDrop } from '../../lib/pagedrop';
+  import { lang, t } from '../../lib/i18n';
   import type { EngineState, Item, SendResult, ToBg, ToEngine, ToPanel } from '../../lib/types';
   import FileItem from './FileItem.svelte';
   import ImageItem from './ImageItem.svelte';
   import Qr from './Qr.svelte';
 
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
   let s = $state<EngineState | null>(null);
   let showQr = $state(false);
   let out = $state('');
@@ -82,7 +85,7 @@
     if (await browser.permissions.request({ origins: ['<all_urls>'] })) {
       needImagePermission = false;
       void browser.storage.local.remove('needImagePermission');
-      permTip = '好了。现在可以把照片直接拖进网页，也能在网页的图片上右键发到手机';
+      permTip = t.permDone;
     }
   }
   let permTip = $state('');
@@ -99,18 +102,17 @@
   void load();
 
   const status = $derived.by(() => {
-    if (!s) return { cls: 'wait', text: '正在启动…' };
-    if (s.link === 'connected') return { cls: 'ok', text: `已连上${s.phoneName ? ' ' + s.phoneName : '手机'}` };
-    if (s.link === 'connecting') return { cls: 'wait', text: '手机正在连过来…' };
-    if (s.link === 'blocked') return { cls: 'bad', text: '手机找到了，但这个网络不让手机和电脑直接连' };
-    if (s.signal !== 'online') return { cls: 'wait', text: '正在连接网络…' };
-    return { cls: 'idle', text: s.everPaired ? '等手机来连：手机上打开 Tapaste 网页就会自动连上' : '还没配对手机' };
+    if (!s) return { cls: 'wait', text: t.starting };
+    if (s.link === 'connected') return { cls: 'ok', text: t.connected(localDeviceName(s.phoneName, lang)) };
+    if (s.link === 'connecting') return { cls: 'wait', text: t.phoneConnecting };
+    if (s.link === 'blocked') return { cls: 'bad', text: t.blocked };
+    if (s.signal !== 'online') return { cls: 'wait', text: t.netConnecting };
+    return { cls: 'idle', text: s.everPaired ? t.waitPhone : t.notPaired };
   });
 
   function showResult(r: SendResult | undefined, what = '') {
     sendOk = !!r?.ok;
-    sendTip = !r?.ok ? (r?.error ?? '没发出去')
-      : r.connected ? `✓ ${what}已发到手机` : `${what}先存着，手机打开 Tapaste 网页后自动送到`;
+    sendTip = !r?.ok ? (r?.error ?? t.notSent) : r.connected ? t.sentOk(what) : t.queued(what);
   }
 
   async function send() {
@@ -132,7 +134,7 @@
     }
   }
 
-  const shotName = () => `截图 ${new Date().toLocaleTimeString().replace(/:/g, '-')}.png`;
+  const shotName = () => t.shotName(new Date().toLocaleTimeString().replace(/:/g, '-'));
 
   /** 侧边栏里任何地方按 Ctrl+V：剪贴板里是图片（比如刚截的图）或文件（在文件夹里复制的）就直接发到手机 */
   function onPaste(e: ClipboardEvent) {
@@ -147,8 +149,8 @@
 
   /** 按钮：把刚复制的内容（文字或截图）发到手机。先让引擎读；读不到再用侧边栏自己读 */
   async function sendClipboard() {
-    const r: SendResult = await engine({ to: 'engine', type: 'send-clipboard' }).catch(() => ({ ok: false, error: '读不到剪贴板' }));
-    if (r.ok || !r.error?.startsWith('读不到剪贴板')) { showResult(r, r.what ?? ''); return; }
+    const r: SendResult = await engine({ to: 'engine', type: 'send-clipboard' }).catch(() => ({ ok: false, code: 'no-clipboard' }));
+    if (r.ok || r.code !== 'no-clipboard') { showResult(r, r.what ?? ''); return; }
     try {
       const files: File[] = [];
       let text = '';
@@ -158,28 +160,28 @@
         else if (it.types.includes('text/plain')) text = await (await it.getType('text/plain')).text();
       }
       if (files.length) { await sendFiles(files); return; }
-      if (!text.trim()) { sendOk = false; sendTip = '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再点这个按钮'; return; }
+      if (!text.trim()) { sendOk = false; sendTip = t.clipEmptyBtn; return; }
       showResult(await engine({ to: 'engine', type: 'send-text', text }));
     } catch {
       sendOk = false;
-      sendTip = '读不到剪贴板。可以把内容粘贴到上面的输入框里，再点「发到手机」';
+      sendTip = t.clipUnreadableBtn;
     }
   }
 
   async function cancel(it: Item) { s = await engine({ to: 'engine', type: 'cancel', id: it.id }); }
   async function deleteItem(it: Item) { s = await engine({ to: 'engine', type: 'delete-item', id: it.id }); }
   async function clearItems() {
-    if (!confirm('清空这里的记录？（已经存进「下载\\Tapaste」的照片和文件不受影响，还没送到手机的会留着）')) return;
+    if (!confirm(t.confirmClear)) return;
     s = await engine({ to: 'engine', type: 'clear-items' });
   }
   async function dismiss(what: 'newPhone' | 'skippedSecret') { s = await engine({ to: 'engine', type: 'dismiss', what }); }
   /** 发到手机的一条现在怎么样了：文字 + 颜色 */
-  const pcStatus = (it: Item) => it.delivered ? { cls: 'ok', text: '手机已收到 ✓' }
-    : it.dropped === 'cancelled' ? { cls: 'off', text: '已取消，不发了' }
-    : it.dropped === 'expired' ? { cls: 'off', text: '放了一天也没送到，不发了' }
-    : it.dropped === 'failed' ? { cls: 'bad', text: '没发出去' }
-    : it.pct !== undefined ? { cls: 'wait', text: `发送中 ${it.pct}%` }
-    : { cls: 'wait', text: '等手机打开网页' };
+  const pcStatus = (it: Item) => it.delivered ? { cls: 'ok', text: t.stDelivered }
+    : it.dropped === 'cancelled' ? { cls: 'off', text: t.stCancelled }
+    : it.dropped === 'expired' ? { cls: 'off', text: t.stExpired }
+    : it.dropped === 'failed' ? { cls: 'bad', text: t.stFailed }
+    : it.pct !== undefined ? { cls: 'wait', text: t.stSending(it.pct) }
+    : { cls: 'wait', text: t.stWaiting };
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -195,14 +197,14 @@
   }
 
   async function reset() {
-    if (!confirm('换一个新的二维码？之前配对过的手机需要重新扫码。')) return;
+    if (!confirm(t.confirmReset)) return;
     s = await engine({ to: 'engine', type: 'reset-pairing' });
     showQr = true;
   }
 
   async function copyText(it: Item, e: MouseEvent) {
     await navigator.clipboard.writeText(it.text ?? '');
-    (e.target as HTMLButtonElement).textContent = '已复制';
+    (e.target as HTMLButtonElement).textContent = t.copied;
   }
 
   const time = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -238,21 +240,21 @@
       <h1>Tapaste</h1>
     </div>
     <div class="status {status.cls}" data-link={s?.link ?? ''}><span class="dot"></span><span>{status.text}</span></div>
-    {#if s?.link === 'blocked'}<p class="small">有些公司或公共场所的 Wi-Fi 会这样。手机和电脑换成同一个家里的 Wi-Fi 就能用；这边会一直自动重试。</p>{/if}
-    {#if s?.newerPeer}<p class="small bad">手机那边的版本比插件新，请更新插件</p>{/if}
+    {#if s?.link === 'blocked'}<p class="small">{t.blockedHint}</p>{/if}
+    {#if s?.newerPeer}<p class="small bad">{t.newerPeer}</p>{/if}
   </header>
 
   {#if failed}
-    <p class="tip bad">插件后台没启动起来。请到 chrome://extensions 里把「Tapaste」关掉再打开。</p>
+    <p class="tip bad">{t.engineFailed}</p>
   {:else if s}
     {#if !s.everPaired || showQr}
       <section class="card pair">
-        <h2>{@render icon('qr')}{s.everPaired ? '换一台手机' : '第一步：用 iPhone 扫码'}</h2>
-        <p class="hint">用 iPhone 自带的相机扫下面的码，会打开 Tapaste 网页。手机和电脑要连同一个 Wi-Fi。以后在手机上打开这个网页就能用。{#if s.everPaired}同一时间只能连一台手机：新手机连上后，原来那台会断开。{/if}</p>
+        <h2>{@render icon('qr')}{s.everPaired ? t.pairAnother : t.pairFirst}</h2>
+        <p class="hint">{t.pairHint}{#if s.everPaired}{lang === 'zh' ? '' : ' '}{t.pairOnlyOne}{/if}</p>
         <div class="qrbox"><Qr text={s.pairingUrl} /></div>
         <p class="small center">
-          {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>收起</button> · {/if}
-          <button class="link" onclick={reset}>换一个新码</button>
+          {#if s.everPaired}<button class="link" onclick={() => (showQr = false)}>{t.hide}</button> · {/if}
+          <button class="link" onclick={reset}>{t.newCode}</button>
         </p>
       </section>
     {/if}
@@ -264,7 +266,7 @@
       <!-- 正在收手机发来的大文件：让人知道在传、传到哪了 -->
       <section class="card recv" class:lost aria-live="polite" transition:slide={{ duration: 220 }}>
         <div class="recv-top">
-          <b>{r.done ? '收好了，正在保存…' : lost ? '连接断了，等手机重新发…' : '正在接收手机发来的'}</b>
+          <b>{r.done ? t.recvDone : lost ? t.recvLost : t.recvFromPhone}</b>
           <span class="pct">{pct}%</span>
         </div>
         <div class="recv-name" title={r.name}>{r.name}</div>
@@ -273,68 +275,66 @@
       </section>
     {/if}
 
-    <section class="card send" class:dragging aria-label="发到手机"
+    <section class="card send" class:dragging aria-label={t.sendArea}
       ondragover={(e) => { e.preventDefault(); dragging = true; }} ondragleave={() => (dragging = false)} ondrop={onDrop}>
       <label class="auto" class:on={s.autoSend}>
-        <span class="auto-text"><b>复制就发</b><span>在任何软件里 Ctrl+C 复制的字，自动发到手机（手机上的 Tapaste 网页要开着）</span></span>
+        <span class="auto-text"><b>{t.autoTitle}</b><span>{t.autoDesc}</span></span>
         <input type="checkbox" role="switch" checked={s.autoSend} onchange={(e) => setAuto((e.target as HTMLInputElement).checked)} />
       </label>
-      <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder="输入或粘贴文字、代码、网址，按 Ctrl+Enter 发送"></textarea>
+      <textarea rows="3" bind:value={out} bind:this={box} onkeydown={onKey} placeholder={t.placeholder}></textarea>
       <div class="row">
-        <button class="primary" onclick={send}>{@render icon('send')}发到手机</button>
-        <button onclick={sendClipboard}>{@render icon('clip')}发刚复制的</button>
-        <button onclick={() => fileInput?.click()}>{@render icon('image')}选图片或文件…</button>
+        <button class="primary" onclick={send}>{@render icon('send')}{t.sendBtn}</button>
+        <button onclick={sendClipboard}>{@render icon('clip')}{t.clipBtn}</button>
+        <button onclick={() => fileInput?.click()}>{@render icon('image')}{t.pickBtn}</button>
       </div>
       <input bind:this={fileInput} type="file" multiple hidden onchange={onPick} />
       {#if sendTip}<div class="result" class:ok={sendOk}>{sendTip}</div>{/if}
-      <p class="hint">复制了文字或截了图，点「发刚复制的」就行。文件可以直接拖到这里。网页上选中文字、在链接或图片上右键，也能发到手机。</p>
+      <p class="hint">{t.sendHint}</p>
     </section>
 
     {#if needImagePermission || permTip}
       <section class="tip perm">
         {#if needImagePermission}
-          <b>先允许一次</b>：要把照片直接拖进网页、或在网页的图片上右键发到手机，需要你点下面的「允许」，Chrome 会再问一次，选「允许」。
-          <div><button class="primary" onclick={allowImages}>允许</button></div>
+          <b>{t.permTitle}</b>{t.permBody}
+          <div><button class="primary" onclick={allowImages}>{t.allow}</button></div>
         {:else}
-          {permTip} <button class="link" onclick={() => (permTip = '')}>知道了</button>
+          {permTip} <button class="link" onclick={() => (permTip = '')}>{t.gotIt}</button>
         {/if}
       </section>
     {/if}
 
     {#if s.newPhone}
       <section class="tip">
-        <b>有一台新手机连上了（{s.newPhone}）</b>。如果是你的，就不用管；如果不是你的，点
-        <button class="link" onclick={reset}>换一个新码</button>，它就连不上了。
-        <button class="link" onclick={() => dismiss('newPhone')}>是我的</button>
+        <b>{t.newPhoneTitle(localDeviceName(s.newPhone, lang) || (lang === 'zh' ? '手机' : 'phone'))}</b>{t.newPhoneBefore}<button class="link" onclick={reset}>{t.newCode}</button>{t.newPhoneAfter}
+        <button class="link" onclick={() => dismiss('newPhone')}>{t.itsMine}</button>
       </section>
     {/if}
     {#if s.skippedSecretAt && s.autoSend}
       <section class="tip">
-        刚复制的内容像密码，为了安全<b>没有自动发</b>到手机。真要发，点上面的「发刚复制的」。
-        <button class="link" onclick={() => dismiss('skippedSecret')}>知道了</button>
+        {t.secretBefore}<b>{t.secretBold}</b>{t.secretAfter}
+        <button class="link" onclick={() => dismiss('skippedSecret')}>{t.gotIt}</button>
       </section>
     {/if}
 
     {#if s.everPaired && notPinned}
       <section class="tip">
-        <b>把 Tapaste 固定到右上角</b>：点 Chrome 右上角的拼图图标，再点「Tapaste」旁边的图钉。这样手机发来东西时，图标上会出现数字提醒你。
-        <button class="link" onclick={() => { localStorage.setItem('pinTipClosed', '1'); notPinned = false; }}>知道了</button>
+        <b>{t.pinTitle}</b>{t.pinBody}
+        <button class="link" onclick={() => { localStorage.setItem('pinTipClosed', '1'); notPinned = false; }}>{t.gotIt}</button>
       </section>
     {/if}
 
     <section class="recent">
-      <div class="tabs" role="tablist" aria-label="最近">
+      <div class="tabs" role="tablist" aria-label={t.recent}>
         <button role="tab" class="t-phone" class:on={tab === 'phone'} aria-selected={tab === 'phone'} onclick={() => showTab('phone')}>
-          {@render icon('phone')}手机发来的<span class="n">{fromPhone.length}</span>
+          {@render icon('phone')}{t.tabFromPhone}<span class="n">{fromPhone.length}</span>
         </button>
         <button role="tab" class="t-pc" class:on={tab === 'pc'} aria-selected={tab === 'pc'} onclick={() => showTab('pc')}>
-          {@render icon('pc')}发到手机的<span class="n">{toPhone.length}</span>
+          {@render icon('pc')}{t.tabToPhone}<span class="n">{toPhone.length}</span>
         </button>
       </div>
       {#if shown.length === 0}
         <p class="empty">
-          {#if tab === 'phone'}手机发来的文字会自动复制好，直接 Ctrl+V；照片和文件会自动存进「下载\Tapaste」文件夹。
-          {:else}在上面打字、点「发刚复制的」、或在网页上右键「发到手机」，发出去的东西都在这里，能看到手机收到没有。{/if}
+          {tab === 'phone' ? t.emptyFromPhone : t.emptyToPhone}
         </p>
       {/if}
       <!-- 换栏时整块换掉（不播淡出），只有点垃圾桶删的那一条才淡出 -->
@@ -344,14 +344,14 @@
           {@const st = it.from === 'pc' ? pcStatus(it) : null}
           <div class="item" data-kind={it.kind} data-from={it.from} animate:flip={{ duration: 250 }} out:fade={{ duration: 150 }}>
             <div class="meta">
-              {#if st}<span class="who">发到手机</span><span class="st {st.cls}">{st.text}</span>
-              {:else}<span class="who">手机发来</span>{#if it.kind === 'text' && it.copied}<span class="st ok">已复制</span>{/if}{/if}
+              {#if st}<span class="who">{t.whoToPhone}</span><span class="st {st.cls}">{st.text}</span>
+              {:else}<span class="who">{t.whoFromPhone}</span>{#if it.kind === 'text' && it.copied}<span class="st ok">{t.copied}</span>{/if}{/if}
               <span class="when">{time(it.time) + (it.kind !== 'text' ? ' · ' + kb(it.size) : '')}</span>
-              <button class="del" onclick={() => deleteItem(it)} aria-label="删除这一条" title="删除这一条">{@render icon('trash')}</button>
+              <button class="del" onclick={() => deleteItem(it)} aria-label={t.deleteOne} title={t.deleteOne}>{@render icon('trash')}</button>
             </div>
             {#if it.kind === 'text'}
               <div class="text">{it.text}</div>
-              {#if it.cut}<div class="small">太长了，记录里只留了开头（手机发来时整段已经复制好了）</div>{/if}
+              {#if it.cut}<div class="small">{t.cutNote}</div>{/if}
             {:else if it.kind === 'file'}
               <FileItem item={it} onShow={showFile} />
             {:else}
@@ -359,21 +359,21 @@
             {/if}
             {#if it.kind === 'text' || (it.from === 'pc' && !it.delivered && !it.dropped)}
               <div class="acts">
-                {#if it.kind === 'text'}<button class="sm" onclick={(e) => copyText(it, e)}>复制</button>{/if}
-                {#if it.from === 'pc' && !it.delivered && !it.dropped}<button class="sm cancel" onclick={() => cancel(it)}>不发了</button>{/if}
+                {#if it.kind === 'text'}<button class="sm" onclick={(e) => copyText(it, e)}>{t.copy}</button>{/if}
+                {#if it.from === 'pc' && !it.delivered && !it.dropped}<button class="sm cancel" onclick={() => cancel(it)}>{t.dontSend}</button>{/if}
               </div>
             {/if}
           </div>
         {/each}
       </div>
       {/key}
-      {#if s.items.length}<p class="small center"><button class="link" onclick={clearItems}>清空记录</button></p>{/if}
+      {#if s.items.length}<p class="small center"><button class="link" onclick={clearItems}>{t.clearHistory}</button></p>{/if}
     </section>
 
     <footer>
-      {#if s.everPaired && !showQr}<button class="link" onclick={() => (showQr = true)}>换一台手机 / 显示二维码</button> · {/if}
-      <span>版本 {s.version}</span>
-      <details><summary>运行记录</summary><pre>{s.log.join('\n')}</pre></details>
+      {#if s.everPaired && !showQr}<button class="link" onclick={() => (showQr = true)}>{t.showQr}</button> · {/if}
+      <span>{t.version(s.version)}</span>
+      <details><summary>{t.log}</summary><pre>{s.log.join('\n')}</pre></details>
     </footer>
   {/if}
 </main>

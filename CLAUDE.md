@@ -8,6 +8,13 @@
 ## 名字
 产品名 **Tapaste**（2026-11-05 定，官网 https://hidaydream.com/tapaste/ ）。界面上提到产品/插件/网页时写 Tapaste（「Tapaste 网页」「Tapaste 侧边栏」）；「互传」只当动词用。照片存在「下载\Tapaste」（插件 0.4.3 起；之前叫「下载\互传」，老照片还在那里）。
 
+## 中英双语（插件 0.5.0 / 手机 0.5.0 起）
+- 跟随系统语言（2026-11-06 曦定）：`core/lang.ts` 的 `pickLang`，`zh*`（含繁体，繁体以后单独做）显示简体中文，其他所有语言显示英文。
+- 界面文字只写在 `apps/extension/src/lib/i18n.ts` 和 `apps/mobile/src/i18n.ts`（`zh` 一份、`en: typeof zh` 一份，少了哪个 TypeScript 会报错）。加新文字两份都要写。运行记录（log）是排查用的，只写中文。
+- 插件名字、介绍、快捷键说明在 `apps/extension/public/_locales/{zh_CN,en}/messages.json`，`default_locale` 是 `zh_CN`（商店以中文为主）。英文介绍要和商店页一致（官网线程定的）。
+- 对方报上来的设备名是按对方语言起的，显示前用 `localDeviceName` 换成这边的语言。
+- e2e 主流程按中文系统跑（`locale: 'zh-CN'` + `LANGUAGE=zh_CN`），最后用英文系统再测一遍。
+
 ## 架构（不要绕开）
 - 一个仓库，三端共用 `packages/core`。配对、消息格式、连接、待发队列只写在核心里。
 - 分层：`signal.ts`（介绍人：SignalBus 收发字符串 → SecureSignal 加密/签名/防重放）→ `link.ts`（WebRTC 直连 PeerLink）→ `transfer.ts`（发一条/收一条：待发队列、确认、去重、分块）→ `session.ts`（拼起来）。

@@ -1,11 +1,12 @@
 <script lang="ts">
   import { getFile, photoName, toPng } from '../../lib/files';
+  import { t } from '../../lib/i18n';
   import { disarmPageDropSoon, startPhotoDrag } from '../../lib/pagedrop';
   import type { Item } from '../../lib/types';
   let { item, onShow, onNeedPermission }: { item: Item; onShow: (id: number) => void; onNeedPermission: () => void } = $props();
 
   let url = $state('');
-  let copyLabel = $state('复制这张图');
+  let copyLabel = $state(t.copyImage);
   $effect(() => {
     const id = item.id;
     let made = '';
@@ -25,30 +26,30 @@
   async function copy() {
     try {
       const b = await getFile(item.id);
-      if (!b) throw new Error('照片已经不在了');
+      if (!b) throw new Error(t.photoGoneErr);
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': await toPng(b) })]);
-      copyLabel = '已复制，去 Ctrl+V';
+      copyLabel = t.copiedPaste;
     } catch (e) {
-      copyLabel = '复制失败';
+      copyLabel = t.copyFailed;
     }
   }
 </script>
 
 {#if url}
-  <img src={url} alt={item.from === 'phone' ? '手机发来的照片' : '发到手机的图片'} draggable="true" title="可以直接拖进网页" ondragstart={dragStart} ondragend={dragEnd} />
+  <img src={url} alt={item.from === 'phone' ? t.altFromPhone : t.altToPhone} draggable="true" title={t.dragHint} ondragstart={dragStart} ondragend={dragEnd} />
 {:else}
-  <div class="gone">照片已经不在了（只保留最近 30 张）</div>
+  <div class="gone">{t.photoGone30}</div>
 {/if}
 {#if item.from === 'phone'}
   <div class="row">
     <button onclick={copy}>{copyLabel}</button>
     {#if item.saved?.ok && item.saved.downloadId !== undefined}
-      <button onclick={() => onShow(item.saved!.downloadId!)}>打开所在文件夹</button>
+      <button onclick={() => onShow(item.saved!.downloadId!)}>{t.showInFolder}</button>
     {/if}
   </div>
 {/if}
 {#if item.saved && !item.saved.ok}
-  <div class="small bad">没能自动保存：{item.saved.detail}</div>
+  <div class="small bad">{t.notSaved(item.saved.detail ?? '')}</div>
 {/if}
 
 <style>

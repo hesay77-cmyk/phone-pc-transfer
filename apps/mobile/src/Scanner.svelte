@@ -1,6 +1,7 @@
 <script lang="ts">
   // 用手机摄像头扫电脑上的配对二维码（放到桌面的互传第一次打开时用；苹果相机扫码会打开浏览器，不会打开桌面版）
   import { secretFromHash } from '@hutong/core';
+  import { L } from './i18n';
   let { onSecret, onClose }: { onSecret: (secret: string) => void; onClose: () => void } = $props();
 
   let video = $state<HTMLVideoElement>();
@@ -21,7 +22,7 @@
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
     } catch {
-      err = '打不开摄像头。请在弹出的提示里点「允许」；如果之前点了不允许，到手机「设置」里把相机权限打开。';
+      err = L.cameraFail;
       return;
     }
     if (stopped || !video) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -41,7 +42,7 @@
         if (code?.data) {
           const secret = parse(code.data);
           if (secret) { stopped = true; stream?.getTracks().forEach((t) => t.stop()); onSecret(secret); return; }
-          err = '这不是 Tapaste 的二维码。请扫电脑上 Tapaste 侧边栏里的码。';
+          err = L.notOurQr;
         }
       }
       setTimeout(tick, 120);
@@ -52,10 +53,10 @@
 
 <div class="scan">
   <div class="frame"><video bind:this={video} playsinline muted autoplay></video><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i></div>
-  <p>把电脑上 Tapaste 侧边栏里的二维码对准上面的框。</p>
-  <p class="hint">电脑上没看到二维码？点开 Tapaste 侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
+  <p>{L.aimQr}</p>
+  <p class="hint">{L.noQr}</p>
   {#if err}<p class="err">{err}</p>{/if}
-  <button class="btn" onclick={onClose}>取消</button>
+  <button class="btn" onclick={onClose}>{L.cancel}</button>
 </div>
 
 <style>

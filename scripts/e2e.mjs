@@ -79,9 +79,14 @@ function testPng(w = 900, h = 700) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-const ctx = await chromium.launchPersistentContext(join(work, 'profile'), {
-  headless: false, args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`], ...(process.env.E2E_SHOTS ? { deviceScaleFactor: 2 } : {})
+// 界面跟随系统语言：主流程按中文系统测（最后再用英文系统测一遍）
+const scale = process.env.E2E_SHOTS ? { deviceScaleFactor: 2 } : {};
+const extBrowser = (dir, lang) => chromium.launchPersistentContext(join(work, dir), {
+  // Linux 上 Chrome 的界面语言看 LANGUAGE（插件的 chrome.i18n 跟它走），网页里的 navigator.language 看 locale
+  headless: false, locale: lang, env: { ...process.env, LANGUAGE: lang.replace('-', '_'), LANG: lang.replace('-', '_') + '.UTF-8' },
+  args: [`--disable-extensions-except=${extPath}`, `--load-extension=${extPath}`, `--lang=${lang}`], ...scale
 });
+const ctx = await extBrowser('profile', 'zh-CN');
 let [sw] = ctx.serviceWorkers();
 if (!sw) sw = await ctx.waitForEvent('serviceworker');
 const extId = new URL(sw.url()).host;
@@ -90,9 +95,11 @@ await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
 await panel.waitForSelector('.qr[data-url]', { timeout: 20000 });
 const pairUrl = await panel.getAttribute('.qr', 'data-url');
 check('插件显示配对二维码', /^http:\/\/localhost:8080\/#k=[A-Za-z0-9_-]{43}$/.test(pairUrl), pairUrl);
+const zhDesc = await panel.evaluate(() => chrome.i18n.getMessage('extDescription'));
+check('中文系统：插件介绍是中文', zhDesc.startsWith('手机和电脑之间互传文字、照片、视频和文件'), zhDesc.slice(0, 30));
 
 const phoneBrowser = await chromium.launch({ headless: false });
-const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, ...(process.env.E2E_SHOTS ? { deviceScaleFactor: 2 } : {}) });
+const phoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN', ...scale });
 await phoneCtx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:8080' });
 let phone = await phoneCtx.newPage();
 phone.on('pageerror', (e) => console.log('[手机页面出错]', e.message));
@@ -589,7 +596,7 @@ check('手机网页关掉重开、电脑后来才开：照样收到手机攒着�
 await panel.click('button:has-text("换一台手机")').catch(() => {});
 await panel.waitForSelector('.qr svg', { timeout: 5000 });
 const qrSvg = await panel.evaluate(() => document.querySelector('.qr svg').outerHTML);
-const homeCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+const homeCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
 await homeCtx.addInitScript((svg) => {
   navigator.mediaDevices.getUserMedia = async () => {
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 480;
@@ -633,7 +640,7 @@ await panel.waitForSelector('.item', { timeout: 10000 }).catch(() => {});
 check('侧边栏删掉一条，重新打开也不回来', goneNow && (await wrong.count()) === 0, `点完=${goneNow}`);
 
 // 公司网络不让设备直接通信：两边都要说清楚，而不是一直转圈
-const blockCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 } });
+const blockCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
 await blockCtx.addInitScript(() => {
   const Orig = window.RTCPeerConnection;
   const srd = Orig.prototype.setRemoteDescription;
@@ -657,6 +664,44 @@ if (process.env.E2E_SHOTS) {
   await panel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-dark.png'), fullPage: true });
   if (!phone.isClosed()) { await phone.emulateMedia({ colorScheme: 'dark' }); await phone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-dark.png'), fullPage: true }); }
 }
+
+// 英文系统：插件和手机网页都显示英文（2026-11-06 曦要中英双语，跟随系统：中文系统中文，其他都英文）
+const enPhoneCtx = await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'en-US', ...scale });
+await enPhoneCtx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:8080' });
+const enHello = await enPhoneCtx.newPage();
+await enHello.goto('http://localhost:8080/');
+await enHello.waitForSelector('.hello', { timeout: 10000 }).catch(() => {});
+check('英文手机：第一次打开是英文', (await enHello.textContent('main')).includes('Scan to pair') && (await enHello.evaluate(() => document.documentElement.lang)) === 'en',
+  (await enHello.textContent('.hello')).trim().replace(/\s+/g, ' ').slice(0, 80));
+if (process.env.E2E_SHOTS) await enHello.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-en-hello.png') });
+await enHello.close();
+const enPhone = await enPhoneCtx.newPage();
+await enPhone.goto(pairUrl);
+const enOk = await enPhone.waitForSelector('.status[data-link="connected"]', { timeout: 20000 }).then(() => true, () => false);
+const enMain = enOk ? (await enPhone.textContent('main')).replace(/\s+/g, ' ') : '';
+check('英文手机：连上后界面是英文', enOk && enMain.includes('Paste & send to computer') && enMain.includes('Connected to') && enMain.includes('From computer') && !/[\u4e00-\u9fff]{2}/.test(enMain.replace(/Windows 电脑|电脑/g, '')),
+  enMain.slice(0, 120));
+if (enOk) {
+  await enPhone.fill('textarea', 'hello from an English phone');
+  await enPhone.getByRole('button', { name: 'Send', exact: true }).click();
+}
+check('英文手机：照样能发到电脑', await panel.waitForFunction(() => document.body.innerText.includes('hello from an English phone'), null, { timeout: 8000 }).then(() => true, () => false));
+if (process.env.E2E_SHOTS) await enPhone.screenshot({ path: join(process.env.E2E_SHOTS, 'phone-en.png') });
+await enPhoneCtx.close();
+
+const enCtx = await extBrowser('profile-en', 'en-US');
+let [enSw] = enCtx.serviceWorkers();
+if (!enSw) enSw = await enCtx.waitForEvent('serviceworker');
+const enPanel = await enCtx.newPage();
+await enPanel.goto(`chrome-extension://${new URL(enSw.url()).host}/sidepanel.html`);
+await enPanel.waitForSelector('.qr[data-url]', { timeout: 20000 }).catch(() => {});
+const enPanelText = (await enPanel.textContent('main')).replace(/\s+/g, ' ');
+check('英文系统：侧边栏是英文', ['Step 1: scan with your iPhone', 'Send to phone', 'Send what I just copied', 'Send on copy', 'From phone', 'To phone'].every((x) => enPanelText.includes(x))
+  && !/[\u4e00-\u9fff]/.test(enPanelText), enPanelText.slice(0, 120));
+const enDesc = await enPanel.evaluate(() => chrome.i18n.getMessage('extDescription'));
+check('英文系统：插件介绍是英文', enDesc === 'Send text, photos, videos and files between your phone and computer. One tap, direct over your Wi-Fi, never through a server.', enDesc);
+if (process.env.E2E_SHOTS) { await enPanel.setViewportSize({ width: 380, height: 900 }); await enPanel.screenshot({ path: join(process.env.E2E_SHOTS, 'panel-en.png'), fullPage: true }); }
+await enCtx.close();
 
 console.log(failures ? `\n${failures} 项没通过` : '\n全部通过');
 await ctx.close();

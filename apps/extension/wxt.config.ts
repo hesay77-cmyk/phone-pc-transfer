@@ -12,8 +12,10 @@ export default defineConfig({
   // 引擎页面（offscreen）拿不到 manifest，版本号在构建时写进去
   vite: () => ({ define: { __APP_VERSION__: JSON.stringify(pkg.version) } }),
   manifest: {
-    name: 'Tapaste',
-    description: '手机和电脑之间互传文字、照片、视频和文件。点一下就到另一边，同一个 Wi-Fi 直连，内容不经过服务器。',
+    // 名字和介绍中英两份，在 public/_locales 里（中文为主：商店默认显示中文）
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
+    default_locale: 'zh_CN',
     minimum_chrome_version: '116',
     permissions: ['offscreen', 'notifications', 'clipboardWrite', 'clipboardRead', 'downloads', 'contextMenus', 'activeTab', 'scripting', 'storage'],
     // 右键发网页上的图时才问用户要（自动测试时直接给，免得弹窗卡住）
@@ -22,9 +24,9 @@ export default defineConfig({
     // 照片拖到网页或新标签页上时，Chrome 会打开这个「看照片」页面
     web_accessible_resources: [{ resources: ['view.html'], matches: ['<all_urls>'] }],
     commands: {
-      _execute_action: { suggested_key: { default: 'Alt+Shift+V' }, description: '打开 Tapaste' },
+      _execute_action: { suggested_key: { default: 'Alt+Shift+V' }, description: '__MSG_cmdOpen__' },
       // 全局快捷键：Chrome 不在前台（在 Word、记事本里）也能用。Chrome 只允许 Ctrl+Shift+数字 做全局键
-      'send-clipboard': { suggested_key: { default: 'Ctrl+Shift+1' }, description: '把刚复制的内容发到手机', global: true } as any
+      'send-clipboard': { suggested_key: { default: 'Ctrl+Shift+1' }, description: '__MSG_cmdSendClipboard__', global: true } as any
     }
   }
 });

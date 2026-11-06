@@ -65,7 +65,7 @@ export type ToBg =
   | { to: 'bg'; type: 'badge'; text: string; color: string };
 
 /** 发到手机的结果 */
-export interface SendResult { ok: boolean; connected?: boolean; error?: string; /** 发的是什么，给用户看 */ what?: string }
+export interface SendResult { ok: boolean; connected?: boolean; error?: string; /** 引擎读不到剪贴板：侧边栏自己再读一次 */ code?: 'no-clipboard'; /** 发的是什么，给用户看 */ what?: string }
 
 export type ToEngine =
   | { to: 'engine'; type: 'get-state' }

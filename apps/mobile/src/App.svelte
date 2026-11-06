@@ -1,11 +1,12 @@
 <script lang="ts">
   import {
-    BlobStore, CONFIG, isShowableImage, localKV, persistentOutbox, randomId, secretFromHash, sizeText, startSession, trimForHistory,
+    BlobStore, CONFIG, isShowableImage, localDeviceName, localKV, persistentOutbox, randomId, secretFromHash, sizeText, startSession, trimForHistory,
     type BusStatus, type DeviceInfo, type LinkState, type OutItem, type Receiving, type Session
   } from '@hutong/core';
   import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
   import { fade, fly } from 'svelte/transition';
+  import { L, lang } from './i18n';
   import PhoneFile from './PhoneFile.svelte';
   import PhoneImage from './PhoneImage.svelte';
   import Scanner from './Scanner.svelte';
@@ -16,6 +17,7 @@
   const photos = new BlobStore('hutong', 'files', MAX_GOT);
   interface Sent { id: string; label: string; state: 'sending' | 'waiting' | 'done' | 'cancelled' | 'expired' | 'failed'; pct?: number }
 
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
   const kv = localKV('hutong:phone:');
   const version = __APP_VERSION__;
 
@@ -25,7 +27,7 @@
   const fromHash = secretFromHash(location.hash);
   if (fromHash) {
     const old = kv.get('secret');
-    if (!old || old === fromHash || confirm('要换成新的配对吗？\n电脑上刚换了新码、或者要连另一台电脑，点「好」；不知道这个链接是哪来的，点「取消」。')) {
+    if (!old || old === fromHash || confirm(L.confirmRepair)) {
       kv.set('secret', fromHash);
     }
     history.replaceState(null, '', location.pathname + location.search);
@@ -88,7 +90,7 @@
     })));
   }
   function clearGot() {
-    if (!confirm('清空「电脑发来的」记录？')) return;
+    if (!confirm(L.confirmClear)) return;
     got = [];
     saveGot();
     void photos.prune([]);
@@ -112,13 +114,13 @@
     let id = kv.get('deviceId');
     if (!id) { id = randomId(); kv.set('deviceId', id); }
     const ua = navigator.userAgent;
-    const name = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? '安卓手机' : '手机';
+    const name = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? L.androidPhone : L.phone;
     return { id, role: 'phone', name, app: version };
   }
 
   const short = (n: string) => (n.length > 18 ? n.slice(0, 10) + '…' + n.slice(-6) : n);
-  const label = (it: OutItem) => (it.kind === 'text' ? `${it.text.length} 个字`
-    : isShowableImage(it.meta.mime) ? `照片 ${kb(it.meta.size)}` : `「${short(it.meta.name)}」${kb(it.meta.size)}`);
+  const label = (it: OutItem) => (it.kind === 'text' ? L.nChars(it.text.length)
+    : isShowableImage(it.meta.mime) ? L.photoSize(kb(it.meta.size)) : L.fileSize(short(it.meta.name), kb(it.meta.size)));
   const setSent = (id: string, p: Partial<Sent>) => { sent = sent.map((s) => (s.id === id ? { ...s, ...p } : s)); };
 
   async function start() {
@@ -163,7 +165,7 @@
         delivered: (it) => { setSent(it.id, { state: 'done' }); note = ''; },
         dropped: (it, why) => setSent(it.id, { state: why }),
         queue: (n) => {
-          if (n > 0 && !session?.link.ready) note = `还没连上电脑，连上后会自动发出（${n} 个）`;
+          if (n > 0 && !session?.link.ready) note = L.notYet(n);
           if (n === 0) note = '';
         },
         log: (s) => console.log('[Tapaste]', s)
@@ -206,10 +208,10 @@
     try {
       text = await navigator.clipboard.readText();
     } catch {
-      note = '读不到剪贴板。可以在下面的框里长按粘贴，再点发送';
+      note = L.clipUnreadable;
       return;
     }
-    if (!text) { note = '剪贴板是空的，先去别的 App 里复制一段字'; return; }
+    if (!text) { note = L.clipEmpty; return; }
     track(session.transfer.sendText(text));
   }
 
@@ -224,27 +226,27 @@
     const files = Array.from(fileInput.files ?? []);
     fileInput.value = '';
     for (const f of files) {
-      if (f.size > CONFIG.maxFileBytes) { note = `「${short(f.name)}」太大了（${sizeText(f.size)}），一次最多发 ${sizeText(CONFIG.maxFileBytes)}`; continue; }
+      if (f.size > CONFIG.maxFileBytes) { note = L.tooBig(short(f.name), sizeText(f.size), sizeText(CONFIG.maxFileBytes)); continue; }
       let w: number | undefined, h: number | undefined;
       if (isShowableImage(f.type)) {
         try { const b = await createImageBitmap(f); w = b.width; h = b.height; b.close(); } catch { /* 读不到尺寸不要紧 */ }
       }
-      if (session) track(session.transfer.sendFile(f, { name: f.name || '文件', w, h }));
+      if (session) track(session.transfer.sendFile(f, { name: f.name || L.file, w, h }));
     }
   }
 
   async function copy(t: string, e: MouseEvent) {
-    try { await navigator.clipboard.writeText(t); (e.target as HTMLElement).textContent = '已复制'; }
-    catch { (e.target as HTMLElement).textContent = '复制失败'; }
+    try { await navigator.clipboard.writeText(t); (e.target as HTMLElement).textContent = L.copied; }
+    catch { (e.target as HTMLElement).textContent = L.copyFailed; }
   }
 
   const status = $derived.by(() => {
-    if (!secret) return { cls: 'bad', text: '还没配对' };
-    if (link === 'connected') return { cls: 'ok', text: '已连上' + (pcName || '电脑') };
-    if (link === 'offline') return { cls: 'bad', text: '电脑不在线' };
-    if (link === 'blocked') return { cls: 'bad', text: '连不上电脑：这个网络不让直连' };
-    if (signal !== 'online') return { cls: 'wait', text: '正在连接网络…' };
-    return { cls: 'wait', text: '正在连接电脑…' };
+    if (!secret) return { cls: 'bad', text: L.notPaired };
+    if (link === 'connected') return { cls: 'ok', text: L.connected(localDeviceName(pcName, lang)) };
+    if (link === 'offline') return { cls: 'bad', text: L.pcOffline };
+    if (link === 'blocked') return { cls: 'bad', text: L.blocked };
+    if (signal !== 'online') return { cls: 'wait', text: L.netConnecting };
+    return { cls: 'wait', text: L.pcConnecting };
   });
   let scrolled = $state(false);
   const onScroll = () => { scrolled = window.scrollY > 36; };
@@ -288,26 +290,26 @@
     <section class="hello">
       <div class="hello-icon">{@render logo(84)}</div>
       <h1>Tapaste</h1>
-      <p class="hello-sub">手机和电脑，点一下就到另一边。</p>
+      <p class="hello-sub">{L.helloSub}</p>
       {#if standalone}
-        <p class="hello-text">第一次用，扫一下电脑上的二维码配对（只用扫这一次）。</p>
+        <p class="hello-text">{L.helloStandalone}</p>
       {:else}
-        <p class="hello-text">用 iPhone 自带的相机扫一下电脑上「Tapaste」插件里的二维码，或者点下面的按钮在这里扫。</p>
+        <p class="hello-text">{L.helloBrowser}</p>
       {/if}
-      <button class="pill" onclick={() => (scanning = true)}>扫码配对</button>
-      <p class="foot-hint">电脑上没看到二维码？点开 Tapaste 侧边栏，在最下面点「换一台手机 / 显示二维码」。</p>
+      <button class="pill" onclick={() => (scanning = true)}>{L.scanToPair}</button>
+      <p class="foot-hint">{L.noQr}</p>
     </section>
   {:else}
     <header class="large">
       <h1>Tapaste</h1>
       <div class="status {status.cls}" data-link={link}><span class="dot"></span><span>{status.text}</span></div>
       {#if link === 'blocked'}
-        <p class="sub-hint">电脑找到了，但这个 Wi-Fi 不让手机和电脑直接连（有些公司或公共场所的 Wi-Fi 会这样）。手机和电脑换成同一个家里的 Wi-Fi 就能用。这边会一直自动重试。</p>
+        <p class="sub-hint">{L.blockedHint}</p>
       {/if}
       {#if link === 'offline'}
-        <p class="sub-hint">电脑上的 Chrome 开着吗？手机和电脑连的是同一个 Wi-Fi 吗？会一直自动重试。</p>
+        <p class="sub-hint">{L.offlineHint}</p>
       {/if}
-      {#if newer}<p class="sub-hint red">电脑上的插件版本比这个网页新，请刷新一下这个网页</p>{/if}
+      {#if newer}<p class="sub-hint red">{L.newerPeer}</p>{/if}
     </header>
 
     {#if scanning}
@@ -318,27 +320,27 @@
           {#if !homeOpen}
             <div class="tip-row">
               <div class="tip-icon">{@render logo(44)}</div>
-              <p><b>把 Tapaste 放到手机桌面</b><br /><span>下次点图标就能用，不用再找网页。</span></p>
+              <p><b>{L.homeTitle}</b><br /><span>{L.homeSub}</span></p>
             </div>
             <div class="btns">
-              <button class="chip-btn tinted" onclick={openHomeTip}>怎么放？</button>
-              <button class="chip-btn plain" onclick={() => closeHomeTip(true)}>不用了</button>
+              <button class="chip-btn tinted" onclick={openHomeTip}>{L.howTo}</button>
+              <button class="chip-btn plain" onclick={() => closeHomeTip(true)}>{L.noThanks}</button>
             </div>
           {:else}
-            <p><b>放到手机桌面</b></p>
+            <p><b>{L.homeSteps}</b></p>
             <ol>
               {#if inChrome}
-                <li>点地址栏右边的「分享」按钮（方框带向上的箭头）。找不到就点右下角「…」，再点「分享」。</li>
+                <li>{L.stepShareChrome}</li>
               {:else}
-                <li>点屏幕下方的「分享」按钮（方框带向上的箭头）。</li>
+                <li>{L.stepShareSafari}</li>
               {/if}
-              <li>往下滑，点「添加到主屏幕」。</li>
-              <li>右上角点「添加」。</li>
-              <li>从桌面打开「Tapaste」，如果提示配对，点「扫码配对」扫一下电脑上的码（只用扫这一次）。</li>
+              <li>{L.stepAdd}</li>
+              <li>{L.stepConfirm}</li>
+              <li>{L.stepOpen}</li>
             </ol>
             <div class="btns">
-              <button class="chip-btn tinted" onclick={() => closeHomeTip(true)}>放好了</button>
-              <button class="chip-btn plain" onclick={() => closeHomeTip(false)}>先收起</button>
+              <button class="chip-btn tinted" onclick={() => closeHomeTip(true)}>{L.done}</button>
+              <button class="chip-btn plain" onclick={() => closeHomeTip(false)}>{L.later}</button>
             </div>
           {/if}
         </section>
@@ -346,17 +348,17 @@
 
       <section class="tiles rise" style="--d: 60ms">
         <button class="tile main" onclick={pasteAndSend}>
-          {@render icon('clip')}<span>粘贴并发送到电脑</span>
+          {@render icon('clip')}<span>{L.pasteSend}</span>
         </button>
         <button class="tile" onclick={() => fileInput?.click()}>
-          {@render icon('image')}<span>发照片或文件到电脑</span>
+          {@render icon('image')}<span>{L.sendFiles}</span>
         </button>
         <input bind:this={fileInput} type="file" multiple hidden onchange={onFiles} />
       </section>
 
       <section class="compose rise" style="--d: 110ms">
-        <textarea rows="1" bind:value={txt} placeholder="或者在这里打字"></textarea>
-        <button class="send" class:ready={txt.trim()} onclick={sendTyped} aria-label="发送">{@render icon('up')}</button>
+        <textarea rows="1" bind:value={txt} placeholder={L.typeHere}></textarea>
+        <button class="send" class:ready={txt.trim()} onclick={sendTyped} aria-label={L.send}>{@render icon('up')}</button>
       </section>
 
       {#if note}<p class="note" in:fly={{ y: -6, duration: 260 }}>{note}</p>{/if}
@@ -367,14 +369,14 @@
             <div class="sent" data-state={s.state} animate:flip={{ duration: 320, easing: cubicOut }} in:fly={pop} out:fade={{ duration: 180 }}>
               <span class="what">{s.label}</span>
               <span class="right">
-              {#if s.state === 'done'}<span class="st ok">电脑已收到 ✓</span>
-              {:else if s.state === 'cancelled'}<span class="st">已取消，不发了</span>
-              {:else if s.state === 'expired'}<span class="st">放了一天也没送到，不发了</span>
-              {:else if s.state === 'failed'}<span class="st bad">没发出去</span>
-              {:else if s.state === 'sending'}<span class="st wait">发送中{s.pct !== undefined ? ` ${s.pct}%` : '…'}</span>
-              {:else}<span class="st wait">等连上电脑后自动发</span>{/if}
-              {#if s.state === 'waiting' || s.state === 'sending'}<button class="link-btn" onclick={() => cancelSent(s.id)}>不发了</button>{/if}
-              <button class="del" onclick={() => deleteSent(s.id)} aria-label="删除这一条">{@render icon('trash')}</button>
+              {#if s.state === 'done'}<span class="st ok">{L.stDone}</span>
+              {:else if s.state === 'cancelled'}<span class="st">{L.stCancelled}</span>
+              {:else if s.state === 'expired'}<span class="st">{L.stExpired}</span>
+              {:else if s.state === 'failed'}<span class="st bad">{L.stFailed}</span>
+              {:else if s.state === 'sending'}<span class="st wait">{L.stSending(s.pct)}</span>
+              {:else}<span class="st wait">{L.stWaiting}</span>{/if}
+              {#if s.state === 'waiting' || s.state === 'sending'}<button class="link-btn" onclick={() => cancelSent(s.id)}>{L.dontSend}</button>{/if}
+              <button class="del" onclick={() => deleteSent(s.id)} aria-label={L.deleteOne}>{@render icon('trash')}</button>
               </span>
             </div>
           {/each}
@@ -382,7 +384,7 @@
       {/if}
 
       <section class="got rise" style="--d: 190ms">
-        <h2>电脑发来的{#if got.length}<span class="count">{got.length}</span>{/if}</h2>
+        <h2>{L.fromPc}{#if got.length}<span class="count">{got.length}</span>{/if}</h2>
         {#if receiving}
           {@const r = receiving}
           {@const pct = r.done || !r.meta.size ? 100 : Math.floor((r.got / r.meta.size) * 100)}
@@ -391,7 +393,7 @@
             <div class="recv-top">
               <span class="recv-ic">{@render icon(isShowableImage(r.meta.mime) ? 'image' : 'doc')}</span>
               <div class="recv-info">
-                <b>{r.done ? '收好了，正在保存…' : lost ? '连接断了，电脑会重新发…' : '正在接收'}</b>
+                <b>{r.done ? L.recvDone : lost ? L.recvLost : L.receiving}</b>
                 <span>{r.meta.name}</span>
               </div>
               <span class="pct">{pct}%</span>
@@ -401,37 +403,37 @@
           </div>
         {/if}
         {#if got.length === 0 && !receiving}
-          <div class="empty">{@render icon('tray')}<p>还没有。电脑上可以在网页里右键「发到手机」，或者在 Tapaste 侧边栏里发文字、网址、图片、文件过来。</p></div>
+          <div class="empty">{@render icon('tray')}<p>{L.empty}</p></div>
         {/if}
         {#each got as g (g.id)}
           <div class="item" data-kind={g.kind ?? 'text'} animate:flip={{ duration: 320, easing: cubicOut }} in:fly={pop} out:fade={{ duration: 180 }}>
             <div class="head">
               <div class="meta">{time(g.time) + (g.size ? ' · ' + kb(g.size) : '')}</div>
-              <button class="del" onclick={() => deleteGot(g.id)} aria-label="删除这一条">{@render icon('trash')}</button>
+              <button class="del" onclick={() => deleteGot(g.id)} aria-label={L.deleteOne}>{@render icon('trash')}</button>
             </div>
             {#if g.kind === 'image'}
               <PhoneImage id={g.id} name={g.name ?? ''} store={photos} />
             {:else if g.kind === 'file'}
-              <PhoneFile id={g.id} name={g.name ?? '文件'} mime={g.mime ?? ''} store={photos} />
+              <PhoneFile id={g.id} name={g.name ?? L.file} mime={g.mime ?? ''} store={photos} />
             {:else}
               {@const t = g.text ?? ''}
               <div class="text" class:code={isCode(t)}>{isCode(t) ? t.trim() : t}</div>
-              {#if g.cut}<p class="small">太长了，记录里只留了开头</p>{/if}
+              {#if g.cut}<p class="small">{L.cutNote}</p>{/if}
               <div class="btns">
-                {#if isUrl(t)}<a class="chip-btn tinted" href={t.trim()} target="_blank" rel="noopener">打开网址</a>{/if}
-                <button class="chip-btn tinted" onclick={(e) => copy(t.trim(), e)}>复制</button>
+                {#if isUrl(t)}<a class="chip-btn tinted" href={t.trim()} target="_blank" rel="noopener">{L.openLink}</a>{/if}
+                <button class="chip-btn tinted" onclick={(e) => copy(t.trim(), e)}>{L.copy}</button>
               </div>
             {/if}
           </div>
         {/each}
-        {#if got.length}<p class="center"><button class="link-btn" onclick={clearGot}>清空记录</button></p>{/if}
+        {#if got.length}<p class="center"><button class="link-btn" onclick={clearGot}>{L.clearHistory}</button></p>{/if}
       </section>
     {/if}
   {/if}
 
   <footer>
-    {#if secret && !scanning}<button class="link-btn" onclick={() => (scanning = true)}>重新扫码配对</button> · {/if}
-    Tapaste · 版本 {version}
+    {#if secret && !scanning}<button class="link-btn" onclick={() => (scanning = true)}>{L.rescan}</button> · {/if}
+    Tapaste · {L.version(version)}
   </footer>
 </main>
 

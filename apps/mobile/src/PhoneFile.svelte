@@ -1,6 +1,7 @@
 <script lang="ts">
   // 电脑发来的文件（文档、压缩包等）：存到手机「文件」App，或者用别的 App 打开
   import type { BlobStore } from '@hutong/core';
+  import { L } from './i18n';
   let { id, name, mime, store }: { id: string; name: string; mime: string; store: BlobStore } = $props();
 
   let url = $state('');
@@ -14,7 +15,7 @@
     let made = '';
     void store.get(id).then((b) => {
       if (!b) { gone = true; return; }
-      file = new File([b], name || '文件', { type: b.type || mime || 'application/octet-stream' });
+      file = new File([b], name || L.file, { type: b.type || mime || 'application/octet-stream' });
       url = made = URL.createObjectURL(file);
     });
     return () => { if (made) URL.revokeObjectURL(made); };
@@ -30,7 +31,7 @@
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       // 分享用不了：让浏览器自己下载（链接本身带着 download）
-      tip = '如果没反应，在浏览器的「下载」里能找到它';
+      tip = L.fileDownloadTip;
     }
   }
 </script>
@@ -44,11 +45,11 @@
 </div>
 {#if url}
   <div class="btns">
-    <a class="btn" href={url} download={name} onclick={save}>存到手机 / 打开</a>
+    <a class="btn" href={url} download={name} onclick={save}>{L.saveOrOpen}</a>
   </div>
-  {#if tip}<p class="tip">{tip}</p>{:else}<p class="tip">点了之后选「存储到文件」，或者选一个 App 打开</p>{/if}
+  {#if tip}<p class="tip">{tip}</p>{:else}<p class="tip">{L.fileHint}</p>{/if}
 {:else if gone}
-  <p class="tip">文件已经不在了（只保留最近 20 个）</p>
+  <p class="tip">{L.fileGone}</p>
 {/if}
 
 <style>

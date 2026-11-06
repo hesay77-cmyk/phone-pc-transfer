@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../../lib/i18n';
   import type { Item } from '../../lib/types';
   let { item, onShow }: { item: Item; onShow: (id: number) => void } = $props();
 
@@ -10,13 +11,13 @@
     <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
     {#if ext}<span>{ext}</span>{/if}
   </div>
-  <div class="name" title={item.name}>{item.name || '文件'}</div>
+  <div class="name" title={item.name}>{item.name || t.fileFallback}</div>
 </div>
 {#if item.from === 'phone' && item.saved?.ok && item.saved.downloadId !== undefined}
-  <div class="row"><button onclick={() => onShow(item.saved!.downloadId!)}>打开所在文件夹</button></div>
+  <div class="row"><button onclick={() => onShow(item.saved!.downloadId!)}>{t.showInFolder}</button></div>
 {/if}
 {#if item.saved && !item.saved.ok}
-  <div class="small bad">没能自动保存：{item.saved.detail}</div>
+  <div class="small bad">{t.notSaved(item.saved.detail ?? '')}</div>
 {/if}
 
 <style>

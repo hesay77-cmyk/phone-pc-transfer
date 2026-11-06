@@ -1,12 +1,13 @@
 <script lang="ts">
   // 电脑发来的图：显示出来，能存到相册、能复制
   import type { BlobStore } from '@hutong/core';
+  import { L } from './i18n';
   let { id, name, store }: { id: string; name: string; store: BlobStore } = $props();
 
   let url = $state('');
   let gone = $state(false);
-  let saveLabel = $state('存到相册');
-  let copyLabel = $state('复制');
+  let saveLabel = $state(L.saveToPhotos);
+  let copyLabel = $state(L.copy);
   let tip = $state('');
   // 先读好：iPhone 要求点按钮的那一刻就调用分享/复制，中间不能再等读数据
   let blob: Blob | null = null;
@@ -30,7 +31,7 @@
       await navigator.share({ files: [f] });
     } catch (e) {
       if ((e as Error).name === 'AbortError') return;
-      tip = '长按上面的图片，选「存储到照片」或「保存图片」';
+      tip = L.saveTipImage;
     }
   }
 
@@ -39,10 +40,10 @@
     try {
       // 苹果只认 PNG：先转一下（放在 Promise 里，按钮按下那一刻就占住剪贴板）
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': toPng(blob) })]);
-      copyLabel = '已复制';
+      copyLabel = L.copied;
     } catch {
-      copyLabel = '复制失败';
-      tip = '长按上面的图片，选「拷贝」';
+      copyLabel = L.copyFailed;
+      tip = L.copyTipImage;
     }
   }
 
@@ -57,14 +58,14 @@
 </script>
 
 {#if url}
-  <img src={url} alt="电脑发来的图片" />
+  <img src={url} alt={L.altImage} />
   <div class="btns">
     <button class="btn" onclick={save}>{saveLabel}</button>
     <button class="btn" onclick={copy}>{copyLabel}</button>
   </div>
   {#if tip}<p class="tip">{tip}</p>{/if}
 {:else if gone}
-  <p class="tip">图片已经不在了（只保留最近 20 张）</p>
+  <p class="tip">{L.imageGone}</p>
 {/if}
 
 <style>

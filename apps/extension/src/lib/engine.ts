@@ -8,6 +8,7 @@ import {
 import { browser } from 'wxt/browser';
 import { copyText, readClipboard } from './clipboard';
 import { deleteFile, getFile, photoName, pruneFiles, putFile, thumbnail } from './files';
+import { t } from './i18n';
 import type { EngineState, Item, SavedInfo, SendResult, ToBg, ToEngine, ToPanel } from './types';
 
 const kv = localKV('hutong:pc:');
@@ -72,7 +73,7 @@ export class Engine {
   private device(): DeviceInfo {
     let id = kv.get('deviceId');
     if (!id) { id = randomId(); kv.set('deviceId', id); }
-    return { id, role: 'pc', name: /Windows/.test(navigator.userAgent) ? 'Windows 电脑' : '电脑', app: this.state.version };
+    return { id, role: 'pc', name: t.pcName(/Windows/.test(navigator.userAgent)), app: this.state.version };
   }
 
   private async connect() {
@@ -153,7 +154,7 @@ export class Engine {
   }
 
   private sendText(text: string): SendResult {
-    if (!this.session || !text.trim()) return { ok: false, error: '没有可发的文字' };
+    if (!this.session || !text.trim()) return { ok: false, error: t.noText };
     const out = this.session.transfer.sendText(text);
     this.addItem({ id: out.id, from: 'pc', kind: 'text', time: Date.now(), text, delivered: false });
     return { ok: true, connected: this.session.link.ready };
@@ -202,17 +203,17 @@ export class Engine {
   /** 剪贴板里有图（截图）就发图，否则发文字 */
   private async sendClipboard(): Promise<SendResult> {
     const c = readClipboard();
-    if (!c.ok) { this.log('读剪贴板失败'); return { ok: false, error: '读不到剪贴板。可以把内容粘贴到侧边栏的输入框里再发' }; }
+    if (!c.ok) { this.log('读剪贴板失败'); return { ok: false, code: 'no-clipboard', error: t.clipUnreadable }; }
     // 截的图，或者在文件夹里复制的文件
     if (c.files.length) {
       let r: SendResult = { ok: false };
-      const t = new Date().toLocaleTimeString().replace(/:/g, '-');
-      for (const f of c.files) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : `截图 ${t}.png`);
+      const time = new Date().toLocaleTimeString().replace(/:/g, '-');
+      for (const f of c.files) r = await this.sendBlob(f, f.name && f.name !== 'image.png' ? f.name : t.shotName(time));
       const allImg = c.files.every((f) => f.type.startsWith('image/'));
       const n = c.files.length;
-      return { ...r, what: allImg ? (n > 1 ? `${n} 张图` : '截图') : (n > 1 ? `${n} 个文件` : `「${c.files[0]!.name}」`) };
+      return { ...r, what: allImg ? (n > 1 ? t.whatImages(n) : t.whatShot) : (n > 1 ? t.whatFiles(n) : t.whatQuoted(c.files[0]!.name)) };
     }
-    if (!c.text.trim()) return { ok: false, error: '剪贴板是空的。先复制一段文字（Ctrl+C）或截个图，再发' };
+    if (!c.text.trim()) return { ok: false, error: t.clipEmpty };
     const r = this.sendText(c.text);
     const head = c.text.trim().replace(/\s+/g, ' ');
     return { ...r, what: `「${head.length > 20 ? head.slice(0, 20) + '…' : head}」` };
@@ -227,9 +228,9 @@ export class Engine {
       blob = await r.blob();
     } catch (e) {
       this.log(`下载网页图片失败（${String(e)}）：${url.slice(0, 120)}`);
-      return { ok: false, error: '这张图下载不下来。可以先把图存到电脑，再拖进侧边栏发送' };
+      return { ok: false, error: t.imgDownloadFail };
     }
-    const name = decodeURIComponent(url.startsWith('data:') ? '' : (new URL(url).pathname.split('/').pop() ?? '')) || '图片';
+    const name = decodeURIComponent(url.startsWith('data:') ? '' : (new URL(url).pathname.split('/').pop() ?? '')) || t.imageName;
     return this.sendBlob(blob, name);
   }
 
@@ -237,15 +238,15 @@ export class Engine {
   private async sendStoredFile(fileId: string, name: string): Promise<SendResult> {
     const blob = await getFile(fileId);
     void deleteFile(fileId);
-    if (!blob) return { ok: false, error: '没读到这个文件，请再试一次' };
+    if (!blob) return { ok: false, error: t.fileNotRead };
     return this.sendBlob(blob, name);
   }
 
   /** 发图片或文件到手机。能直接显示的图片当照片发（侧边栏、手机上都能看到图），别的当文件 */
   private async sendBlob(blob: Blob, name: string): Promise<SendResult> {
-    if (!this.session) return { ok: false, error: '插件还没准备好，请稍等再试' };
+    if (!this.session) return { ok: false, error: t.notReady };
     if (blob.size > CONFIG.maxFileBytes) {
-      return { ok: false, error: `「${name}」太大了（${sizeText(blob.size)}），一次最多发 ${sizeText(CONFIG.maxFileBytes)}` };
+      return { ok: false, error: t.tooBig(name, sizeText(blob.size), sizeText(CONFIG.maxFileBytes)) };
     }
     let w: number | undefined, h: number | undefined;
     let isImg = isShowableImage(blob.type);
@@ -262,7 +263,7 @@ export class Engine {
     this.addItem({ id: out.id, from: 'pc', kind: isImg ? 'image' : 'file', time: Date.now(), size: blob.size, w, h, mime: blob.type, name, delivered: false });
     this.log(`发${isImg ? '图片' : '文件'}到手机：${name}，${kb(blob.size)}`);
     if (isImg) void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
-    return { ok: true, connected: this.session.link.ready, what: isImg ? '图片' : '文件' };
+    return { ok: true, connected: this.session.link.ready, what: isImg ? t.whatImage : t.whatFile };
   }
 
   private async onReceived(it: Incoming) {
@@ -271,7 +272,7 @@ export class Engine {
       if (r.ok) this.lastClip = it.text; // 这是手机发来的，别再自动发回去
       this.log(`收到文字（${it.text.length} 字），自动复制${r.ok ? '成功' : '失败：' + r.how}`);
       this.addItem({ id: it.id, from: 'phone', kind: 'text', time: Date.now(), text: it.text, copied: r.ok });
-      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? '已复制手机发来的文字' : '收到手机发来的文字',
+      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: r.ok ? t.nTextCopied : t.nTextGot,
         message: it.text.slice(0, 100) });
       return;
     }
@@ -293,11 +294,11 @@ export class Engine {
     this.patch(it.id, { saved });
     if (isImg) {
       this.bg({ to: 'bg', type: 'notify', kind: 'image', itemId: it.id,
-        title: saved.ok ? '收到一张照片，已存进「下载\\Tapaste」' : '收到一张照片',
-        message: '点这里复制，然后就能 Ctrl+V', imageUrl: await thumbnail(blob) });
+        title: saved.ok ? t.nPhotoSaved : t.nPhotoGot,
+        message: t.nPhotoClick, imageUrl: await thumbnail(blob) });
       void pruneFiles(this.state.items.filter((x) => x.kind === 'image').map((x) => x.id));
     } else {
-      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: saved.ok ? '收到一个文件，已存进「下载\\Tapaste」' : '收到一个文件',
+      this.bg({ to: 'bg', type: 'notify', kind: 'text', title: saved.ok ? t.nFileSaved : t.nFileGot,
         message: `${meta.name}（${sizeText(blob.size)}）` });
     }
   }

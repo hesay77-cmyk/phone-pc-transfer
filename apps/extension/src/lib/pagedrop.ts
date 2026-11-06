@@ -13,6 +13,7 @@ import { browser } from 'wxt/browser';
 import { CONFIG } from '@hutong/core';
 import { getFile } from './files';
 import type { ToPanel } from './types';
+import { t as text } from './i18n';
 
 export const DRAG_TYPE = 'application/x-hutong-photo';
 
@@ -72,7 +73,7 @@ export async function armPageDrop(arm: DropArm | null): Promise<ArmResult> {
   if (!(await browser.permissions.contains({ origins: ['<all_urls>'] }).catch(() => false))) return 'no-permission';
   const tabs = await browser.tabs.query({ active: true }).catch(() => []);
   const done = await Promise.all(tabs.map((t) => t.id === undefined ? false
-    : browser.scripting.executeScript({ target: { tabId: t.id, allFrames: true }, func: pageDropHelper, args: [arm] })
+    : browser.scripting.executeScript({ target: { tabId: t.id, allFrames: true }, func: pageDropHelper, args: [arm, { noPhoto: text.dropNoPhoto, noSpot: text.dropNoSpot, photo: text.photoTitle }] })
       .then(() => true, () => false)));
   return done.some(Boolean) ? 'ok' : 'no-page';
 }
@@ -81,7 +82,7 @@ export async function armPageDrop(arm: DropArm | null): Promise<ArmResult> {
  * 放进网页里运行的接收员。整个函数会被转成文字塞进网页，所以不能用到函数外面的任何东西。
  * 同一个网页里只装一次，之后再调用只是换一张要接的照片（null = 不接了）。
  */
-export function pageDropHelper(arm: DropArm | null) {
+export function pageDropHelper(arm: DropArm | null, msgs = { noPhoto: '照片没取到，请再拖一次', noSpot: '这个位置放不了图片', photo: '照片' }) {
   type St = { set(a: DropArm | null): void };
   const w = window as unknown as { __hutongDrop?: St };
   if (w.__hutongDrop) { w.__hutongDrop.set(arm); return; }
@@ -120,7 +121,7 @@ export function pageDropHelper(arm: DropArm | null) {
         for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
         const type = r.type || 'image/jpeg';
         const ext = ({ 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/heic': 'heic' } as Record<string, string>)[type] || 'jpg';
-        resolve((file = new File([u8], name || '照片.' + ext, { type, lastModified: Date.now() })));
+        resolve((file = new File([u8], name || msgs.photo + '.' + ext, { type, lastModified: Date.now() })));
       });
     });
     return fileP;
@@ -172,7 +173,7 @@ export function pageDropHelper(arm: DropArm | null) {
     const photo = cur ?? { id: e.dataTransfer?.getData(TYPE) || '', name: '' };
     w.__hutongDrop!.set(null);
     void fp.then((f) => {
-      if (!f) return toast('照片没取到，请再拖一次', false);
+      if (!f) return toast(msgs.noPhoto, false);
       for (const x of pending) if (x !== t) fire(x, 'dragleave', e, f);
       // 1) 网页自己接拖进来的文件（大多数上传区、聊天框）
       if (fire(t, 'drop', e, f)) return;
@@ -182,7 +183,7 @@ export function pageDropHelper(arm: DropArm | null) {
       if (pasteInto(t, f)) return;
       // 4) 都不收：像 Chrome 打开拖进来的图片一样，在旁边新标签页打开这张照片（不把当前网页换掉）
       rt.sendMessage({ to: 'panel', type: 'open-photo', id: photo.id, name: f.name }, (ok: boolean | undefined) => {
-        if (rt.lastError || !ok) toast('这个位置放不了图片。拖到网页的上传框或聊天输入框里，或者在侧边栏点「复制这张图」再 Ctrl+V', false);
+        if (rt.lastError || !ok) toast(msgs.noSpot, false);
       });
     });
   };
